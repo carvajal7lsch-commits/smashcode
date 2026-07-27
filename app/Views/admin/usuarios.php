@@ -444,7 +444,7 @@
         </div>
       </div>
 
-      <!-- Contraseña (oculta para instructor) -->
+      <!-- Contraseña (oculta para instructor y aprendiz) -->
       <div class="grupo-campo" id="crear-grupo-contrasena" style="margin-bottom:16px;">
         <label class="etiqueta-campo" for="crear_contrasena" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Contraseña *</label>
         <div class="contenedor-input" style="margin:0; position:relative;">
@@ -453,11 +453,11 @@
         </div>
       </div>
 
-      <!-- Aviso clave temporal (solo instructor) -->
+      <!-- Aviso clave temporal (para instructor y aprendiz) -->
       <div id="crear-aviso-instructor" style="display:none; margin-bottom:16px; padding:12px 16px; background:rgba(28,176,246,0.08); border:1px solid rgba(28,176,246,0.25); border-radius:12px;">
         <p style="margin:0; font-size:0.82rem; color:var(--azul); font-weight:600; display:flex; align-items:center; gap:8px;">
           <i class="fas fa-paper-plane"></i>
-          Se generará una contraseña temporal segura y se enviará automáticamente al correo del instructor.
+          <span id="crear-texto-aviso">Se generará una contraseña temporal segura y se enviará automáticamente al correo del usuario.</span>
         </p>
       </div>
 
@@ -623,7 +623,7 @@
     const desc            = document.getElementById('crear-modal-desc');
     const contrasena      = document.getElementById('crear_contrasena');
 
-    if (rol === 'instructor') {
+    if (rol === 'instructor' || rol === 'aprendiz') {
       grupoContrasena.style.display = 'none';
       avisoinst.style.display       = 'block';
       grupoFicha.style.display      = 'block';
@@ -631,8 +631,16 @@
       contrasena.removeAttribute('required');
       btnSubmit.innerHTML  = '<i class="fas fa-paper-plane"></i> Crear y Enviar Credenciales';
       btnSubmit.className  = 'btn-premium btn-premium-azul';
-      titulo.textContent   = 'Crear Cuenta de Instructor';
-      desc.textContent     = 'Se generará una contraseña temporal y se enviará automáticamente al correo del instructor.';
+      
+      if (rol === 'instructor') {
+        titulo.textContent = 'Crear Cuenta de Instructor';
+        desc.textContent   = 'Se generará una contraseña temporal y se enviará automáticamente al correo del instructor.';
+        document.getElementById('crear-texto-aviso').textContent = 'Se generará una contraseña temporal segura y se enviará automáticamente al correo del instructor.';
+      } else {
+        titulo.textContent = 'Crear Nuevo Aprendiz';
+        desc.textContent   = 'Se generará una contraseña temporal y se enviará automáticamente al correo del aprendiz.';
+        document.getElementById('crear-texto-aviso').textContent = 'Se generará una contraseña temporal segura y se enviará automáticamente al correo del aprendiz.';
+      }
     } else if (rol === 'admin') {
       grupoContrasena.style.display = 'block';
       avisoinst.style.display       = 'none';
@@ -643,17 +651,6 @@
       btnSubmit.className  = 'btn-premium btn-premium-verde';
       titulo.textContent   = 'Crear Administrador';
       desc.textContent     = 'Crea una cuenta con acceso total al panel de administración.';
-    } else {
-      // aprendiz
-      grupoContrasena.style.display = 'block';
-      avisoinst.style.display       = 'none';
-      grupoFicha.style.display      = 'block';
-      grupoPrograma.style.display   = 'block';
-      contrasena.setAttribute('required', 'required');
-      btnSubmit.innerHTML  = '<i class="fas fa-user-plus"></i> Crear Cuenta';
-      btnSubmit.className  = 'btn-premium btn-premium-verde';
-      titulo.textContent   = 'Crear Nuevo Usuario';
-      desc.textContent     = 'Crea una cuenta de aprendiz vinculada a un programa de formación.';
     }
   }
 

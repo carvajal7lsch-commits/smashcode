@@ -113,8 +113,8 @@ class AdminController extends Controller {
         if (empty($nombre))                                $errores[] = 'El nombre es obligatorio.';
         if (!filter_var($correo, FILTER_VALIDATE_EMAIL))   $errores[] = 'Correo inválido.';
 
-        // La contraseña solo es obligatoria para no-instructores
-        if ($rol !== 'instructor') {
+        // La contraseña solo es obligatoria para el administrador
+        if ($rol === 'admin') {
             if (strlen($contrasena) < 8)                   $errores[] = 'La contraseña debe tener mínimo 8 caracteres.';
             if (!preg_match('/[A-Z]/', $contrasena))       $errores[] = 'Incluye al menos 1 mayúscula.';
             if (!preg_match('/[0-9]/', $contrasena))       $errores[] = 'Incluye al menos 1 número.';
@@ -132,12 +132,12 @@ class AdminController extends Controller {
 
         $id = generarUUID();
 
-        // ── FLUJO INSTRUCTOR: clave temporal + correo automático (HU09 / RF-03) ──
-        if ($rol === 'instructor') {
+        // ── FLUJO APRENDIZ / INSTRUCTOR: clave temporal + correo automático ──
+        if ($rol === 'instructor' || $rol === 'aprendiz') {
             $claveTemp = $this->generarClaveTemp();
             $hash = password_hash($claveTemp, PASSWORD_BCRYPT, ['cost' => 12]);
 
-            $this->usuarioModel->crearInstructor($id, $nombre, $correo, $hash, $programaId ?: null, $ficha ?: null);
+            $this->usuarioModel->crearConClaveTemporal($id, $nombre, $correo, $hash, $rol, $programaId ?: null, $ficha ?: null);
 
             // Resolver nombre del programa para el correo
             $nombrePrograma = '';
@@ -149,11 +149,13 @@ class AdminController extends Controller {
 
             $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
             $urlLogin  = $protocolo . $_SERVER['HTTP_HOST'] . PROYECTO_PATH . '/login';
+            
+            $rolTexto = ucfirst($rol);
 
             $asunto = '¡Bienvenido a SmashCode! Tus credenciales de acceso';
             $cuerpo  = "<h2 style='color:#58CC02;'>¡Bienvenido(a) al equipo SmashCode!</h2>";
             $cuerpo .= "<p>Hola <strong>" . htmlspecialchars($nombre) . "</strong>,</p>";
-            $cuerpo .= "<p>El administrador ha creado tu cuenta como <strong>Instructor</strong> en la plataforma SmashCode SENA.</p>";
+            $cuerpo .= "<p>El administrador ha creado tu cuenta como <strong>{$rolTexto}</strong> en la plataforma SmashCode SENA.</p>";
             $cuerpo .= "<p>Para acceder, utiliza las siguientes credenciales temporales. Por tu seguridad, el sistema te forzará a cambiarlas en tu primer inicio de sesión.</p>";
             $cuerpo .= "<table style='border-collapse:collapse; font-size:1rem; margin:16px 0; background:#f4f4f4; padding:12px; border-radius:8px;'>";
             $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Correo:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($correo) . "</td></tr>";
@@ -169,11 +171,11 @@ class AdminController extends Controller {
                 enviarCorreo($correo, $asunto, $cuerpo);
             }
 
-            $this->redirect('admin/usuarios?exito=instructor_creado');
+            $this->redirect('admin/usuarios?exito=creado');
             return;
         }
 
-        // ── FLUJO APRENDIZ / ADMIN: contraseña ingresada por el admin ──
+        // ── FLUJO ADMIN: contraseña ingresada por el admin ──
         $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
         // Admins no llevan ficha ni programa
         $fichaFinal     = ($rol === 'admin') ? null : ($ficha ?: null);
