@@ -44,6 +44,29 @@ class InstructorController extends Controller {
         ]);
     }
 
+    /**
+     * Muestra el panel "Mis Aprendices" con opciones de filtrado (HU23).
+     */
+    public function aprendices(): void {
+        $nivel_id = $_GET['nivel_id'] ?? '';
+        $rap_id   = $_GET['rap_id'] ?? '';
+        $estado   = $_GET['estado'] ?? '';
+
+        // Obtenemos niveles y raps para los dropdowns
+        $nivelesConRaps = $this->nivelModel->obtenerNivelesConRaps();
+        
+        // Obtenemos los aprendices filtrados
+        $aprendices = $this->instructorModel->obtenerListadoAprendicesFiltrado($nivel_id, $rap_id, $estado);
+
+        $this->render('instructor/aprendices', [
+            'nivelesConRaps' => $nivelesConRaps,
+            'aprendices'     => $aprendices,
+            'filtroNivel'    => $nivel_id,
+            'filtroRap'      => $rap_id,
+            'filtroEstado'   => $estado
+        ]);
+    }
+
     /* ========================================================
      * HU10 — Gestión de Niveles (6 niveles fijos MCER)
      * ======================================================== */

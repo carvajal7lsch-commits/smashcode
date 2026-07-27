@@ -82,6 +82,9 @@ $app->post('/admin/vocabulario/sugerir', 'VocabularioController@sugerir');
 // --- Módulo de Niveles (HU10) — Instructor ---
 $app->get('/instructor/niveles',             'InstructorController@niveles');
 
+// --- Módulo de Aprendices (HU23) — Instructor ---
+$app->get('/instructor/aprendices',          'InstructorController@aprendices');
+
 // --- Gestión de Usuarios (HU04) ---
 $app->get('/admin/usuarios', 'AdminController@usuarios');
 $app->get('/admin/usuarios/crear', 'AdminController@crearUsuario');
