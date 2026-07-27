@@ -142,7 +142,7 @@ class GestionUsuarios extends Model {
      */
     public function softDelete(string $id): bool {
         $pdo  = self::obtenerConexion();
-        $stmt = $pdo->prepare("UPDATE usuarios SET eliminado = 1, activo = 0 WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE usuarios SET eliminado = 1, activo = 0, correo = CONCAT(correo, '__deleted_', UNIX_TIMESTAMP()) WHERE id = ?");
         return $stmt->execute([$id]);
     }
 
