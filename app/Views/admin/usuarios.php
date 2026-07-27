@@ -52,9 +52,6 @@
           <button type="button" class="btn-premium btn-premium-verde" onclick="abrirModalCrearUsuario()">
             <i class="fas fa-user-plus"></i> Nuevo Usuario
           </button>
-          <button type="button" class="btn-premium btn-premium-azul" onclick="abrirModalCrearInstructor()">
-            <i class="fas fa-chalkboard-teacher"></i> Nuevo Instructor
-          </button>
         </div>
       </div>
 
@@ -194,7 +191,7 @@
                        class="btn-accion-premium btn-premium-edit" 
                        style="padding:0; border-radius:10px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;" 
                        title="Editar Datos"
-                       onclick="abrirModalEditar('<?= $u['id'] ?>', '<?= limpiar(addslashes($u['nombre_completo'])) ?>', '<?= limpiar(addslashes($u['correo'])) ?>', '<?= limpiar($u['rol']) ?>', '<?= limpiar(addslashes($u['ficha_sena'] ?? '')) ?>')">
+                     onclick="abrirModalEditar('<?= $u['id'] ?>', '<?= limpiar(addslashes($u['nombre_completo'])) ?>', '<?= limpiar(addslashes($u['correo'])) ?>', '<?= limpiar($u['rol']) ?>', '<?= limpiar(addslashes($u['ficha_sena'] ?? '')) ?>', '<?= limpiar($u['programa_id'] ?? '') ?>')">
                       <i class="fas fa-pen" style="font-size:0.8rem;"></i>
                     </button>
                     
@@ -312,7 +309,7 @@
                      class="btn-accion-premium btn-premium-edit" 
                      style="padding:0; border-radius:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;" 
                      title="Editar Datos"
-                     onclick="abrirModalEditar('<?= $u['id'] ?>', '<?= limpiar(addslashes($u['nombre_completo'])) ?>', '<?= limpiar(addslashes($u['correo'])) ?>', '<?= limpiar($u['rol']) ?>', '<?= limpiar(addslashes($u['ficha_sena'] ?? '')) ?>')">
+                     onclick="abrirModalEditar('<?= $u['id'] ?>', '<?= limpiar(addslashes($u['nombre_completo'])) ?>', '<?= limpiar(addslashes($u['correo'])) ?>', '<?= limpiar($u['rol']) ?>', '<?= limpiar(addslashes($u['ficha_sena'] ?? '')) ?>', '<?= limpiar($u['programa_id'] ?? '') ?>')">
                     <i class="fas fa-pen" style="font-size:0.8rem;"></i>
                   </button>
                   
@@ -404,41 +401,24 @@
   </div>
 </div>
 
-<!-- Modal: Crear Usuario -->
+<!-- Modal: Crear Usuario (Unificado Inteligente) -->
 <div class="modal-fondo" id="modal-crear-usuario">
-  <div class="modal-caja-premium" style="max-width: 520px;">
-    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:var(--texto-principal); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-      <i class="fas fa-user-plus" style="color:var(--verde);"></i> Crear Nuevo Usuario
+  <div class="modal-caja-premium" style="max-width: 540px;">
+    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:var(--texto-principal); margin-bottom:4px; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-user-plus" style="color:var(--verde);"></i>
+      <span id="crear-modal-titulo">Crear Nuevo Usuario</span>
     </p>
-    <p class="modal-desc" style="font-size:0.875rem; color:var(--texto-secundario); margin-bottom:20px;">Crea una nueva cuenta de administrador, instructor o aprendiz.</p>
-    
-    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/guardar" novalidate>
+    <p class="modal-desc" id="crear-modal-desc" style="font-size:0.875rem; color:var(--texto-secundario); margin-bottom:20px;">Selecciona un rol para adaptar el formulario automáticamente.</p>
+
+    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/guardar" novalidate id="form-crear-usuario">
       <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
-      
-      <!-- Nombre completo -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="crear_nombre" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Nombre Completo *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
-          <i class="fas fa-user icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="text" id="crear_nombre" name="nombre_completo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Nombre y apellido" required>
-        </div>
-      </div>
 
-      <!-- Correo -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="crear_correo" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Correo Electrónico *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
-          <i class="fas fa-envelope icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="email" id="crear_correo" name="correo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="usuario@dominio.com" required>
-        </div>
-      </div>
-
-      <!-- Rol -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="crear_rol" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Rol de Cuenta *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <!-- Rol (primer campo: define qué se muestra) -->
+      <div class="grupo-campo" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="crear_rol" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Rol de Cuenta *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-shield-halved icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
-          <select id="crear_rol" name="rol" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
+          <select id="crear_rol" name="rol" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;" onchange="adaptarModalCrear(this.value)">
             <option value="aprendiz" selected>Aprendiz</option>
             <option value="instructor">Instructor</option>
             <option value="admin">Administrador</option>
@@ -446,76 +426,56 @@
         </div>
       </div>
 
-      <!-- Ficha SENA -->
-      <div class="grupo-campo" id="crear-grupo-ficha" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="crear_ficha" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA (Opcional)</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <!-- Nombre completo -->
+      <div class="grupo-campo" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="crear_nombre" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Nombre Completo *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
+          <i class="fas fa-user icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
+          <input type="text" id="crear_nombre" name="nombre_completo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Nombre y apellido" required>
+        </div>
+      </div>
+
+      <!-- Correo -->
+      <div class="grupo-campo" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="crear_correo" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Correo Electrónico *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
+          <i class="fas fa-envelope icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
+          <input type="email" id="crear_correo" name="correo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="usuario@dominio.com" required>
+        </div>
+      </div>
+
+      <!-- Contraseña (oculta para instructor) -->
+      <div class="grupo-campo" id="crear-grupo-contrasena" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="crear_contrasena" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Contraseña *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
+          <i class="fas fa-lock icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
+          <input type="password" id="crear_contrasena" name="contrasena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número">
+        </div>
+      </div>
+
+      <!-- Aviso clave temporal (solo instructor) -->
+      <div id="crear-aviso-instructor" style="display:none; margin-bottom:16px; padding:12px 16px; background:rgba(28,176,246,0.08); border:1px solid rgba(28,176,246,0.25); border-radius:12px;">
+        <p style="margin:0; font-size:0.82rem; color:var(--azul); font-weight:600; display:flex; align-items:center; gap:8px;">
+          <i class="fas fa-paper-plane"></i>
+          Se generará una contraseña temporal segura y se enviará automáticamente al correo del instructor.
+        </p>
+      </div>
+
+      <!-- Ficha SENA (oculta para admin) -->
+      <div class="grupo-campo" id="crear-grupo-ficha" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="crear_ficha" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-id-card icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
           <input type="text" id="crear_ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 2877650" maxlength="20">
         </div>
       </div>
 
-      <!-- Contraseña -->
-      <div class="grupo-campo" style="margin-bottom: 24px;">
-        <label class="etiqueta-campo" for="crear_contrasena" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Contraseña *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
-          <i class="fas fa-lock icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="password" id="crear_contrasena" name="contrasena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Mín. 8 caracteres, 1 mayúscula, 1 número" required>
-        </div>
-      </div>
-
-      <div class="modal-acciones" style="gap:12px;">
-        <button type="button" class="btn-premium btn-premium-blanco" onclick="cerrarModal('modal-crear-usuario')">Cancelar</button>
-        <button type="submit" class="btn-premium btn-premium-verde"><i class="fas fa-user-plus"></i> Crear Cuenta</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Modal: Crear Instructor -->
-<div class="modal-fondo" id="modal-crear-instructor">
-  <div class="modal-caja-premium" style="max-width: 520px;">
-    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:var(--texto-principal); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
-      <i class="fas fa-chalkboard-teacher" style="color:var(--azul);"></i> Crear Cuenta de Instructor
-    </p>
-    <p class="modal-desc" style="font-size:0.875rem; color:var(--texto-secundario); margin-bottom:20px;">Se generará una clave temporal y se enviará al correo del instructor.</p>
-    
-    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/instructor/guardar" novalidate>
-      <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
-      
-      <!-- Nombre completo -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="inst_nombre" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Nombre Completo *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
-          <i class="fas fa-user icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="text" id="inst_nombre" name="nombre_completo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: Carlos Andrés Gómez" required>
-        </div>
-      </div>
-
-      <!-- Correo -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="inst_correo" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Correo Electrónico Institucional *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
-          <i class="fas fa-envelope icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="email" id="inst_correo" name="correo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="instructor@sena.edu.co" required>
-        </div>
-      </div>
-
-      <!-- Ficha SENA -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="inst_ficha" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA (Opcional)</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
-          <i class="fas fa-id-card icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="text" id="inst_ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 2877650" maxlength="20">
-        </div>
-      </div>
-
-      <!-- Programa asignado -->
-      <div class="grupo-campo" style="margin-bottom: 24px;">
-        <label class="etiqueta-campo" for="inst_programa" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Programa Asignado (Opcional)</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <!-- Programa de Formación (oculto para admin) -->
+      <div class="grupo-campo" id="crear-grupo-programa" style="margin-bottom:24px;">
+        <label class="etiqueta-campo" for="crear_programa" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Programa de Formación <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-graduation-cap icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
-          <select id="inst_programa" name="programa_id" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
+          <select id="crear_programa" name="programa_id" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
             <option value="">— Sin programa asignado —</option>
             <?php foreach ($programas as $p): ?>
               <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>
@@ -525,8 +485,8 @@
       </div>
 
       <div class="modal-acciones" style="gap:12px;">
-        <button type="button" class="btn-premium btn-premium-blanco" onclick="cerrarModal('modal-crear-instructor')">Cancelar</button>
-        <button type="submit" class="btn-premium btn-premium-azul"><i class="fas fa-paper-plane"></i> Crear y Enviar</button>
+        <button type="button" class="btn-premium btn-premium-blanco" onclick="cerrarModal('modal-crear-usuario')">Cancelar</button>
+        <button type="submit" class="btn-premium btn-premium-verde" id="crear-btn-submit"><i class="fas fa-user-plus"></i> Crear Cuenta</button>
       </div>
     </form>
   </div>
@@ -534,40 +494,40 @@
 
 <!-- Modal: Editar Usuario -->
 <div class="modal-fondo" id="modal-editar-usuario">
-  <div class="modal-caja-premium" style="max-width: 520px;">
+  <div class="modal-caja-premium" style="max-width: 540px;">
     <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:var(--texto-principal); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
       <i class="fas fa-user-pen" style="color:var(--azul);"></i> Editar Datos del Usuario
     </p>
     <p class="modal-desc" style="font-size:0.875rem; color:var(--texto-secundario); margin-bottom:20px;">Modifica la información básica de la cuenta. El historial de interacciones se conservará.</p>
-    
+
     <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/actualizar" novalidate>
       <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
       <input type="hidden" name="id" id="editar-id">
-      
+
       <!-- Nombre completo -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="editar-nombre" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Nombre Completo *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <div class="grupo-campo" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="editar-nombre" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Nombre Completo *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-user icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
           <input type="text" id="editar-nombre" name="nombre_completo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Nombre y apellido" required>
         </div>
       </div>
 
       <!-- Correo -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="editar-correo" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Correo Electrónico *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <div class="grupo-campo" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="editar-correo" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Correo Electrónico *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-envelope icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
           <input type="email" id="editar-correo" name="correo" class="input-premium" style="width:100%; padding-left:38px;" placeholder="usuario@dominio.com" required>
         </div>
       </div>
 
       <!-- Rol -->
-      <div class="grupo-campo" style="margin-bottom: 16px;">
-        <label class="etiqueta-campo" for="editar-rol" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Rol de Cuenta *</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <div class="grupo-campo" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="editar-rol" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Rol de Cuenta *</label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-shield-halved icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
-          <select id="editar-rol" name="rol" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
+          <select id="editar-rol" name="rol" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;" onchange="adaptarModalEditar(this.value)">
             <option value="aprendiz">Aprendiz</option>
             <option value="instructor">Instructor</option>
             <option value="admin">Administrador</option>
@@ -576,11 +536,25 @@
       </div>
 
       <!-- Ficha SENA -->
-      <div class="grupo-campo" id="editar-grupo-ficha" style="margin-bottom: 24px;">
-        <label class="etiqueta-campo" for="editar-ficha" style="font-size: 0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA (Opcional)</label>
-        <div class="contenedor-input" style="margin: 0; position:relative;">
+      <div class="grupo-campo" id="editar-grupo-ficha" style="margin-bottom:16px;">
+        <label class="etiqueta-campo" for="editar-ficha" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-id-card icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
           <input type="text" id="editar-ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 2877650" maxlength="20">
+        </div>
+      </div>
+
+      <!-- Programa de Formación -->
+      <div class="grupo-campo" id="editar-grupo-programa" style="margin-bottom:24px;">
+        <label class="etiqueta-campo" for="editar-programa" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Programa de Formación <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+        <div class="contenedor-input" style="margin:0; position:relative;">
+          <i class="fas fa-graduation-cap icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
+          <select id="editar-programa" name="programa_id" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
+            <option value="">— Sin programa asignado —</option>
+            <?php foreach ($programas as $p): ?>
+              <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>
+            <?php endforeach; ?>
+          </select>
         </div>
       </div>
 
@@ -631,53 +605,80 @@
 </div>
 
 <script>
+  // ── MODAL CREAR: lógica adaptativa por rol ──
   function abrirModalCrearUsuario() {
-    const rolSelect = document.getElementById('crear_rol');
-    if (rolSelect) rolSelect.value = 'aprendiz';
-    const grupoFicha = document.getElementById('crear-grupo-ficha');
-    if (grupoFicha) grupoFicha.style.display = 'block';
-    
+    // Resetear formulario
+    document.getElementById('form-crear-usuario').reset();
+    adaptarModalCrear('aprendiz');
     document.getElementById('modal-crear-usuario').classList.add('visible');
   }
 
-  function abrirModalCrearInstructor() {
-    document.getElementById('modal-crear-instructor').classList.add('visible');
+  function adaptarModalCrear(rol) {
+    const grupoContrasena = document.getElementById('crear-grupo-contrasena');
+    const avisoinst       = document.getElementById('crear-aviso-instructor');
+    const grupoFicha      = document.getElementById('crear-grupo-ficha');
+    const grupoPrograma   = document.getElementById('crear-grupo-programa');
+    const btnSubmit       = document.getElementById('crear-btn-submit');
+    const titulo          = document.getElementById('crear-modal-titulo');
+    const desc            = document.getElementById('crear-modal-desc');
+    const contrasena      = document.getElementById('crear_contrasena');
+
+    if (rol === 'instructor') {
+      grupoContrasena.style.display = 'none';
+      avisoinst.style.display       = 'block';
+      grupoFicha.style.display      = 'block';
+      grupoPrograma.style.display   = 'block';
+      contrasena.removeAttribute('required');
+      btnSubmit.innerHTML  = '<i class="fas fa-paper-plane"></i> Crear y Enviar Credenciales';
+      btnSubmit.className  = 'btn-premium btn-premium-azul';
+      titulo.textContent   = 'Crear Cuenta de Instructor';
+      desc.textContent     = 'Se generará una contraseña temporal y se enviará automáticamente al correo del instructor.';
+    } else if (rol === 'admin') {
+      grupoContrasena.style.display = 'block';
+      avisoinst.style.display       = 'none';
+      grupoFicha.style.display      = 'none';
+      grupoPrograma.style.display   = 'none';
+      contrasena.setAttribute('required', 'required');
+      btnSubmit.innerHTML  = '<i class="fas fa-user-shield"></i> Crear Admin';
+      btnSubmit.className  = 'btn-premium btn-premium-verde';
+      titulo.textContent   = 'Crear Administrador';
+      desc.textContent     = 'Crea una cuenta con acceso total al panel de administración.';
+    } else {
+      // aprendiz
+      grupoContrasena.style.display = 'block';
+      avisoinst.style.display       = 'none';
+      grupoFicha.style.display      = 'block';
+      grupoPrograma.style.display   = 'block';
+      contrasena.setAttribute('required', 'required');
+      btnSubmit.innerHTML  = '<i class="fas fa-user-plus"></i> Crear Cuenta';
+      btnSubmit.className  = 'btn-premium btn-premium-verde';
+      titulo.textContent   = 'Crear Nuevo Usuario';
+      desc.textContent     = 'Crea una cuenta de aprendiz vinculada a un programa de formación.';
+    }
   }
 
-  function abrirModalEditar(id, nombre, correo, rol, ficha) {
-    document.getElementById('editar-id').value = id;
+  // ── MODAL EDITAR ──
+  function abrirModalEditar(id, nombre, correo, rol, ficha, programaId) {
+    document.getElementById('editar-id').value     = id;
     document.getElementById('editar-nombre').value = nombre;
     document.getElementById('editar-correo').value = correo;
-    document.getElementById('editar-rol').value = rol;
-    document.getElementById('editar-ficha').value = ficha;
-    
-    // Ocultar Ficha SENA si es Administrador
-    const grupoFicha = document.getElementById('editar-grupo-ficha');
-    if (grupoFicha) {
-      grupoFicha.style.display = (rol === 'admin') ? 'none' : 'block';
-    }
-    
+    document.getElementById('editar-rol').value    = rol;
+    document.getElementById('editar-ficha').value  = ficha;
+
+    // Preseleccionar programa
+    const selPrograma = document.getElementById('editar-programa');
+    if (selPrograma) selPrograma.value = programaId || '';
+
+    adaptarModalEditar(rol);
     document.getElementById('modal-editar-usuario').classList.add('visible');
   }
 
-  // Manejadores de cambios de rol dinámicos
-  document.addEventListener('DOMContentLoaded', () => {
-    const crearRol = document.getElementById('crear_rol');
-    if (crearRol) {
-      crearRol.addEventListener('change', (e) => {
-        const gf = document.getElementById('crear-grupo-ficha');
-        if (gf) gf.style.display = (e.target.value === 'admin') ? 'none' : 'block';
-      });
-    }
-
-    const editarRol = document.getElementById('editar-rol');
-    if (editarRol) {
-      editarRol.addEventListener('change', (e) => {
-        const gf = document.getElementById('editar-grupo-ficha');
-        if (gf) gf.style.display = (e.target.value === 'admin') ? 'none' : 'block';
-      });
-    }
-  });
+  function adaptarModalEditar(rol) {
+    const grupoFicha    = document.getElementById('editar-grupo-ficha');
+    const grupoPrograma = document.getElementById('editar-grupo-programa');
+    if (grupoFicha)    grupoFicha.style.display    = (rol === 'admin') ? 'none' : 'block';
+    if (grupoPrograma) grupoPrograma.style.display = (rol === 'admin') ? 'none' : 'block';
+  }
 
   function abrirModalLogs(id, nombre) {
     document.getElementById('logs-nombre-usuario').innerHTML = 'Historial de interacciones de <strong style="color:var(--texto-principal);">' + nombre + '</strong>';

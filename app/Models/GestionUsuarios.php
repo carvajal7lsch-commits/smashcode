@@ -73,7 +73,7 @@ class GestionUsuarios extends Model {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
             "SELECT id, nombre_completo, correo, rol, activo, bloqueado,
-                    ficha_sena, xp_puntos, nivel_perfil, creado_en
+                    ficha_sena, programa_id, xp_puntos, nivel_perfil, creado_en
              FROM usuarios WHERE id = ? AND eliminado = 0 LIMIT 1"
         );
         $stmt->execute([$id]);
@@ -93,13 +93,13 @@ class GestionUsuarios extends Model {
     /**
      * Crea un nuevo usuario en el sistema.
      */
-    public function crear(string $id, string $nombre, string $correo, string $hash, string $rol, ?string $ficha): bool {
+    public function crear(string $id, string $nombre, string $correo, string $hash, string $rol, ?string $ficha, ?string $programaId): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
-            "INSERT INTO usuarios (id, nombre_completo, correo, contrasena, rol, ficha_sena, activo, correo_verificado)
-             VALUES (?, ?, ?, ?, ?, ?, 1, 1)"
+            "INSERT INTO usuarios (id, nombre_completo, correo, contrasena, rol, ficha_sena, programa_id, activo, correo_verificado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)"
         );
-        return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $ficha]);
+        return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $ficha, $programaId]);
     }
 
     /**
