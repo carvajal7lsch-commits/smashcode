@@ -87,8 +87,11 @@
     </div>
     <ul class="nav-lateral">
       <li><a href="<?= PROYECTO_PATH ?>/instructor" class="nav-enlace"><i class="fas fa-gauge-high nav-icono"></i><span>Dashboard</span></a></li>
+      <li><a href="<?= PROYECTO_PATH ?>/instructor/aprendices" class="nav-enlace"><i class="fas fa-users nav-icono"></i><span>Mis Aprendices</span></a></li>
+      <li><a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="nav-enlace"><i class="fas fa-clipboard-list nav-icono"></i><span>Resultados Quiz</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/niveles" class="nav-enlace"><i class="fas fa-layer-group nav-icono"></i><span>Niveles</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/raps" class="nav-enlace activo" aria-current="page"><i class="fas fa-file-lines nav-icono"></i><span>RAPs</span></a></li>
+      <li><a href="<?= PROYECTO_PATH ?>/instructor/exportar" class="nav-enlace"><i class="fas fa-file-csv nav-icono"></i><span>Exportar CSV</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/logout" class="nav-enlace" style="color:var(--rojo);"><i class="fas fa-right-from-bracket nav-icono"></i><span>Cerrar Sesión</span></a></li>
     </ul>
   </nav>
