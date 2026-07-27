@@ -1,41 +1,28 @@
 version: '3.8'
-
 services:
   web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: smashcode_web
     restart: unless-stopped
-    ports:
-      - "8080:80"
     environment:
-      # Las variables se cargarán automáticamente desde el archivo .env gracias al paquete phpdotenv
       - DB_HOST=db
     depends_on:
       - db
     networks:
       - smashcode_network
-
   db:
     image: mysql:8.0
-    container_name: smashcode_db
     restart: unless-stopped
-    ports:
-      - "3306:3306"
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_CLAVE:-root}
       MYSQL_DATABASE: smash_code
     volumes:
       - db_data:/var/lib/mysql
-      # Inicializa la base de datos automáticamente en el primer arranque si se provee el script
-      - ./database/smash_code.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - smashcode_network
-
 volumes:
   db_data:
-
 networks:
   smashcode_network:
     driver: bridge
