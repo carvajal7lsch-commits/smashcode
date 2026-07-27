@@ -7,6 +7,15 @@ services:
     restart: unless-stopped
     environment:
       - DB_HOST=db
+      - DB_NOMBRE=${DB_NOMBRE}
+      - DB_USUARIO=${DB_USUARIO}
+      - DB_CLAVE=${DB_CLAVE}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+      - JWT_SECRET=${JWT_SECRET}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       - db
     networks:
