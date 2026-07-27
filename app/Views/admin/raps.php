@@ -91,7 +91,7 @@
           
           <div class="card-rap-header">
             <div>
-              <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($r['titulo']) ?></div>
+              <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;">RAP <?= $r['nivel_orden'] ?></div>
               <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
                 <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['nivel_orden']] ?? limpiar($r['nivel_nombre']) ?>
               </div>

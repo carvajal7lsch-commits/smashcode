@@ -1361,23 +1361,23 @@ body.bg-mesh, body {
 
 /* Tarjetas y Estadísticas */
 .tarjeta {
-  background: #1F2F36 !important;
-  border-color: #2B3E46 !important;
+  background: var(--blanco) !important;
+  border-color: var(--borde-sutil) !important;
 }
 .tarjeta:hover {
-  border-color: #37464F !important;
+  border-color: var(--borde-activo) !important;
   box-shadow: var(--sombra-premium-hover) !important;
 }
 .stat-valor {
-  color: #FFFFFF !important;
+  color: var(--texto-principal) !important;
 }
 .item-actividad-card {
-  background: #18262C !important;
-  border-color: #2B3E46 !important;
-  color: #F1F5F9 !important;
+  background: var(--fondo) !important;
+  border-color: var(--borde-sutil) !important;
+  color: var(--texto-principal) !important;
 }
 .item-actividad-card:hover {
-  background: #25373F !important;
+  background: var(--blanco) !important;
 }
 .grafico-semanal-wrap {
   background: #1F2F36 !important;
