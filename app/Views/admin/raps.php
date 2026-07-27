@@ -17,16 +17,18 @@
   <?php include __DIR__ . '/partials/sidebar.php'; ?>
 
   <main class="contenido-principal">
-    <header class="header-breadcrumbs">
-      <div class="header-breadcrumbs-path">
-        <i class="fas fa-home"></i>
-        <a href="<?= PROYECTO_PATH ?>/admin">Dashboard</a>
-        <i class="fas fa-chevron-right"></i>
-        <span>RAPs</span>
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-link"><i class="fas fa-file-lines" style="color:var(--azul); margin-right:4px;"></i> RAPs</span>
       </div>
-      <div class="header-acciones">
-        <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar tema">
-          <i class="fas fa-sun tema-icono"></i><span class="tema-label">Claro</span>
+      <div class="admin-header-actions">
+        <!-- Botón cambio de tema -->
+        <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
+          <i class="fas fa-sun tema-icono"></i>
+          <span class="tema-label">Claro</span>
         </button>
         <div class="avatar-usuario" title="<?= limpiar($_SESSION['nombre']) ?>">
           <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
@@ -65,10 +67,20 @@
 
       <!-- Contenedor Grid -->
       <div class="grid-raps">
+        <?php
+        $descRaps = [
+            'RAP 1' => 'Getting to Know Other People (Fase Analisis)',
+            'RAP 2' => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
+            'RAP 3' => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
+            'RAP 4' => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
+            'RAP 5' => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
+            'RAP 6' => 'Professional Practice (Fase Evaluacion)',
+        ];
+        ?>
         <?php foreach ($raps as $r): 
           // Validar completitud de cada uno de los 5 componentes
           $cVocab = $r['total_vocabulario'] > 0;
-          $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] === $r['total_vocabulario']);
+          $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] == $r['total_vocabulario']);
           $cEjerc = $r['total_ejercicios'] > 0;
           $cDial  = $r['total_dialogos'] > 0;
           $cQuiz  = $r['tiene_quiz'] > 0 && $r['total_preguntas_quiz'] > 0;
@@ -80,7 +92,9 @@
           <div class="card-rap-header">
             <div>
               <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($r['titulo']) ?></div>
-              <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600;"><i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= limpiar($r['nivel_nombre']) ?></div>
+              <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
+                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['titulo']] ?? limpiar($r['nivel_nombre']) ?>
+              </div>
             </div>
             <div>
               <?php if ($esCompleto): ?>

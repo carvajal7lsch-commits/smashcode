@@ -20,20 +20,20 @@
 
   <!-- Contenido principal -->
   <main class="contenido-principal">
-    <header class="barra-superior" style="background: transparent; border: none; box-shadow: none; margin: 0; padding: 24px 24px 10px; z-index: 90; position:relative; min-height:60px;">
-      <div style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:600; color:var(--texto-tenue);">
-        <i class="fas fa-home" style="font-size:0.75rem;"></i>
-        <span>Dashboard</span>
-        <i class="fas fa-chevron-right" style="font-size:0.6rem; color:var(--texto-tenue);"></i>
-        <span style="color:var(--texto-secundario); font-weight:700;"><i class="fas fa-users-gear" style="color:var(--azul); margin-right:4px;"></i> Gestión de Usuarios</span>
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-link"><i class="fas fa-users-gear" style="color:var(--azul); margin-right:4px;"></i> Gestión de Usuarios</span>
       </div>
-      <div style="margin-left: auto; display:flex; align-items:center; gap:16px;">
+      <div class="admin-header-actions">
         <!-- Botón cambio de tema -->
         <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
         </button>
-        <div class="avatar-usuario" style="border: 2px solid var(--verde); background: linear-gradient(135deg, var(--verde), var(--azul)); font-weight: 800; cursor: default;" title="<?= limpiar($_SESSION['nombre']) ?>">
+        <div class="avatar-usuario" title="<?= limpiar($_SESSION['nombre']) ?>">
           <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
         </div>
       </div>

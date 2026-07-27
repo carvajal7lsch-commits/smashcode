@@ -136,9 +136,19 @@
             </tr>
           </thead>
           <tbody>
+            <?php
+            $descRaps = [
+                'RAP 1' => 'Getting to Know Other People (Fase Analisis)',
+                'RAP 2' => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
+                'RAP 3' => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
+                'RAP 4' => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
+                'RAP 5' => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
+                'RAP 6' => 'Professional Practice (Fase Evaluacion)',
+            ];
+            ?>
             <?php foreach ($raps as $r): 
               $cVocab = $r['total_vocabulario'] > 0;
-              $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] === $r['total_vocabulario']);
+              $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] == $r['total_vocabulario']);
               $cEjerc = $r['total_ejercicios'] > 0;
               $cDial  = $r['total_dialogos'] > 0;
               $cQuiz  = $r['tiene_quiz'] > 0 && $r['total_preguntas_quiz'] > 0;
@@ -148,7 +158,9 @@
             <tr id="fila-rap-<?= $r['id'] ?>" class="fila-rap" data-nombre="<?= limpiar(mb_strtolower($r['titulo'])) ?>" data-nivel="<?= limpiar(mb_strtolower($r['nivel_nombre'])) ?>">
               <td>
                 <div style="font-weight:700; font-size:0.9rem; color:var(--texto-principal);"><?= limpiar($r['titulo']) ?></div>
-                <div style="font-size:0.75rem; color:var(--texto-tenue); margin-top:2px; font-weight:600;"><i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= limpiar($r['nivel_nombre']) ?></div>
+                <div style="font-size:0.75rem; color:var(--texto-tenue); margin-top:2px; font-weight:600;">
+                  <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['titulo']] ?? limpiar($r['nivel_nombre']) ?>
+                </div>
               </td>
               
               <td>

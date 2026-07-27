@@ -18,15 +18,22 @@
   <?php include __DIR__ . '/partials/sidebar.php'; ?>
 
   <main class="contenido-principal">
-    <header class="barra-superior">
-      <div class="stat-xp"><i class="fas fa-chalkboard-teacher"></i> Nuevo Instructor</div>
-      <div style="margin-left: auto; display:flex; align-items:center; gap:16px;">
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin/usuarios" class="breadcrumb-current" style="text-decoration:none;">Gestión de Usuarios</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-link"><i class="fas fa-chalkboard-teacher" style="color:var(--azul); margin-right:4px;"></i> Nuevo Instructor</span>
+      </div>
+      <div class="admin-header-actions">
         <!-- Botón cambio de tema -->
         <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
         </button>
-        <div class="avatar-usuario" style="border: 2px solid var(--verde); background: linear-gradient(135deg, var(--verde), var(--azul)); font-weight: 800; cursor: default; margin: 0;" title="<?= limpiar($_SESSION['nombre']) ?>">
+        <div class="avatar-usuario" title="<?= limpiar($_SESSION['nombre']) ?>">
           <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
         </div>
       </div>
@@ -34,15 +41,6 @@
 
     <div class="pagina-contenido">
       <div style="max-width: 620px; margin: 0 auto;">
-
-        <!-- Migas de pan -->
-        <nav style="font-size: 0.78rem; color: var(--gris-medio); margin-bottom: 20px;">
-          <a href="<?= PROYECTO_PATH ?>/admin" style="color:var(--verde);">Dashboard</a>
-          <i class="fas fa-chevron-right" style="font-size:0.6rem; margin: 0 6px;"></i>
-          <a href="<?= PROYECTO_PATH ?>/admin/usuarios" style="color:var(--verde);">Usuarios</a>
-          <i class="fas fa-chevron-right" style="font-size:0.6rem; margin: 0 6px;"></i>
-          <span>Nuevo Instructor</span>
-        </nav>
 
         <?php if ($error): ?>
           <div class="alerta alerta-error" style="margin-top: 12px;"><i class="fas fa-triangle-exclamation"></i> <?= htmlspecialchars($error) ?></div>

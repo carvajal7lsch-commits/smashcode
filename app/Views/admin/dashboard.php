@@ -6,6 +6,7 @@
   <title>Dashboard — Admin SmashCode</title>
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/dashboard.css?v=<?= time() ?>">
+  <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/cruds.css?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script>/* Aplicar tema guardado antes del paint */
   (function(){var t=localStorage.getItem('smashcode_tema');if(t)document.documentElement.setAttribute('data-theme',t);})();
@@ -19,12 +20,12 @@
 
   <!-- Contenido principal -->
   <main class="contenido-principal">
-    <header class="barra-superior dashboard-header-premium">
-      <div class="dashboard-header-container">
-        <i class="fas fa-home"></i>
-        <span class="dashboard-header-title">Dashboard</span>
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <span class="breadcrumb-link">Dashboard</span>
       </div>
-      <div class="dashboard-header-actions">
+      <div class="admin-header-actions">
         <div class="stat-xp-indicator">
           <i class="fas fa-bolt"></i> <?= formatearXP((int)$totalXP) ?> XP Total
         </div>
@@ -33,7 +34,7 @@
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
         </button>
-        <div class="avatar-usuario avatar-premium" title="<?= limpiar($_SESSION['nombre']) ?>">
+        <div class="avatar-usuario" title="<?= limpiar($_SESSION['nombre']) ?>">
           <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
         </div>
       </div>

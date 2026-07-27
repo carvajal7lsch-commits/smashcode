@@ -20,7 +20,7 @@ class Nivel extends Model {
             'SELECT n.id, n.nombre, n.descripcion, n.orden, n.activo, n.umbral_desbloqueo,
                     r.id AS rap_id, r.titulo AS rap_titulo
              FROM nivel n
-             LEFT JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
+             JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
              WHERE n.activo = 1
              ORDER BY n.orden'
         );

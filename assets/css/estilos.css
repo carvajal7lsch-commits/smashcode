@@ -108,13 +108,7 @@
 [data-theme="light"] body,
 [data-theme="light"] body.bg-mesh {
   background-color: #F0F4F8 !important;
-  background-image: 
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
-    radial-gradient(at 15% 15%, rgba(28, 176, 246, 0.05) 0px, transparent 50%),
-    radial-gradient(at 85% 85%, rgba(88, 204, 2, 0.05) 0px, transparent 50%) !important;
-  background-size: 44px 44px, 44px 44px, auto, auto !important;
-  background-attachment: fixed !important;
+  background-image: none !important;
   color: #1E293B !important;
 }
 [data-theme="light"] .tarjeta-premium {
@@ -412,11 +406,11 @@ button, input, select { font-family: var(--fuente); }
 }
 .avatar-usuario {
   width: 38px; height: 38px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--verde), var(--azul));
+  background: var(--verde) !important;
   display: flex; align-items: center; justify-content: center;
   font-weight: 800; color: #fff; font-size: 0.9rem;
   cursor: pointer; margin-left: auto;
-  border: 3px solid var(--borde);
+  border: none !important;
 }
 
 /* ── PÁGINA ── */
@@ -604,11 +598,7 @@ button, input, select { font-family: var(--fuente); }
   align-items: center;
   justify-content: center;
   background-color: var(--fondo);
-  background-image: 
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-  background-size: 44px 44px;
-  background-position: center center;
+  background-image: none;
   padding: 20px;
   overflow: hidden;
 }
@@ -624,6 +614,7 @@ button, input, select { font-family: var(--fuente); }
   opacity: var(--blob-opacity);
   pointer-events: none;
   transition: opacity 0.3s ease;
+  display: none !important;
 }
 .pagina-auth::before {
   width: 450px;
@@ -1289,13 +1280,7 @@ button, input, select { font-family: var(--fuente); }
 /* Modificaciones generales del fondo */
 body.bg-mesh, body {
   background-color: #131F24 !important;
-  background-image: 
-    linear-gradient(var(--grid-color) 1px, transparent 1px),
-    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
-    radial-gradient(at 15% 15%, rgba(28, 176, 246, 0.08) 0px, transparent 60%),
-    radial-gradient(at 85% 85%, rgba(88, 204, 2, 0.08) 0px, transparent 60%) !important;
-  background-size: 44px 44px, 44px 44px, auto, auto !important;
-  background-attachment: fixed !important;
+  background-image: none !important;
   color: var(--gris-texto) !important;
 }
 
