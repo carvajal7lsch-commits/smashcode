@@ -41,7 +41,7 @@ class Instructor extends Model {
         $stmt = $pdo->query(
             "SELECT u.id, u.nombre_completo, u.correo, u.xp_puntos,
                     COUNT(p.id) AS raps_iniciados,
-                    SUM(p.completado) AS raps_completados,
+                    COALESCE(SUM(p.completado), 0) AS raps_completados,
                     COALESCE(AVG(p.porcentaje), 0) AS avance_promedio
              FROM usuarios u
              LEFT JOIN progreso p ON p.usuario_id = u.id

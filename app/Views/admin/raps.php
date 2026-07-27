@@ -69,12 +69,12 @@
       <div class="grid-raps">
         <?php
         $descRaps = [
-            'RAP 1' => 'Getting to Know Other People (Fase Analisis)',
-            'RAP 2' => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
-            'RAP 3' => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
-            'RAP 4' => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
-            'RAP 5' => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
-            'RAP 6' => 'Professional Practice (Fase Evaluacion)',
+            1 => 'Getting to Know Other People (Fase Analisis)',
+            2 => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
+            3 => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
+            4 => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
+            5 => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
+            6 => 'Professional Practice (Fase Evaluacion)',
         ];
         ?>
         <?php foreach ($raps as $r): 
@@ -93,7 +93,7 @@
             <div>
               <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($r['titulo']) ?></div>
               <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
-                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['titulo']] ?? limpiar($r['nivel_nombre']) ?>
+                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['nivel_orden']] ?? limpiar($r['nivel_nombre']) ?>
               </div>
             </div>
             <div>

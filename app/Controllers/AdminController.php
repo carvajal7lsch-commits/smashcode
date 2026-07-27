@@ -400,9 +400,10 @@ class AdminController extends Controller {
             return;
         }
 
-        // El nivel 1 (orden=1) siempre tiene umbral 0
+        // El nivel 1 (orden=1) siempre tiene umbral 0 y siempre está activo
         if ((int)$nivel['orden'] === 1) {
             $umbral = 0.00;
+            $activo = 1;
         }
 
         $this->nivelModel->actualizar($id, $nombre, $descripcion, $imagenUrl, $umbral, $activo);

@@ -86,13 +86,8 @@
     </div>
     <ul class="nav-lateral">
       <li><a href="<?= PROYECTO_PATH ?>/instructor" class="nav-enlace"><i class="fas fa-gauge-high nav-icono"></i><span>Dashboard</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/aprendices" class="nav-enlace"><i class="fas fa-users nav-icono"></i><span>Mis Aprendices</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="nav-enlace"><i class="fas fa-clipboard-list nav-icono"></i><span>Resultados Quiz</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/niveles" class="nav-enlace"><i class="fas fa-layer-group nav-icono"></i><span>Niveles</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/raps" class="nav-enlace activo" aria-current="page"><i class="fas fa-file-lines nav-icono"></i><span>RAPs</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/vocabulario" class="nav-enlace"><i class="fas fa-spell-check nav-icono"></i><span>Vocabulario</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/quizzes" class="nav-enlace"><i class="fas fa-question-circle nav-icono"></i><span>Quizzes</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/exportar" class="nav-enlace"><i class="fas fa-file-csv nav-icono"></i><span>Exportar CSV</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/logout" class="nav-enlace" style="color:var(--rojo);"><i class="fas fa-right-from-bracket nav-icono"></i><span>Cerrar Sesión</span></a></li>
     </ul>
   </nav>
@@ -124,103 +119,120 @@
       </div>
 
       <!-- Contenedor Tabla -->
-      <div class="tarjeta" style="padding:0; overflow:hidden;">
-        <table class="tabla-usuarios" style="width:100%;">
-          <thead>
-            <tr>
-              <th style="width:25%;">RAP / Nivel</th>
-              <th style="text-align:center; width:50%;">Componentes de Aprendizaje</th>
-              <th style="text-align:center; width:90px;">Completitud</th>
-              <th style="text-align:center; width:90px;">Estado</th>
-              <th style="text-align:center; width:100px;">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php
-            $descRaps = [
-                'RAP 1' => 'Getting to Know Other People (Fase Analisis)',
-                'RAP 2' => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
-                'RAP 3' => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
-                'RAP 4' => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
-                'RAP 5' => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
-                'RAP 6' => 'Professional Practice (Fase Evaluacion)',
-            ];
-            ?>
-            <?php foreach ($raps as $r): 
-              $cVocab = $r['total_vocabulario'] > 0;
-              $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] == $r['total_vocabulario']);
-              $cEjerc = $r['total_ejercicios'] > 0;
-              $cDial  = $r['total_dialogos'] > 0;
-              $cQuiz  = $r['tiene_quiz'] > 0 && $r['total_preguntas_quiz'] > 0;
+      <!-- Contenedor Grid RAPs (Modo Lectura) -->
+      <div class="grid-raps">
+        <?php
+        $descRaps = [
+            1 => 'Getting to Know Other People (Fase Analisis)',
+            2 => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
+            3 => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
+            4 => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
+            5 => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
+            6 => 'Professional Practice (Fase Evaluacion)',
+        ];
+        ?>
+        <?php foreach ($raps as $r): 
+          $cVocab = $r['total_vocabulario'] > 0;
+          $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] == $r['total_vocabulario']);
+          $cEjerc = $r['total_ejercicios'] > 0;
+          $cDial  = $r['total_dialogos'] > 0;
+          $cQuiz  = $r['tiene_quiz'] > 0 && $r['total_preguntas_quiz'] > 0;
 
-              $esCompleto = ($cVocab && $cPron && $cEjerc && $cDial && $cQuiz);
-            ?>
-            <tr id="fila-rap-<?= $r['id'] ?>" class="fila-rap" data-nombre="<?= limpiar(mb_strtolower($r['titulo'])) ?>" data-nivel="<?= limpiar(mb_strtolower($r['nivel_nombre'])) ?>">
-              <td>
-                <div style="font-weight:700; font-size:0.9rem; color:var(--texto-principal);"><?= limpiar($r['titulo']) ?></div>
-                <div style="font-size:0.75rem; color:var(--texto-tenue); margin-top:2px; font-weight:600;">
-                  <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['titulo']] ?? limpiar($r['nivel_nombre']) ?>
-                </div>
-              </td>
-              
-              <td>
-                <div style="display:flex; gap:10px; justify-content:center; flex-wrap:wrap;">
-                  <span class="comp-badge <?= $cVocab ? 'complete' : 'incomplete' ?>">
-                    <i class="fas fa-<?= $cVocab ? 'circle-check' : 'circle-xmark' ?>"></i>
-                    Vocabulario: <?= (int)$r['total_vocabulario'] ?>
-                  </span>
+          $esCompleto = ($cVocab && $cPron && $cEjerc && $cDial && $cQuiz);
+        ?>
+        <div id="fila-rap-<?= $r['id'] ?>" class="card-rap fila-rap <?= !$r['rap_activo'] ? 'inactiva' : '' ?>" data-nombre="<?= limpiar(mb_strtolower($r['titulo'])) ?>" data-nivel="<?= limpiar(mb_strtolower($r['nivel_nombre'])) ?>">
+          
+          <div class="card-rap-header">
+            <div>
+              <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($r['titulo']) ?></div>
+              <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
+                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['nivel_orden']] ?? limpiar($r['nivel_nombre']) ?>
+              </div>
+            </div>
+            <div>
+              <?php if ($esCompleto): ?>
+                <span class="badge-completitud si" style="padding:4px 8px; font-size:0.7rem;">Completo</span>
+              <?php else: ?>
+                <span class="badge-completitud no" style="padding:4px 8px; font-size:0.7rem;">Incompleto</span>
+              <?php endif; ?>
+            </div>
+          </div>
 
-                  <span class="comp-badge <?= $cPron ? 'complete' : 'incomplete' ?>">
-                    <i class="fas fa-<?= $cPron ? 'circle-check' : 'circle-xmark' ?>"></i>
-                    IPA: <?= (int)$r['total_pronunciacion'] ?>/<?= (int)$r['total_vocabulario'] ?>
-                  </span>
+          <div class="card-rap-body">
+            <div style="font-size:0.75rem; color:var(--texto-tenue); text-transform:uppercase; font-weight:700; margin-bottom:12px; letter-spacing:0.5px;">Componentes</div>
+            
+            <div class="btn-componente <?= $cVocab ? 'completado' : 'incompleto' ?>">
+              <div class="btn-componente-icono-izq">
+                <i class="fas fa-<?= $cVocab ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cVocab ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
+                <span>Vocabulario</span>
+              </div>
+              <div class="btn-componente-icono-der">
+                <?= (int)$r['total_vocabulario'] ?>
+              </div>
+            </div>
 
-                  <span class="comp-badge <?= $cEjerc ? 'complete' : 'incomplete' ?>">
-                    <i class="fas fa-<?= $cEjerc ? 'circle-check' : 'circle-xmark' ?>"></i>
-                    Ejercicios: <?= (int)$r['total_ejercicios'] ?>
-                  </span>
+            <div class="btn-componente <?= $cPron ? 'completado' : 'incompleto' ?>">
+              <div class="btn-componente-icono-izq">
+                <i class="fas fa-<?= $cPron ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cPron ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
+                <span>IPA (Pronunciación)</span>
+              </div>
+              <div class="btn-componente-icono-der">
+                <?= (int)$r['total_pronunciacion'] ?>/<?= (int)$r['total_vocabulario'] ?>
+              </div>
+            </div>
 
-                  <span class="comp-badge <?= $cDial ? 'complete' : 'incomplete' ?>">
-                    <i class="fas fa-<?= $cDial ? 'circle-check' : 'circle-xmark' ?>"></i>
-                    Diálogos: <?= (int)$r['total_dialogos'] ?>
-                  </span>
+            <div class="btn-componente <?= $cEjerc ? 'completado' : 'incompleto' ?>">
+              <div class="btn-componente-icono-izq">
+                <i class="fas fa-<?= $cEjerc ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cEjerc ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
+                <span>Ejercicios</span>
+              </div>
+              <div class="btn-componente-icono-der">
+                <?= (int)$r['total_ejercicios'] ?>
+              </div>
+            </div>
 
-                  <span class="comp-badge <?= $cQuiz ? 'complete' : 'incomplete' ?>">
-                    <i class="fas fa-<?= $cQuiz ? 'circle-check' : 'circle-xmark' ?>"></i>
-                    Quiz: <?= (int)$r['total_preguntas_quiz'] ?> preg.
-                  </span>
-                </div>
-              </td>
+            <div class="btn-componente <?= $cDial ? 'completado' : 'incompleto' ?>">
+              <div class="btn-componente-icono-izq">
+                <i class="fas fa-<?= $cDial ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cDial ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
+                <span>Diálogos</span>
+              </div>
+              <div class="btn-componente-icono-der">
+                <?= (int)$r['total_dialogos'] ?>
+              </div>
+            </div>
 
-              <td style="text-align:center;">
-                <?php if ($esCompleto): ?>
-                  <span class="badge-completitud si">Completo</span>
-                <?php else: ?>
-                  <span class="badge-completitud no">Incompleto</span>
-                <?php endif; ?>
-              </td>
+            <div class="btn-componente <?= $cQuiz ? 'completado' : 'incompleto' ?>">
+              <div class="btn-componente-icono-izq">
+                <i class="fas fa-<?= $cQuiz ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cQuiz ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
+                <span>Quiz</span>
+              </div>
+              <div class="btn-componente-icono-der">
+                <?= (int)$r['total_preguntas_quiz'] ?> preg.
+              </div>
+            </div>
+          </div>
 
-              <td style="text-align:center;">
-                <?php if ($r['rap_activo']): ?>
-                  <span class="badge-activo">Publicado</span>
-                <?php else: ?>
-                  <span class="badge-inactivo">Inactivo</span>
-                <?php endif; ?>
-              </td>
-
-              <td style="text-align:center;">
-                <a href="<?= PROYECTO_PATH ?>/aprendiz/rap?id=<?= urlencode($r['id']) ?>" 
-                   class="btn btn-azul" 
-                   style="padding:8px 12px; font-size:0.75rem; border:none; display:inline-flex; align-items:center; gap:6px; text-decoration:none;"
-                   id="btn-preview-rap-<?= $r['nivel_orden'] ?>"
-                   title="Previsualizar la vista del aprendiz">
-                  <i class="fas fa-eye"></i> Prever
-                </a>
-              </td>
-            </tr>
-            <?php endforeach; ?>
-          </tbody>
-        </table>
+          <div class="card-rap-footer">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <?php if ($r['rap_activo']): ?>
+                <span class="badge-activo" style="padding:4px 8px; font-size:0.7rem;"><i class="fas fa-eye"></i> Publicado</span>
+              <?php else: ?>
+                <span class="badge-inactivo" style="padding:4px 8px; font-size:0.7rem;"><i class="fas fa-eye-slash"></i> Inactivo</span>
+              <?php endif; ?>
+            </div>
+            
+            <div style="display:flex; gap:8px;">
+              <a href="<?= PROYECTO_PATH ?>/aprendiz/rap?id=<?= urlencode($r['id']) ?>" 
+                 class="btn btn-azul" 
+                 style="padding:6px 12px; font-size:0.75rem; border:none; display:inline-flex; align-items:center; gap:6px; text-decoration:none;"
+                 id="btn-preview-rap-<?= $r['nivel_orden'] ?>"
+                 title="Previsualizar la vista exacta del aprendiz">
+                <i class="fas fa-desktop"></i> Prever
+              </a>
+            </div>
+          </div>
+        </div>
+        <?php endforeach; ?>
       </div>
 
     </div>
