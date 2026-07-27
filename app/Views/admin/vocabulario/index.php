@@ -245,12 +245,7 @@
             <h2 class="form-seccion-titulo" style="font-size: 1rem; margin-bottom: 16px;">Información Principal</h2>
 
             <div class="grupo-input">
-              <div class="d-flex" style="justify-content:space-between; align-items:center;">
-                <label class="label-input" for="termino_en">Término en Inglés <span class="text-rojo">*</span></label>
-                <button type="button" class="btn-premium-blanco" style="font-size:0.75rem; padding:4px 8px;" onclick="sugerirConIA()">
-                  <i class="fas fa-magic" style="color:var(--naranja);"></i> Sugerir con IA
-                </button>
-              </div>
+              <label class="label-input" for="termino_en">Término en Inglés <span class="text-rojo">*</span></label>
               <input type="text" name="termino_en" id="vocab-termino-en" class="input-base" required>
             </div>
 
@@ -404,52 +399,6 @@
     }
 
     document.getElementById('modal-vocab').classList.add('visible');
-  }
-
-  // --- Lógica de Sugerencia con IA ---
-  async function sugerirConIA() {
-    const terminoEn = document.getElementById('vocab-termino-en').value.trim();
-    if (!terminoEn) {
-      alert("Por favor, ingresa el término en inglés primero.");
-      return;
-    }
-
-    const btn = event.currentTarget;
-    const oldHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sugiriendo...';
-    btn.disabled = true;
-
-    try {
-      const formData = new FormData();
-      formData.append('termino', terminoEn);
-
-      const response = await fetch("<?= PROYECTO_PATH ?>/admin/vocabulario/sugerir", {
-        method: 'POST',
-        body: formData
-      });
-
-      const text = await response.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch(e) {
-        throw new Error("Respuesta inválida del servidor");
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      if (data.traduccion) document.getElementById('vocab-termino-es').value = data.traduccion;
-      if (data.ipa) document.getElementById('vocab-ipa').value = data.ipa;
-      if (data.oracion) document.getElementById('vocab-oracion').value = data.oracion;
-      
-    } catch (error) {
-      alert("Error al sugerir con IA: " + error.message);
-    } finally {
-      btn.innerHTML = oldHtml;
-      btn.disabled = false;
-    }
   }
 
   // --- Lógica de TTS (Text-to-Speech) ---
