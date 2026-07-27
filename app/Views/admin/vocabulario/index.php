@@ -131,6 +131,10 @@
                       <button type="button" class="audio-btn" onclick="new Audio('<?= PROYECTO_PATH ?><?= $v['audio_url'] ?>').play()" title="Escuchar audio">
                         <i class="fas fa-volume-up"></i>
                       </button>
+                    <?php else: ?>
+                      <button type="button" class="audio-btn" onclick="speakTerm('<?= addslashes(limpiar($v['termino_en'])) ?>')" title="Escuchar pronunciación (TTS)">
+                        <i class="fas fa-volume-up" style="color:var(--naranja);"></i>
+                      </button>
                     <?php endif; ?>
                   </div>
                 </td>
@@ -241,7 +245,12 @@
             <h2 class="form-seccion-titulo" style="font-size: 1rem; margin-bottom: 16px;">Información Principal</h2>
 
             <div class="grupo-input">
-              <label class="label-input" for="termino_en">Término en Inglés <span class="text-rojo">*</span></label>
+              <div class="d-flex" style="justify-content:space-between; align-items:center;">
+                <label class="label-input" for="termino_en">Término en Inglés <span class="text-rojo">*</span></label>
+                <button type="button" class="btn-premium-blanco" style="font-size:0.75rem; padding:4px 8px;" onclick="sugerirConIA()">
+                  <i class="fas fa-magic" style="color:var(--naranja);"></i> Sugerir con IA
+                </button>
+              </div>
               <input type="text" name="termino_en" id="vocab-termino-en" class="input-base" required>
             </div>
 
@@ -265,9 +274,13 @@
           <div class="tarjeta tarjeta-margen" style="padding: 20px;">
             <h2 class="form-seccion-titulo" style="font-size: 1rem; margin-bottom: 16px;">Contenido y Clasificación</h2>
 
-            <!-- Audio -->
             <div class="grupo-input">
-              <label class="label-input" for="audio">Archivo de Audio</label>
+              <div class="d-flex" style="justify-content:space-between; align-items:center;">
+                <label class="label-input" for="audio">Archivo de Audio (Máx 2MB)</label>
+                <button type="button" class="btn-premium-blanco" style="font-size:0.75rem; padding:4px 8px;" onclick="probarTTS()">
+                  <i class="fas fa-volume-up" style="color:var(--naranja);"></i> Probar TTS
+                </button>
+              </div>
               <div id="vocab-audio-preview-container" style="display: none; margin-bottom: 12px;">
                 <div class="vocab-audio-preview" style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px;">
                   <audio controls class="vocab-audio-player" id="vocab-audio-player" style="height: 30px; width: 100%;">
@@ -391,6 +404,79 @@
     }
 
     document.getElementById('modal-vocab').classList.add('visible');
+  }
+
+  // --- Lógica de Sugerencia con IA ---
+  async function sugerirConIA() {
+    const terminoEn = document.getElementById('vocab-termino-en').value.trim();
+    if (!terminoEn) {
+      alert("Por favor, ingresa el término en inglés primero.");
+      return;
+    }
+
+    const btn = event.currentTarget;
+    const oldHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sugiriendo...';
+    btn.disabled = true;
+
+    try {
+      const formData = new FormData();
+      formData.append('termino', terminoEn);
+
+      const response = await fetch("<?= PROYECTO_PATH ?>/admin/vocabulario/sugerir", {
+        method: 'POST',
+        body: formData
+      });
+
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch(e) {
+        throw new Error("Respuesta inválida del servidor");
+      }
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (data.traduccion) document.getElementById('vocab-termino-es').value = data.traduccion;
+      if (data.ipa) document.getElementById('vocab-ipa').value = data.ipa;
+      if (data.oracion) document.getElementById('vocab-oracion').value = data.oracion;
+      
+    } catch (error) {
+      alert("Error al sugerir con IA: " + error.message);
+    } finally {
+      btn.innerHTML = oldHtml;
+      btn.disabled = false;
+    }
+  }
+
+  // --- Lógica de TTS (Text-to-Speech) ---
+  function speakTerm(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      let utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      
+      let voices = window.speechSynthesis.getVoices();
+      let enVoice = voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert("Tu navegador no soporta síntesis de voz (TTS).");
+    }
+  }
+
+  function probarTTS() {
+    const terminoEn = document.getElementById('vocab-termino-en').value.trim();
+    if (!terminoEn) {
+      alert("Por favor, ingresa un término en inglés para probar el TTS.");
+      return;
+    }
+    speakTerm(terminoEn);
   }
 </script>
 </body>

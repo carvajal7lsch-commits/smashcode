@@ -159,6 +159,12 @@ class VocabularioController extends Controller {
             mkdir($directorioBase, 0777, true);
         }
 
+        // Validación de tamaño (Límite 2MB según HU19)
+        $maxSize = 2 * 1024 * 1024; // 2MB
+        if ($archivo['size'] > $maxSize) {
+            return null; // En una mejora real se lanzaría una excepción o se pasaría el error
+        }
+
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
         // Simple validación de seguridad
         $extensionesPermitidas = ['jpg', 'jpeg', 'png', 'svg', 'mp3', 'ogg', 'wav'];
