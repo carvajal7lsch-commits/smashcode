@@ -55,7 +55,7 @@
     <li><span class="nav-grupo-titulo">Plataforma</span></li>
     <li>
       <a href="<?= PROYECTO_PATH ?>/admin/usuarios" class="nav-enlace <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/usuarios') !== false ? 'activo' : '' ?>">
-        <i class="fas fa-users nav-icono"></i><span>Usuarios</span>
+        <i class="fas fa-users-gear nav-icono"></i><span>Gestión de Usuarios</span>
         <span class="nav-badge"><?= $totalUsuarios ?? '' ?></span>
       </a>
     </li>
@@ -77,11 +77,6 @@
     <li>
       <a href="<?= PROYECTO_PATH ?>/admin/catalogos" class="nav-enlace <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/catalogos') !== false ? 'activo' : '' ?>">
         <i class="fas fa-tags nav-icono"></i><span>Catálogos</span>
-      </a>
-    </li>
-    <li>
-      <a href="<?= PROYECTO_PATH ?>/admin/quizzes" class="nav-enlace">
-        <i class="fas fa-question-circle nav-icono"></i><span>Quizzes</span>
       </a>
     </li>
 

@@ -10,20 +10,16 @@ use PDO;
  */
 class CategoriaVocabulario extends Model {
 
-    public function obtenerTodas(bool $soloActivas = false): array {
+    public function obtenerTodas(): array {
         $pdo  = self::obtenerConexion();
-        $sql = 'SELECT id, nombre, activo FROM categoria_vocabulario';
-        if ($soloActivas) {
-            $sql .= ' WHERE activo = 1';
-        }
-        $sql .= ' ORDER BY nombre';
+        $sql = 'SELECT id, nombre FROM categoria_vocabulario ORDER BY nombre';
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll();
     }
 
     public function obtenerPorId(string $id): ?array {
         $pdo  = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT id, nombre, activo FROM categoria_vocabulario WHERE id = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, nombre FROM categoria_vocabulario WHERE id = ? LIMIT 1');
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
     }

@@ -33,23 +33,10 @@
           <i class="fas fa-book-open nav-icono"></i>
           <span>Aprender</span>
         </a>
-      </li>
       <li>
         <a href="<?= PROYECTO_PATH ?>/aprendiz/vocabulario" class="nav-enlace <?= strpos($current_uri, '/aprendiz/vocabulario') !== false ? 'activo' : '' ?>">
           <i class="fas fa-spell-check nav-icono"></i>
-          <span>Vocabulario</span>
-        </a>
-      </li>
-      <li>
-        <a href="<?= PROYECTO_PATH ?>/aprendiz/dialogos" class="nav-enlace <?= strpos($current_uri, '/aprendiz/dialogos') !== false ? 'activo' : '' ?>">
-          <i class="fas fa-comments nav-icono"></i>
-          <span>Diálogos</span>
-        </a>
-      </li>
-      <li>
-        <a href="<?= PROYECTO_PATH ?>/aprendiz/ejercicios" class="nav-enlace <?= strpos($current_uri, '/aprendiz/ejercicios') !== false ? 'activo' : '' ?>">
-          <i class="fas fa-dumbbell nav-icono"></i>
-          <span>Ejercicios</span>
+          <span>Mi Vocabulario</span>
         </a>
       </li>
       <li>

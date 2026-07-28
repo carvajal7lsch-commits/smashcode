@@ -45,8 +45,6 @@
       <li><a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="nav-enlace"><i class="fas fa-clipboard-list nav-icono"></i><span>Resultados Quiz</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/niveles" class="nav-enlace activo" aria-current="page"><i class="fas fa-layer-group nav-icono"></i><span>Niveles</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/raps" class="nav-enlace"><i class="fas fa-file-lines nav-icono"></i><span>RAPs</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/vocabulario" class="nav-enlace"><i class="fas fa-spell-check nav-icono"></i><span>Vocabulario</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/quizzes" class="nav-enlace"><i class="fas fa-question-circle nav-icono"></i><span>Quizzes</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/exportar" class="nav-enlace"><i class="fas fa-file-csv nav-icono"></i><span>Exportar CSV</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/logout" class="nav-enlace" style="color:var(--rojo);"><i class="fas fa-right-from-bracket nav-icono"></i><span>Cerrar Sesión</span></a></li>
     </ul>
@@ -116,9 +114,6 @@
               </span>
             </div>
             <div class="card-nivel-acciones">
-              <a href="<?= PROYECTO_PATH ?>/instructor/niveles/editar?id=<?= urlencode($n['id']) ?>" class="btn-editar-nivel btn-verde">
-                <i class="fas fa-pen-to-square"></i> Editar
-              </a>
               <?php if ($n['rap_id']): ?>
                 <a href="<?= PROYECTO_PATH ?>/aprendiz/rap?id=<?= urlencode($n['rap_id']) ?>" 
                    class="btn-prever-nivel btn-azul" 
@@ -126,14 +121,6 @@
                   <i class="fas fa-eye-low-vision"></i> Prever
                 </a>
               <?php endif; ?>
-              <form method="POST" action="<?= PROYECTO_PATH ?>/instructor/niveles/toggle" style="margin:0; display:flex;">
-                <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
-                <input type="hidden" name="id"         value="<?= limpiar($n['id']) ?>">
-                <button type="submit" class="btn-toggle-nivel <?= $n['activo'] ? 'btn-suspender' : 'btn-activar' ?>"
-                        onclick="return confirm('<?= $n['activo'] ? '¿Desactivar este nivel?' : '¿Activar este nivel?' ?>')">
-                  <i class="fas fa-<?= $n['activo'] ? 'eye-slash' : 'eye' ?>"></i>
-                </button>
-              </form>
             </div>
           </div>
         </div>
@@ -143,8 +130,8 @@
       <div class="nota-informativa-admin">
         <i class="fas fa-circle-info nota-informativa-icono"></i>
         <p class="nota-informativa-texto">
-          Los cambios en los niveles se reflejan inmediatamente en el mapa de aprendizaje de los aprendices.
-          No es posible crear ni eliminar niveles; solo editar sus atributos.
+          Este panel muestra los niveles activos en la plataforma.
+          No tienes permisos para crear, editar ni eliminar contenido (solo consulta de RAPs).
         </p>
       </div>
 

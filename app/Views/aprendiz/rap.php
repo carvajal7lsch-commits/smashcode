@@ -195,7 +195,9 @@
           <div id="exercises-carousel">
             <?php foreach ($ejercicios as $idx => $ej): ?>
               <div class="exercise-box" id="exercise-box-<?= $idx ?>" data-type="<?= $ej['tipo'] ?>" data-id="<?= $ej['id'] ?>">
-                <div class="exercise-title"><?= limpiar($ej['enunciado']) ?></div>
+                <?php if ($ej['tipo'] !== 'completar_frase'): ?>
+                  <div class="exercise-title"><?= limpiar($ej['enunciado']) ?></div>
+                <?php endif; ?>
                 
                 <div class="exercise-content">
                   <?php if ($ej['tipo'] === 'seleccion_multiple' || $ej['tipo'] === 'role_play'): ?>
@@ -219,14 +221,21 @@
                           if ($opc['es_correcta']) $correctWord = $opc['texto'];
                           else $wrongWords[] = $opc['texto'];
                       }
-                      // Reemplazar la palabra correcta por un blank drop
-                      $enunciadoFormateado = str_replace($correctWord, '<span class="blank-drop" id="blank-drop-'.$idx.'">???</span>', $ej['enunciado']);
+                      
+                      // Reemplazar el marcador "___" por el contenedor en blanco. 
+                      // Si no hay "___", buscar la palabra correcta exacta (palabra completa)
+                      $enunciadoFormateado = $ej['enunciado'];
+                      if (strpos($enunciadoFormateado, '___') !== false) {
+                          $enunciadoFormateado = preg_replace('/_{3,}/', '<span class="blank-drop" id="blank-drop-'.$idx.'">???</span>', $enunciadoFormateado, 1);
+                      } else {
+                          $enunciadoFormateado = preg_replace('/\b' . preg_quote($correctWord, '/') . '\b/i', '<span class="blank-drop" id="blank-drop-'.$idx.'">???</span>', $enunciadoFormateado, 1);
+                      }
                       
                       // Unir chips y mezclar
                       $chips = array_merge([$correctWord], $wrongWords);
                       shuffle($chips);
                     ?>
-                    <div class="blank-sentence" id="blank-sentence-<?= $idx ?>" data-correct="<?= $correctWord ?>" data-retro="¡Excelente frase completa!">
+                    <div class="blank-sentence" id="blank-sentence-<?= $idx ?>" data-correct="<?= htmlspecialchars($correctWord, ENT_QUOTES) ?>" data-retro="¡Excelente! Frase completada correctamente.">
                       <?= $enunciadoFormateado ?>
                     </div>
                     <div class="word-bank">
@@ -236,32 +245,34 @@
                     </div>
 
                   <?php elseif ($ej['tipo'] === 'arrastrar_soltar'): ?>
-                    <!-- Relacionar términos en columnas -->
-                    <div class="columns-grid">
-                      <div class="matching-col">
-                        <?php 
-                          // Opciones contienen parejas separadas por "="
-                          $pairs = [];
-                          foreach ($ej['opciones'] as $opc) {
-                              $parts = explode('=', $opc['texto']);
-                              if (count($parts) === 2) {
-                                  $pairs[] = ['en' => trim($parts[0]), 'es' => trim($parts[1]), 'opc_id' => $opc['id'], 'retro' => $opc['retroalimentacion']];
-                              }
+                    <?php 
+                      // Parsear parejas separadas por "="
+                      $pairs = [];
+                      foreach ($ej['opciones'] as $opc) {
+                          $parts = explode('=', $opc['texto']);
+                          if (count($parts) >= 2) {
+                              $enPart = trim($parts[0]);
+                              $esPart = trim(implode('=', array_slice($parts, 1))); // soporta '=' en el texto español
+                              $pairs[] = ['en' => $enPart, 'es' => $esPart];
                           }
-                          $shuffledEn = array_column($pairs, 'en');
-                          shuffle($shuffledEn);
-                          foreach ($shuffledEn as $eText):
-                        ?>
-                          <div class="matching-card" onclick="selectColumnMatch('<?= $idx ?>', 'en', '<?= limpiar($eText) ?>', this)"><?= limpiar($eText) ?></div>
+                      }
+                      $shuffledEn = array_column($pairs, 'en');
+                      shuffle($shuffledEn);
+                      $shuffledEs = array_column($pairs, 'es');
+                      shuffle($shuffledEs);
+                      // Serializar los pares correctos como JSON para el JS
+                      $pairsJson = htmlspecialchars(json_encode($pairs), ENT_QUOTES);
+                    ?>
+                    <!-- Relacionar términos en columnas -->
+                    <div class="columns-grid" data-pairs="<?= $pairsJson ?>" data-total-pairs="<?= count($pairs) ?>">
+                      <div class="matching-col">
+                        <?php foreach ($shuffledEn as $eText): ?>
+                          <div class="matching-card" data-col="en" data-value="<?= htmlspecialchars($eText, ENT_QUOTES) ?>" data-exidx="<?= $idx ?>" onclick="selectColumnMatch(this.dataset.exidx, this.dataset.col, this.dataset.value, this)"><?= limpiar($eText) ?></div>
                         <?php endforeach; ?>
                       </div>
                       <div class="matching-col">
-                        <?php 
-                          $shuffledEs = array_column($pairs, 'es');
-                          shuffle($shuffledEs);
-                          foreach ($shuffledEs as $sText):
-                        ?>
-                          <div class="matching-card" onclick="selectColumnMatch('<?= $idx ?>', 'es', '<?= limpiar($sText) ?>', this)"><?= limpiar($sText) ?></div>
+                        <?php foreach ($shuffledEs as $sText): ?>
+                          <div class="matching-card" data-col="es" data-value="<?= htmlspecialchars($sText, ENT_QUOTES) ?>" data-exidx="<?= $idx ?>" onclick="selectColumnMatch(this.dataset.exidx, this.dataset.col, this.dataset.value, this)"><?= limpiar($sText) ?></div>
                         <?php endforeach; ?>
                       </div>
                     </div>
@@ -818,75 +829,65 @@
     };
   }
 
-  // Column Match handler
   function selectColumnMatch(exIdx, column, text, node) {
     let box = document.getElementById('exercise-box-' + exIdx);
-    
+
+    // No permitir seleccionar tarjetas ya emparejadas
+    if (node.classList.contains('correct')) return;
+
     if (column === 'en') {
       box.querySelectorAll('.matching-col:first-child .matching-card').forEach(n => n.classList.remove('selected'));
       selectedColumnText.en = text;
       selectedColumnText.enNode = node;
-      selectedColumnText.enNode.classList.add('selected');
+      node.classList.add('selected');
     } else {
       box.querySelectorAll('.matching-col:last-child .matching-card').forEach(n => n.classList.remove('selected'));
       selectedColumnText.es = text;
       selectedColumnText.esNode = node;
-      selectedColumnText.esNode.classList.add('selected');
+      node.classList.add('selected');
     }
 
-    // Si ambos están seleccionados, validar inmediatamente
+    // Si ambos seleccionados, verificar contra los pares guardados en data-pairs
     if (selectedColumnText.en && selectedColumnText.es) {
-      // Validar si es correcta la relación
-      // En el seeder pusimos las opciones como: "Good morning = Buenos días"
-      let correctMatch = false;
-      let matchingOption = null;
-      
-      // Buscar en las opciones del ejercicio actual
-      let optNodes = box.querySelectorAll('[data-correct]'); // Pero no tenemos las opciones completas aquí de forma directa en DOM, las buscamos por valor
-      // Vamos a verificar
-      let fullText = `${selectedColumnText.en} = ${selectedColumnText.es}`;
-      
-      // AJAX/JS verifica: en el seeder la estructura es "Good morning = Buenos días"
-      // Así que si la cadena de English es igual al inglés y Spanish es igual a español de la opción
-      correctMatch = (selectedColumnText.en.toLowerCase() === 'good morning' && selectedColumnText.es.toLowerCase() === 'buenos días') ||
-                     (selectedColumnText.en.toLowerCase() === 'last name' && selectedColumnText.es.toLowerCase() === 'apellido') ||
-                     (selectedColumnText.en.toLowerCase() === 'first name' && selectedColumnText.es.toLowerCase() === 'primer nombre');
+      let grid = box.querySelector('.columns-grid');
+      let pairs = JSON.parse(grid.dataset.pairs || '[]');
+      let totalPairs = parseInt(grid.dataset.totalPairs || '0');
+
+      // Comparar ignorando mayúsculas/minúsculas y espacios extras
+      let selEn = selectedColumnText.en.trim().toLowerCase();
+      let selEs = selectedColumnText.es.trim().toLowerCase();
+      let correctMatch = pairs.some(p =>
+        p.en.trim().toLowerCase() === selEn && p.es.trim().toLowerCase() === selEs
+      );
+
+      let nEn = selectedColumnText.enNode;
+      let nEs = selectedColumnText.esNode;
 
       if (correctMatch) {
-        selectedColumnText.enNode.className = 'matching-card correct';
-        selectedColumnText.esNode.className = 'matching-card correct';
-        
+        nEn.className = 'matching-card correct';
+        nEs.className = 'matching-card correct';
         speakText(selectedColumnText.en);
-
-        selectedColumnText.en = '';
-        selectedColumnText.es = '';
-        selectedColumnText.enNode = null;
-        selectedColumnText.esNode = null;
-
-        // Comprobar si completó todas
-        let totalCorrects = box.querySelectorAll('.matching-card.correct').length;
-        if (totalCorrects === 6) {
-          answersObj[exIdx] = {
-            isCorrect: true,
-            retro: '¡Relaciones de columnas completas!',
-            text: 'Matches completed'
-          };
-          // Forzar banner y validar
-          validateExercise(exIdx);
-        }
       } else {
-        let nEn = selectedColumnText.enNode;
-        let nEs = selectedColumnText.esNode;
         nEn.classList.add('incorrect');
         nEs.classList.add('incorrect');
         setTimeout(() => {
           nEn.classList.remove('selected', 'incorrect');
           nEs.classList.remove('selected', 'incorrect');
         }, 800);
-        selectedColumnText.en = '';
-        selectedColumnText.es = '';
-        selectedColumnText.enNode = null;
-        selectedColumnText.esNode = null;
+      }
+
+      // Limpiar selección
+      selectedColumnText = { en: '', es: '', enNode: null, esNode: null };
+
+      // Comprobar si se completaron TODOS los pares
+      let totalCorrects = box.querySelectorAll('.matching-card.correct').length;
+      if (totalCorrects === totalPairs * 2) {
+        answersObj[exIdx] = {
+          isCorrect: true,
+          retro: '¡Excelente! Emparejaste todos los términos correctamente.',
+          text: 'All matches completed'
+        };
+        validateExercise(exIdx);
       }
     }
   }

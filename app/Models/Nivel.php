@@ -18,11 +18,11 @@ class Nivel extends Model {
         $pdo = self::obtenerConexion();
         $stmt = $pdo->query(
             'SELECT n.id, n.nombre, n.descripcion, n.orden, n.activo, n.umbral_desbloqueo,
-                    r.id AS rap_id, r.titulo AS rap_titulo
+                    r.id AS rap_id, r.titulo AS rap_titulo, r.orden AS rap_orden
              FROM nivel n
              JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
              WHERE n.activo = 1
-             ORDER BY n.orden'
+             ORDER BY n.orden, r.orden'
         );
         return $stmt->fetchAll();
     }

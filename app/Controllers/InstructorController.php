@@ -44,6 +44,29 @@ class InstructorController extends Controller {
         ]);
     }
 
+    /**
+     * Muestra el panel "Mis Aprendices" con opciones de filtrado (HU23).
+     */
+    public function aprendices(): void {
+        $nivel_id = $_GET['nivel_id'] ?? '';
+        $rap_id   = $_GET['rap_id'] ?? '';
+        $estado   = $_GET['estado'] ?? '';
+
+        // Obtenemos niveles y raps para los dropdowns
+        $nivelesConRaps = $this->nivelModel->obtenerNivelesConRaps();
+        
+        // Obtenemos los aprendices filtrados
+        $aprendices = $this->instructorModel->obtenerListadoAprendicesFiltrado($nivel_id, $rap_id, $estado);
+
+        $this->render('instructor/aprendices', [
+            'nivelesConRaps' => $nivelesConRaps,
+            'aprendices'     => $aprendices,
+            'filtroNivel'    => $nivel_id,
+            'filtroRap'      => $rap_id,
+            'filtroEstado'   => $estado
+        ]);
+    }
+
     /* ========================================================
      * HU10 — Gestión de Niveles (6 niveles fijos MCER)
      * ======================================================== */
@@ -59,70 +82,7 @@ class InstructorController extends Controller {
         $this->render('instructor/niveles', compact('niveles', 'exito', 'error'));
     }
 
-    /**
-     * Muestra el formulario de edición de un nivel.
-     */
-    public function editarNivel(): void {
-        $id    = limpiar($_GET['id'] ?? '');
-        $nivel = $this->nivelModel->obtenerPorId($id);
 
-        if (!$nivel) {
-            $this->redirect('instructor/niveles?error=' . urlencode('Nivel no encontrado.'));
-        }
-
-        $this->render('instructor/nivel_form', compact('nivel'));
-    }
-
-    /**
-     * Procesa la actualización de un nivel.
-     */
-    public function actualizarNivel(): void {
-        if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
-            $this->redirect('instructor/niveles');
-        }
-
-        $id          = limpiar($_POST['id'] ?? '');
-        $nombre      = limpiar($_POST['nombre'] ?? '');
-        $descripcion = limpiar($_POST['descripcion'] ?? '');
-        $imagenUrl   = limpiar($_POST['imagen_url'] ?? '') ?: null;
-        $umbral      = (float)($_POST['umbral_desbloqueo'] ?? 80);
-        $activo      = isset($_POST['activo']) ? 1 : 0;
-
-        if (empty($id) || empty($nombre)) {
-            $this->redirect('instructor/niveles?error=' . urlencode('El nombre del nivel es obligatorio.'));
-            return;
-        }
-
-        $nivel = $this->nivelModel->obtenerPorId($id);
-        if (!$nivel) {
-            $this->redirect('instructor/niveles?error=' . urlencode('Nivel no encontrado.'));
-            return;
-        }
-
-        // El nivel 1 (orden=1) siempre tiene umbral 0
-        if ((int)$nivel['orden'] === 1) {
-            $umbral = 0.00;
-        }
-
-        $this->nivelModel->actualizar($id, $nombre, $descripcion, $imagenUrl, $umbral, $activo);
-        $this->redirect('instructor/niveles?exito=actualizado');
-    }
-
-    /**
-     * Alterna el estado activo/inactivo de un nivel.
-     */
-    public function toggleNivel(): void {
-        if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
-            $this->redirect('instructor/niveles');
-        }
-
-        $id = limpiar($_POST['id'] ?? '');
-        if (!empty($id)) {
-            $this->nivelModel->toggleActivo($id);
-        }
-
-        $this->redirect('instructor/niveles?exito=estado');
-    }
 
     /**
      * Muestra el panel de RAPs para el Instructor (Read-Only) con el estado de sus 5 componentes (HU03).

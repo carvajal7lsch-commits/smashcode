@@ -15,7 +15,7 @@ abstract class Model {
     /**
      * Retorna una conexión PDO singleton configurada con consultas preparadas reales.
      */
-    protected static function obtenerConexion(): PDO {
+    public static function obtenerConexion(): PDO {
         if (self::$conexion === null) {
             // Cargar credenciales si no han sido definidas aún
             if (!defined('DB_HOST')) {

@@ -86,16 +86,6 @@
         </a>
       </li>
       <li>
-        <a href="<?= PROYECTO_PATH ?>/instructor/vocabulario" class="nav-enlace">
-          <i class="fas fa-spell-check nav-icono"></i><span>Vocabulario</span>
-        </a>
-      </li>
-      <li>
-        <a href="<?= PROYECTO_PATH ?>/instructor/quizzes" class="nav-enlace">
-          <i class="fas fa-question-circle nav-icono"></i><span>Quizzes</span>
-        </a>
-      </li>
-      <li>
         <a href="<?= PROYECTO_PATH ?>/instructor/exportar" class="nav-enlace">
           <i class="fas fa-file-csv nav-icono"></i><span>Exportar CSV</span>
         </a>
@@ -130,22 +120,22 @@
           <div class="stat-icono stat-icono-inst-azul">
             <i class="fas fa-users"></i>
           </div>
-          <span class="stat-etiqueta">Total Aprendices</span>
           <span class="stat-valor"><?= $totalAprendices ?></span>
+          <span class="stat-etiqueta">Total Aprendices</span>
         </div>
         <div class="tarjeta tarjeta-stat">
           <div class="stat-icono stat-icono-inst-verde">
             <i class="fas fa-trophy"></i>
           </div>
-          <span class="stat-etiqueta">Completaron RAP</span>
           <span class="stat-valor"><?= $completaronAlgo ?></span>
+          <span class="stat-etiqueta">Completaron RAP</span>
         </div>
         <div class="tarjeta tarjeta-stat">
           <div class="stat-icono stat-icono-inst-naranja">
             <i class="fas fa-star"></i>
           </div>
-          <span class="stat-etiqueta">Promedio Quiz</span>
           <span class="stat-valor"><?= number_format($promedioQuiz, 1) ?>%</span>
+          <span class="stat-etiqueta">Promedio Quiz</span>
         </div>
       </div>
 

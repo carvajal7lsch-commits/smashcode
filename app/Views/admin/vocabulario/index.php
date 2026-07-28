@@ -39,23 +39,28 @@
     </header>
 
     <div class="pagina-contenido">
-      <div class="encabezado-seccion-admin">
-        <div class="d-flex align-items-center" style="gap:12px;">
-          <a href="<?= PROYECTO_PATH ?>/admin/raps" class="btn btn-gris" style="padding:8px 12px;">
-            <i class="fas fa-arrow-left"></i>
+      <?php
+      $ordenRap = $rap['orden'] ?? 1;
+      $tituloRap = isset($rap['titulo']) ? str_replace(['ÔÇö', 'Â', 'Basico'], ['—', '', 'Básico'], $rap['titulo']) : "RAP $ordenRap";
+      ?>
+
+      <div class="encabezado-seccion-admin" style="margin-bottom: 24px;">
+        <div style="display: flex !important; align-items: center; gap: 14px;">
+          <a href="<?= PROYECTO_PATH ?>/admin/raps" class="btn btn-gris" style="width:40px; height:40px; border-radius:50%; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;" title="Volver a RAPs">
+            <i class="fas fa-arrow-left" style="font-size:1rem;"></i>
           </a>
           <div>
-            <h1 class="pagina-titulo">
-              <i class="fas fa-book-medical header-titulo-icono"></i>
-              Vocabulario: <?= $rap ? limpiar($rap['titulo']) : 'RAP Desconocido' ?>
+            <h1 class="pagina-titulo" style="margin:0; font-size:1.6rem; font-weight:800; color:var(--texto-principal); letter-spacing:-0.5px; display:flex; align-items:center; gap:10px;">
+              <i class="fas fa-book-medical" style="color:var(--verde); font-size:1.3rem;"></i>
+              Vocabulario: <?= limpiar($tituloRap) ?>
             </h1>
-            <p class="desc-seccion-admin">
+            <p class="desc-seccion-admin" style="margin:4px 0 0 0; font-size:0.88rem; color:var(--texto-secundario); font-weight:500;">
               Gestiona los términos médicos de este RAP.
             </p>
           </div>
         </div>
         <div>
-          <button type="button" onclick="abrirModalVocabulario()" class="btn btn-verde">
+          <button type="button" onclick="abrirModalVocabulario()" class="btn btn-verde" style="padding:10px 18px; font-weight:700;">
             <i class="fas fa-plus"></i> Añadir Término
           </button>
         </div>
@@ -130,6 +135,10 @@
                     <?php if ($v['audio_url']): ?>
                       <button type="button" class="audio-btn" onclick="new Audio('<?= PROYECTO_PATH ?><?= $v['audio_url'] ?>').play()" title="Escuchar audio">
                         <i class="fas fa-volume-up"></i>
+                      </button>
+                    <?php else: ?>
+                      <button type="button" class="audio-btn" onclick="speakTerm('<?= addslashes(limpiar($v['termino_en'])) ?>')" title="Escuchar pronunciación (TTS)">
+                        <i class="fas fa-volume-up" style="color:var(--naranja);"></i>
                       </button>
                     <?php endif; ?>
                   </div>
@@ -265,9 +274,13 @@
           <div class="tarjeta tarjeta-margen" style="padding: 20px;">
             <h2 class="form-seccion-titulo" style="font-size: 1rem; margin-bottom: 16px;">Contenido y Clasificación</h2>
 
-            <!-- Audio -->
             <div class="grupo-input">
-              <label class="label-input" for="audio">Archivo de Audio</label>
+              <div class="d-flex" style="justify-content:space-between; align-items:center;">
+                <label class="label-input" for="audio">Archivo de Audio (Máx 2MB)</label>
+                <button type="button" class="btn-premium-blanco" style="font-size:0.75rem; padding:4px 8px;" onclick="probarTTS()">
+                  <i class="fas fa-volume-up" style="color:var(--naranja);"></i> Probar TTS
+                </button>
+              </div>
               <div id="vocab-audio-preview-container" style="display: none; margin-bottom: 12px;">
                 <div class="vocab-audio-preview" style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px;">
                   <audio controls class="vocab-audio-player" id="vocab-audio-player" style="height: 30px; width: 100%;">
@@ -391,6 +404,33 @@
     }
 
     document.getElementById('modal-vocab').classList.add('visible');
+  }
+
+  // --- Lógica de TTS (Text-to-Speech) ---
+  function speakTerm(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      let utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      
+      let voices = window.speechSynthesis.getVoices();
+      let enVoice = voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert("Tu navegador no soporta síntesis de voz (TTS).");
+    }
+  }
+
+  function probarTTS() {
+    const terminoEn = document.getElementById('vocab-termino-en').value.trim();
+    if (!terminoEn) {
+      alert("Por favor, ingresa un término en inglés para probar el TTS.");
+      return;
+    }
+    speakTerm(terminoEn);
   }
 </script>
 </body>

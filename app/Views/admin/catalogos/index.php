@@ -1,17 +1,22 @@
+<?php
+$areas      = $areas ?? [];
+$categorias = $categorias ?? [];
+$exito      = $_GET['exito'] ?? '';
+$error      = $_GET['error'] ?? '';
+?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <title>Catálogos — SmashCode</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Catálogos — Admin SmashCode</title>
-  <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css">
+  <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/cruds.css?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script>(function(){var t=localStorage.getItem('smashcode_tema');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
 </head>
 <body>
 <div class="contenedor-app">
-
   <?php include dirname(__DIR__) . '/partials/sidebar.php'; ?>
 
   <main class="contenido-principal">
@@ -20,10 +25,9 @@
         <i class="fas fa-home breadcrumb-icon"></i>
         <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
         <i class="fas fa-chevron-right breadcrumb-separator"></i>
-        <span class="breadcrumb-link"><i class="fas fa-tags" style="color:var(--azul); margin-right:4px;"></i> Catálogos</span>
+        <span class="breadcrumb-link"><i class="fas fa-tags text-morado"></i> Catálogos</span>
       </div>
       <div class="admin-header-actions">
-        <!-- Botón cambio de tema -->
         <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
@@ -35,14 +39,15 @@
     </header>
 
     <div class="pagina-contenido">
-      <div class="alerta-margen">
-        <h1 class="pagina-titulo">
-          <i class="fas fa-tags header-titulo-icono"></i>
-          Catálogos de Vocabulario
-        </h1>
-        <p class="desc-seccion-admin">
-          Gestiona las áreas clínicas y categorías gramaticales utilizadas para organizar el vocabulario de los RAPs.
-        </p>
+      <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+        <div>
+          <h1 class="pagina-titulo" style="margin-bottom:4px;">
+            <i class="fas fa-tags text-morado"></i> Catálogos del Sistema
+          </h1>
+          <p style="color:var(--texto-tenue); font-size:var(--texto-sm); margin:0;">
+            Administra las áreas clínicas y categorías gramaticales.
+          </p>
+        </div>
       </div>
 
       <?php if ($exito): ?>
@@ -66,9 +71,9 @@
 
       <div class="grid-catalogos">
         <!-- Áreas Clínicas -->
-        <div class="tarjeta tarjeta-margen">
-          <div class="tarjeta-header">
-            <h2 class="tarjeta-titulo">
+        <div class="tarjeta" style="padding:0; overflow:hidden;">
+          <div class="tarjeta-header" style="padding:16px 20px; border-bottom:1px solid var(--borde-sutil);">
+            <h2 class="tarjeta-titulo" style="margin:0;">
               <i class="fas fa-hospital icono-seccion-admin"></i> Áreas Clínicas
             </h2>
             <button class="btn btn-verde btn-sm" onclick="abrirModalForm('area', '', '')">
@@ -85,11 +90,13 @@
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($areas as $area): ?>
-              <tr class="<?= !$area['activo'] ? 'disabled-toggle' : '' ?>">
+              <?php foreach ($areas as $area): 
+                $areaActiva = $area['activo'] ?? 1;
+              ?>
+              <tr class="<?= !$areaActiva ? 'disabled-toggle' : '' ?>">
                 <td class="font-weight-600 text-sm"><?= limpiar($area['nombre']) ?></td>
                 <td class="text-center">
-                  <?php if ($area['activo']): ?>
+                  <?php if ($areaActiva): ?>
                     <span class="badge-activo">Activa</span>
                   <?php else: ?>
                     <span class="badge-inactivo">Inactiva</span>
@@ -100,14 +107,16 @@
                     <button class="btn-accion btn-editar" onclick="abrirModalForm('area', '<?= $area['id'] ?>', '<?= limpiar(addslashes($area['nombre'])) ?>')">
                       <i class="fas fa-pen"></i>
                     </button>
+                    <?php if (isset($area['activo'])): ?>
                     <form method="POST" action="<?= PROYECTO_PATH ?>/admin/catalogos/toggle" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
                       <input type="hidden" name="tipo" value="area">
                       <input type="hidden" name="id" value="<?= $area['id'] ?>">
-                      <button type="submit" class="btn-accion <?= $area['activo'] ? 'btn-suspender' : 'btn-activar' ?>" title="<?= $area['activo'] ? 'Desactivar' : 'Activar' ?>">
-                        <i class="fas fa-<?= $area['activo'] ? 'ban' : 'check' ?>"></i>
+                      <button type="submit" class="btn-accion <?= $areaActiva ? 'btn-suspender' : 'btn-activar' ?>" title="<?= $areaActiva ? 'Desactivar' : 'Activar' ?>">
+                        <i class="fas fa-<?= $areaActiva ? 'ban' : 'check' ?>"></i>
                       </button>
                     </form>
+                    <?php endif; ?>
                   </div>
                 </td>
               </tr>
@@ -120,9 +129,9 @@
         </div>
 
         <!-- Categorías Gramaticales -->
-        <div class="tarjeta tarjeta-margen">
-          <div class="tarjeta-header">
-            <h2 class="tarjeta-titulo">
+        <div class="tarjeta" style="padding:0; overflow:hidden;">
+          <div class="tarjeta-header" style="padding:16px 20px; border-bottom:1px solid var(--borde-sutil);">
+            <h2 class="tarjeta-titulo" style="margin:0;">
               <i class="fas fa-spell-check text-morado"></i> Categorías
             </h2>
             <button class="btn btn-verde btn-sm" onclick="abrirModalForm('categoria', '', '')">
@@ -139,11 +148,13 @@
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($categorias as $cat): ?>
-              <tr class="<?= !$cat['activo'] ? 'disabled-toggle' : '' ?>">
+              <?php foreach ($categorias as $cat): 
+                $catActiva = $cat['activo'] ?? 1;
+              ?>
+              <tr class="<?= !$catActiva ? 'disabled-toggle' : '' ?>">
                 <td class="font-weight-600 text-sm"><?= limpiar($cat['nombre']) ?></td>
                 <td class="text-center">
-                  <?php if ($cat['activo']): ?>
+                  <?php if ($catActiva): ?>
                     <span class="badge-activo">Activa</span>
                   <?php else: ?>
                     <span class="badge-inactivo">Inactiva</span>
@@ -154,14 +165,16 @@
                     <button class="btn-accion btn-editar" onclick="abrirModalForm('categoria', '<?= $cat['id'] ?>', '<?= limpiar(addslashes($cat['nombre'])) ?>')">
                       <i class="fas fa-pen"></i>
                     </button>
+                    <?php if (isset($cat['activo'])): ?>
                     <form method="POST" action="<?= PROYECTO_PATH ?>/admin/catalogos/toggle" class="d-inline">
                       <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
                       <input type="hidden" name="tipo" value="categoria">
                       <input type="hidden" name="id" value="<?= $cat['id'] ?>">
-                      <button type="submit" class="btn-accion <?= $cat['activo'] ? 'btn-suspender' : 'btn-activar' ?>" title="<?= $cat['activo'] ? 'Desactivar' : 'Activar' ?>">
-                        <i class="fas fa-<?= $cat['activo'] ? 'ban' : 'check' ?>"></i>
+                      <button type="submit" class="btn-accion <?= $catActiva ? 'btn-suspender' : 'btn-activar' ?>" title="<?= $catActiva ? 'Desactivar' : 'Activar' ?>">
+                        <i class="fas fa-<?= $catActiva ? 'ban' : 'check' ?>"></i>
                       </button>
                     </form>
+                    <?php endif; ?>
                   </div>
                 </td>
               </tr>

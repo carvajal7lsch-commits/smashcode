@@ -30,8 +30,6 @@ $app->post('/aprendiz/rap/marcar-vocabulario', 'AprendizController@toggleVocabMa
 $app->post('/aprendiz/rap/guardar-progreso', 'AprendizController@guardarProgreso');
 $app->post('/aprendiz/rap/guardar-quiz', 'AprendizController@guardarIntentoQuiz');
 $app->get('/aprendiz/vocabulario', 'AprendizController@vocabulario');
-$app->get('/aprendiz/dialogos', 'AprendizController@dialogos');
-$app->get('/aprendiz/ejercicios', 'AprendizController@ejercicios');
 $app->get('/aprendiz/glosario', 'AprendizController@glosario');
 $app->get('/aprendiz/perfil', 'AprendizController@perfil');
 $app->post('/aprendiz/perfil/actualizar', 'AprendizController@actualizarPerfil');
@@ -79,11 +77,26 @@ $app->post('/admin/vocabulario/actualizar', 'VocabularioController@actualizar');
 $app->post('/admin/vocabulario/toggle',  'VocabularioController@toggle');
 $app->post('/admin/vocabulario/sugerir', 'VocabularioController@sugerir');
 
+// --- Gestión de Ejercicios (Momento 3) ---
+$app->get('/admin/ejercicios',           'AdminEjercicioController@index');
+$app->post('/admin/ejercicios/save',     'AdminEjercicioController@save');
+$app->post('/admin/ejercicios/delete',   'AdminEjercicioController@delete');
+
+// --- Gestión de Diálogos (Momento 2) ---
+$app->get('/admin/dialogos',             'AdminDialogoController@index');
+$app->post('/admin/dialogos/save',       'AdminDialogoController@save');
+$app->post('/admin/dialogos/delete',     'AdminDialogoController@delete');
+
+// --- Gestión de Quizzes (Momento 4) ---
+$app->get('/admin/quizzes',              'AdminQuizController@index');
+$app->post('/admin/quizzes/save',        'AdminQuizController@save');
+
+
 // --- Módulo de Niveles (HU10) — Instructor ---
 $app->get('/instructor/niveles',             'InstructorController@niveles');
-$app->get('/instructor/niveles/editar',      'InstructorController@editarNivel');
-$app->post('/instructor/niveles/actualizar', 'InstructorController@actualizarNivel');
-$app->post('/instructor/niveles/toggle',     'InstructorController@toggleNivel');
+
+// --- Módulo de Aprendices (HU23) — Instructor ---
+$app->get('/instructor/aprendices',          'InstructorController@aprendices');
 
 // --- Gestión de Usuarios (HU04) ---
 $app->get('/admin/usuarios', 'AdminController@usuarios');
@@ -115,4 +128,4 @@ $app->post('/admin/programas/eliminar',      'AdminController@eliminarPrograma')
 // ==============================================================
 
 // 5. Ejecutar la aplicación
-$app->run();
+$app->run();

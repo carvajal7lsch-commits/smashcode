@@ -36,7 +36,7 @@
       </div>
     </header>
 
-    <div class="pagina-contenido" style="padding:10px 24px 32px;">
+    <div class="pagina-contenido">
 
       <!-- Encabezado -->
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
@@ -69,12 +69,12 @@
       <div class="grid-raps">
         <?php
         $descRaps = [
-            'RAP 1' => 'Getting to Know Other People (Fase Analisis)',
-            'RAP 2' => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
-            'RAP 3' => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
-            'RAP 4' => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
-            'RAP 5' => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
-            'RAP 6' => 'Professional Practice (Fase Evaluacion)',
+            1 => 'Getting to Know Other People (Fase Análisis)',
+            2 => 'Work Life Interaction - Parte 1 (Fase Planeación)',
+            3 => 'Work Life Interaction - Parte 2 (Fase Planeación)',
+            4 => 'Work Place Communication - Parte 1 (Fase Ejecución)',
+            5 => 'Work Place Communication - Parte 2 (Fase Ejecución)',
+            6 => 'Professional Practice (Fase Evaluación)',
         ];
         ?>
         <?php foreach ($raps as $r): 
@@ -91,9 +91,9 @@
           
           <div class="card-rap-header">
             <div>
-              <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($r['titulo']) ?></div>
+              <div style="font-weight:800; font-size:1.1rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;">RAP <?= $r['nivel_orden'] ?></div>
               <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
-                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['titulo']] ?? limpiar($r['nivel_nombre']) ?>
+                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= $descRaps[$r['nivel_orden']] ?? limpiar($r['nivel_nombre']) ?>
               </div>
             </div>
             <div>
@@ -130,35 +130,35 @@
               </div>
             </div>
 
-            <div class="btn-componente <?= $cEjerc ? 'completado' : 'incompleto' ?>" title="Requerido: >= 1 ejercicio activo">
+            <a href="<?= PROYECTO_PATH ?>/admin/ejercicios?rap_id=<?= urlencode($r['id']) ?>" class="btn-componente <?= $cEjerc ? 'completado' : 'incompleto' ?>" style="text-decoration:none;" title="Requerido: Mínimo 1 ejercicio en Momento 1 o 3">
               <div class="btn-componente-icono-izq">
                 <i class="fas fa-<?= $cEjerc ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cEjerc ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
                 <span>Ejercicios</span>
               </div>
               <div class="btn-componente-icono-der">
-                <?= (int)$r['total_ejercicios'] ?>
+                <?= (int)$r['total_ejercicios'] ?> <i class="fas fa-pen"></i>
               </div>
-            </div>
+            </a>
 
-            <div class="btn-componente <?= $cDial ? 'completado' : 'incompleto' ?>" title="Requerido: >= 1 diálogo clínico activo">
+            <a href="<?= PROYECTO_PATH ?>/admin/dialogos?rap_id=<?= urlencode($r['id']) ?>" class="btn-componente <?= $cDial ? 'completado' : 'incompleto' ?>" style="text-decoration:none;" title="Requerido: Mínimo 1 diálogo interactivo configurado">
               <div class="btn-componente-icono-izq">
                 <i class="fas fa-<?= $cDial ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cDial ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
                 <span>Diálogos</span>
               </div>
               <div class="btn-componente-icono-der">
-                <?= (int)$r['total_dialogos'] ?>
+                <?= (int)$r['total_dialogos'] ?> <i class="fas fa-pen"></i>
               </div>
-            </div>
+            </a>
 
-            <div class="btn-componente <?= $cQuiz ? 'completado' : 'incompleto' ?>" title="Requerido: Quiz con >= 1 pregunta">
+            <a href="<?= PROYECTO_PATH ?>/admin/quizzes?rap_id=<?= urlencode($r['id']) ?>" class="btn-componente <?= $cQuiz ? 'completado' : 'incompleto' ?>" style="text-decoration:none;" title="Requerido: Quiz con >= 1 pregunta">
               <div class="btn-componente-icono-izq">
                 <i class="fas fa-<?= $cQuiz ? 'circle-check' : 'circle-xmark' ?>" style="color: <?= $cQuiz ? 'var(--verde)' : 'var(--rojo)' ?>;"></i>
                 <span>Quiz</span>
               </div>
               <div class="btn-componente-icono-der">
-                <?= (int)$r['total_preguntas_quiz'] ?> preg.
+                <?= (int)$r['total_preguntas_quiz'] ?> preg. <i class="fas fa-pen"></i>
               </div>
-            </div>
+            </a>
           </div>
 
           <div class="card-rap-footer">
