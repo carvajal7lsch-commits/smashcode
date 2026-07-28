@@ -39,11 +39,13 @@
       </div>
     </header>
 
-    <div class="pagina-contenido" style="padding: 10px 24px 32px;">
+    <div class="pagina-contenido">
       <!-- Encabezado -->
       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:16px;">
         <div>
-          <h1 class="pagina-titulo" style="font-size:1.8rem; font-weight:800; letter-spacing:-0.5px;">Gestión de Usuarios</h1>
+          <h1 class="pagina-titulo" style="font-size:1.8rem; font-weight:800; letter-spacing:-0.5px;">
+            <i class="fas fa-users" style="color:var(--verde); margin-right:10px;"></i>Gestión de Usuarios
+          </h1>
           <p class="pagina-subtitulo" style="margin-bottom:0; color:var(--texto-secundario);">
             Hay <strong style="color:var(--texto-principal);"><?= $total ?></strong> usuario(s) registrado(s) en la plataforma
           </p>

@@ -77,6 +77,21 @@ $app->post('/admin/vocabulario/actualizar', 'VocabularioController@actualizar');
 $app->post('/admin/vocabulario/toggle',  'VocabularioController@toggle');
 $app->post('/admin/vocabulario/sugerir', 'VocabularioController@sugerir');
 
+// --- Gestión de Ejercicios (Momento 3) ---
+$app->get('/admin/ejercicios',           'AdminEjercicioController@index');
+$app->post('/admin/ejercicios/save',     'AdminEjercicioController@save');
+$app->post('/admin/ejercicios/delete',   'AdminEjercicioController@delete');
+
+// --- Gestión de Diálogos (Momento 2) ---
+$app->get('/admin/dialogos',             'AdminDialogoController@index');
+$app->post('/admin/dialogos/save',       'AdminDialogoController@save');
+$app->post('/admin/dialogos/delete',     'AdminDialogoController@delete');
+
+// --- Gestión de Quizzes (Momento 4) ---
+$app->get('/admin/quizzes',              'AdminQuizController@index');
+$app->post('/admin/quizzes/save',        'AdminQuizController@save');
+
+
 // --- Módulo de Niveles (HU10) — Instructor ---
 $app->get('/instructor/niveles',             'InstructorController@niveles');
 
@@ -113,4 +128,4 @@ $app->post('/admin/programas/eliminar',      'AdminController@eliminarPrograma')
 // ==============================================================
 
 // 5. Ejecutar la aplicación
-$app->run();
+$app->run();

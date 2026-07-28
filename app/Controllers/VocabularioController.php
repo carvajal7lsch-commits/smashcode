@@ -46,9 +46,9 @@ class VocabularioController extends Controller {
         $areas         = $this->areaModel->obtenerTodas(true);
         $categorias    = $this->categoriaModel->obtenerTodas(true);
         
-        // Obtener el título del RAP para mostrar en la vista
-        $rapTitulo = $this->vocabularioModel->obtenerTituloRap($rapId);
-        $rap = ['titulo' => $rapTitulo];
+        // Obtener el registro del RAP para mostrar en la vista
+        $rapModel = new \App\Models\Rap();
+        $rap = $rapModel->obtenerPorId($rapId);
         
         $exito = limpiar($_GET['exito'] ?? '');
         $error = limpiar($_GET['error'] ?? '');

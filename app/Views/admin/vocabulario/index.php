@@ -39,23 +39,28 @@
     </header>
 
     <div class="pagina-contenido">
-      <div class="encabezado-seccion-admin">
-        <div class="d-flex align-items-center" style="gap:12px;">
-          <a href="<?= PROYECTO_PATH ?>/admin/raps" class="btn btn-gris" style="padding:8px 12px;">
-            <i class="fas fa-arrow-left"></i>
+      <?php
+      $ordenRap = $rap['orden'] ?? 1;
+      $tituloRap = isset($rap['titulo']) ? str_replace(['ÔÇö', 'Â', 'Basico'], ['—', '', 'Básico'], $rap['titulo']) : "RAP $ordenRap";
+      ?>
+
+      <div class="encabezado-seccion-admin" style="margin-bottom: 24px;">
+        <div style="display: flex !important; align-items: center; gap: 14px;">
+          <a href="<?= PROYECTO_PATH ?>/admin/raps" class="btn btn-gris" style="width:40px; height:40px; border-radius:50%; padding:0; display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;" title="Volver a RAPs">
+            <i class="fas fa-arrow-left" style="font-size:1rem;"></i>
           </a>
           <div>
-            <h1 class="pagina-titulo">
-              <i class="fas fa-book-medical header-titulo-icono"></i>
-              Vocabulario: <?= $rap ? limpiar($rap['titulo']) : 'RAP Desconocido' ?>
+            <h1 class="pagina-titulo" style="margin:0; font-size:1.6rem; font-weight:800; color:var(--texto-principal); letter-spacing:-0.5px; display:flex; align-items:center; gap:10px;">
+              <i class="fas fa-book-medical" style="color:var(--verde); font-size:1.3rem;"></i>
+              Vocabulario: <?= limpiar($tituloRap) ?>
             </h1>
-            <p class="desc-seccion-admin">
+            <p class="desc-seccion-admin" style="margin:4px 0 0 0; font-size:0.88rem; color:var(--texto-secundario); font-weight:500;">
               Gestiona los términos médicos de este RAP.
             </p>
           </div>
         </div>
         <div>
-          <button type="button" onclick="abrirModalVocabulario()" class="btn btn-verde">
+          <button type="button" onclick="abrirModalVocabulario()" class="btn btn-verde" style="padding:10px 18px; font-weight:700;">
             <i class="fas fa-plus"></i> Añadir Término
           </button>
         </div>

@@ -10,20 +10,16 @@ use PDO;
  */
 class AreaClinica extends Model {
 
-    public function obtenerTodas(bool $soloActivas = false): array {
+    public function obtenerTodas(): array {
         $pdo  = self::obtenerConexion();
-        $sql = 'SELECT id, nombre, activo FROM area_clinica';
-        if ($soloActivas) {
-            $sql .= ' WHERE activo = 1';
-        }
-        $sql .= ' ORDER BY nombre';
+        $sql = 'SELECT id, nombre FROM area_clinica ORDER BY nombre';
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll();
     }
 
     public function obtenerPorId(string $id): ?array {
         $pdo  = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT id, nombre, activo FROM area_clinica WHERE id = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, nombre FROM area_clinica WHERE id = ? LIMIT 1');
         $stmt->execute([$id]);
         return $stmt->fetch() ?: null;
     }

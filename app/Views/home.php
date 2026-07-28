@@ -203,7 +203,8 @@
             }
             $nivelData['progreso_promedio'] = count($nivelData['raps']) > 0 ? ($totalPorcentaje / count($nivelData['raps'])) : 0;
         }
-        unset($nivelData);
+        unset($nivelData); // Importante: limpiar la referencia del foreach anterior
+        reset($nivelesAgrupados); // Resetear el puntero interno del array
 
         $primerActivo = true; // Para el tooltip de EMPEZAR
         $OFFSETS = ['', '', 'offset-right', 'offset-left', '', 'offset-right'];
@@ -211,118 +212,129 @@
         $promedioNivelAnterior = 100.00; // El nivel 1 siempre está desbloqueado
         $globalRapIndex = 0; // Para los offsets
         
-        foreach ($nivelesAgrupados as $indexNivel => $nivelData):
-            // Un nivel está desbloqueado si es el primero (orden 1) o si el nivel anterior alcanzó el 80% (o el umbral definido).
-            $nivelDesbloqueado = (!$autenticado) ? ($nivelData['orden'] == 1) : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
+        // Determinar la sección activa: primer nivel desbloqueado con progreso < 100%
+        $seccionActiva = null;
+        $promedioAnteriorParaHeader = 100.00;
+        foreach ($nivelesAgrupados as $nivelData) {
+            $nivelAlcanzable = ($nivelData['orden'] == 1) || ($promedioAnteriorParaHeader >= 80);
+            if ($nivelAlcanzable && $nivelData['progreso_promedio'] < 100) {
+                $seccionActiva = $nivelData;
+                break;
+            }
+            $promedioAnteriorParaHeader = $nivelData['progreso_promedio'];
+        }
+        if (!$seccionActiva) {
+            $seccionActiva = end($nivelesAgrupados); // todos completados, mostrar el último
+        }
         ?>
 
         <!-- Header Section para cada Nivel -->
-        <div class="unit-header" style="<?= $nivelDesbloqueado ? '' : 'filter: grayscale(1); opacity: 0.8;' ?>">
+        <div class="unit-header">
             <div class="unit-info">
                 <div class="back-btn">
-                    <i class="fas <?= $nivelDesbloqueado ? 'fa-unlock' : 'fa-lock' ?>"></i> ETAPA 1, SECCIÓN <?= $nivelData['orden'] ?>
+                    <i class="fas fa-book-open"></i> MÓDULO <?= $seccionActiva['orden'] ?>
                 </div>
-                <h1><?= limpiar($nivelData['nombre']) ?></h1>
+                <h1><?= limpiar($seccionActiva['nombre']) ?></h1>
             </div>
             <button class="guide-btn"><i class="fas fa-book-open"></i> GUÍA</button>
         </div>
 
         <div class="path-container" style="padding-bottom: 40px;">
             <?php
-            $rapAnteriorCompletado = true; // El primer RAP de un nivel desbloqueado siempre está disponible
-            
-            foreach ($nivelData['raps'] as $rap):
-                // Lógica estricta de estado por RAP
-                if (!$nivelDesbloqueado) {
-                    $estadoRap = 'bloqueado';
-                } else {
-                    if ($rapAnteriorCompletado) {
-                        if ($autenticado && isset($mapaProgreso[$rap['id']])) {
-                            if ($mapaProgreso[$rap['id']]['completado']) {
-                                $estadoRap = 'completado';
+            foreach ($nivelesAgrupados as $indexNivel => $nivelData):
+                // Un nivel está desbloqueado si es el primero (orden 1) o si el nivel anterior alcanzó el 80% (o el umbral definido).
+                $nivelDesbloqueado = (!$autenticado) ? ($nivelData['orden'] == 1) : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
+                $rapAnteriorCompletado = true; // El primer RAP de un nivel desbloqueado siempre está disponible
+                
+                foreach ($nivelData['raps'] as $rap):
+                    // Lógica estricta de estado por RAP
+                    if (!$nivelDesbloqueado) {
+                        $estadoRap = 'bloqueado';
+                    } else {
+                        if ($rapAnteriorCompletado) {
+                            if ($autenticado && isset($mapaProgreso[$rap['id']])) {
+                                if ($mapaProgreso[$rap['id']]['completado']) {
+                                    $estadoRap = 'completado';
+                                } else {
+                                    $estadoRap = 'en_progreso';
+                                }
                             } else {
-                                $estadoRap = 'en_progreso';
+                                $estadoRap = 'disponible';
                             }
                         } else {
-                            $estadoRap = 'disponible';
+                            $estadoRap = 'bloqueado';
                         }
-                    } else {
-                        $estadoRap = 'bloqueado';
                     }
-                }
 
-                $offsetClase = $OFFSETS[$globalRapIndex % count($OFFSETS)];
-                $globalRapIndex++;
+                    $offsetClase = $OFFSETS[$globalRapIndex % count($OFFSETS)];
+                    $globalRapIndex++;
 
-                $esPrincipal = ($estadoRap === 'disponible' || $estadoRap === 'en_progreso') && $primerActivo;
-                if ($esPrincipal) $primerActivo = false;
-                if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
-                if ($estadoRap === 'completado') {
-                    $rapAnteriorCompletado = true;
-                } else {
-                    $rapAnteriorCompletado = false; // Bloquea los siguientes
-                }
+                    $esPrincipal = ($estadoRap === 'disponible' || $estadoRap === 'en_progreso') && $primerActivo;
+                    if ($esPrincipal) $primerActivo = false;
+                    if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
+                    if ($estadoRap === 'completado') {
+                        $rapAnteriorCompletado = true;
+                    } else {
+                        $rapAnteriorCompletado = false; // Bloquea los siguientes
+                    }
 
-                $urlRap = $autenticado && $estadoRap !== 'bloqueado'
-                    ? PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id'])
-                    : '#';
+                    $urlRap = $autenticado && $estadoRap !== 'bloqueado'
+                        ? PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id'])
+                        : '#';
 
-                $iconosRefs = ['fa-star', 'fa-book', 'fa-star', 'fa-star', 'fa-heart', 'fa-star'];
-                $iconoAct = $iconosRefs[$globalRapIndex % count($iconosRefs)];
+                    $iconosRefs = ['fa-star', 'fa-book', 'fa-star', 'fa-star', 'fa-heart', 'fa-star'];
+                    $iconoAct = $iconosRefs[$globalRapIndex % count($iconosRefs)];
 
-                $nodeClass = '';
-                $iconHtml = '';
-                $isActive = false;
+                    $nodeClass = '';
+                    $iconHtml = '';
+                    $isActive = false;
 
-                if ($estadoRap === 'completado') {
-                    $nodeClass = 'star completed';
-                    $iconHtml = '<i class="fas fa-check"></i>';
-                } else if ($esPrincipal) {
-                    $nodeClass = 'star';
-                    $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
-                    $isActive = true;
-                } else {
-                    $nodeClass = 'star-locked';
-                    $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
-                }
-            ?>
-            <div class="path-item <?= $isActive ? 'current' : 'locked' ?> <?= $offsetClase ?>">
-                <div class="node-wrapper" 
-                     onclick="<?= $estadoRap !== 'bloqueado' ? "window.location='{$urlRap}'" : "mostrarMensajeBloqueado()" ?>" 
-                     title="<?= limpiar($rap['titulo']) ?>">
-                    
-                    <?php if ($isActive): ?>
-                        <span class="tooltip" id="start-tooltip">EMPEZAR</span>
-                    <?php endif; ?>
-                    
-                    <div class="node <?= $nodeClass ?>" <?= $isActive ? 'id="star-node"' : '' ?>>
-                        <?= $iconHtml ?>
+                    if ($estadoRap === 'completado') {
+                        $nodeClass = 'star completed';
+                        $iconHtml = '<i class="fas fa-check"></i>';
+                    } else if ($esPrincipal) {
+                        $nodeClass = 'star';
+                        $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
+                        $isActive = true;
+                    } else {
+                        $nodeClass = 'star-locked';
+                        $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
+                    }
+                ?>
+                <div class="path-item <?= $isActive ? 'current' : 'locked' ?> <?= $offsetClase ?>">
+                    <div class="node-wrapper" 
+                         onclick="<?= $estadoRap !== 'bloqueado' ? "window.location='{$urlRap}'" : "mostrarMensajeBloqueado()" ?>" 
+                         title="<?= limpiar($rap['titulo']) ?>">
+                        
+                        <?php if ($isActive): ?>
+                            <span class="tooltip" id="start-tooltip">EMPEZAR</span>
+                        <?php endif; ?>
+                        
+                        <div class="node <?= $nodeClass ?>" <?= $isActive ? 'id="star-node"' : '' ?>>
+                            <?= $iconHtml ?>
+                        </div>
+                        
+                        <?php if ($isActive && $autenticado): 
+                            $pct = isset($mapaProgreso[$rap['id']]) ? $mapaProgreso[$rap['id']]['porcentaje'] : 0;
+                            $radius = 45;
+                            $circumference = 2 * pi() * $radius;
+                            $dashoffset = $circumference - ($pct / 100) * $circumference;
+                        ?>
+                        <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
+                            <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#e5e5e5" stroke-width="8"/>
+                            <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="8"
+                                    stroke-dasharray="<?= $circumference ?>" stroke-dashoffset="<?= $dashoffset ?>"
+                                    stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                        </svg>
+                        <?php endif; ?>
                     </div>
-                    
-                    <?php if ($isActive && $autenticado): 
-                        $pct = isset($mapaProgreso[$rap['id']]) ? $mapaProgreso[$rap['id']]['porcentaje'] : 0;
-                        $radius = 45;
-                        $circumference = 2 * pi() * $radius;
-                        $dashoffset = $circumference - ($pct / 100) * $circumference;
-                    ?>
-                    <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
-                        <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#e5e5e5" stroke-width="8"/>
-                        <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="8"
-                                stroke-dasharray="<?= $circumference ?>" stroke-dashoffset="<?= $dashoffset ?>"
-                                stroke-linecap="round" transform="rotate(-90 50 50)"/>
-                    </svg>
-                    <?php endif; ?>
                 </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        
-        <?php 
-            $promedioNivelAnterior = $nivelData['progreso_promedio'];
-        endforeach; 
-        ?>
-        
-        <div class="path-container" style="padding-top: 0;">
+                <?php endforeach; ?>
+            <?php 
+                $promedioNivelAnterior = $nivelData['progreso_promedio'];
+            endforeach; 
+            ?>
+            
             <!-- Cofre final -->
             <?php
               $chestOffset = $OFFSETS[$globalRapIndex % count($OFFSETS)];
@@ -347,7 +359,7 @@
                     </div>
                 </div>
             </div>
-        </div>        </div>
+        </div>
       </div>
 
       <!-- PANEL LATERAL DERECHO -->

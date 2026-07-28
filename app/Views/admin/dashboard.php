@@ -106,66 +106,105 @@
       </div>
 
       <!-- Gráfico + Actividad reciente -->
-      <div class="dashboard-charts-grid">
+      <div class="dashboard-charts-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:24px; margin-top:24px;">
 
         <!-- Gráfico de barras premium -->
-        <div class="tarjeta-premium tarjeta-chart">
-          <div class="chart-header">
-            <span class="chart-title">
-              <i class="fas fa-chart-line"></i>
+        <div class="tarjeta-premium tarjeta-chart" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:24px;">
+          <div class="chart-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+            <span class="chart-title" style="font-size:1rem; font-weight:800; color:var(--texto-principal); display:flex; align-items:center; gap:8px;">
+              <i class="fas fa-chart-column" style="color:var(--azul);"></i>
               Rendimiento Semanal (Quizzes Completados)
             </span>
-            <span class="chart-badge">Últimos 7 días</span>
+            <span class="chart-badge" style="font-size:0.75rem; background:rgba(43,108,176,0.1); color:var(--azul); font-weight:700; padding:4px 10px; border-radius:6px;">
+              Últimos 7 días
+            </span>
           </div>
           
-          <div class="barra-chart-premium" id="grafico-quizzes">
-            <!-- Barras generadas por JS dinámicamente -->
+          <?php
+          // Calcular valor máximo para el gráfico
+          $maxVal = 1; // Mínimo 1 para evitar división por cero
+          foreach ($datosSemana as $d) {
+              if ($d['val'] > $maxVal) {
+                  $maxVal = $d['val'];
+              }
+          }
+          ?>
+
+          <div class="barra-chart-container" style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; height:180px; padding:30px 16px 10px 16px; border-bottom:1px solid var(--border-color); box-sizing:border-box;">
+            <?php foreach ($datosSemana as $idx => $d): 
+              $pct = round(($d['val'] / $maxVal) * 100);
+              $esTop = ($idx === 3); // Jueves destacado
+            ?>
+              <div class="columna-bar-wrapper" style="flex:1; height:100%; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; position:relative;">
+                <!-- Valor flotante arriba de la barra -->
+                <span style="font-size:0.75rem; font-weight:800; color:<?= $esTop ? 'var(--verde)' : 'var(--texto-principal)' ?>; margin-bottom:6px;">
+                  <?= $d['val'] ?>
+                </span>
+                <!-- Barra vertical -->
+                <div class="barra-vertical" 
+                     style="width:100%; height:<?= $pct ?>%; background: <?= $esTop ? 'linear-gradient(180deg, #10B981 0%, #059669 100%)' : 'linear-gradient(180deg, #3B82F6 0%, #1D4ED8 100%)' ?>; border-radius:8px 8px 0 0; cursor:pointer; transition:all 0.2s ease; min-height:12px;"
+                     title="<?= $d['dia'] ?>: <?= $d['val'] ?> quizzes completados"
+                     onmouseover="this.style.filter='brightness(1.25)'; this.style.transform='scaleY(1.04)';"
+                     onmouseout="this.style.filter='brightness(1)'; this.style.transform='scaleY(1)';"
+                ></div>
+              </div>
+            <?php endforeach; ?>
           </div>
           
-          <div class="etiquetas-dias etiquetas-dias-container">
-            <span>Lun</span>
-            <span>Mar</span>
-            <span>Mié</span>
-            <span>Jue</span>
-            <span>Vie</span>
-            <span>Sáb</span>
-            <span>Dom</span>
+          <div class="etiquetas-dias-flex" style="display:flex; justify-content:space-between; margin-top:12px; padding:0 16px;">
+            <?php foreach ($datosSemana as $d): ?>
+              <span style="flex:1; text-align:center; font-size:0.78rem; font-weight:700; color:var(--texto-secundario);">
+                <?= $d['dia'] ?>
+              </span>
+            <?php endforeach; ?>
           </div>
         </div>
 
         <!-- Actividad reciente Premium -->
-        <div class="tarjeta-premium actividad-reciente-container">
-          <div class="chart-header">
-            <span class="chart-title">
-              <i class="fas fa-history chart-title-icon-naranja"></i>
+        <div class="tarjeta-premium actividad-reciente-container" style="background:var(--bg-card); border:1px solid var(--border-color); border-radius:16px; padding:24px; display:flex; flex-direction:column;">
+          <div class="chart-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+            <span class="chart-title" style="font-size:1rem; font-weight:800; color:var(--texto-principal); display:flex; align-items:center; gap:8px;">
+              <i class="fas fa-history" style="color:var(--naranja);"></i>
               Actividad Académica Reciente
+            </span>
+            <span class="chart-badge" style="font-size:0.75rem; background:rgba(245,158,11,0.1); color:var(--naranja); font-weight:700; padding:4px 10px; border-radius:6px;">
+              En tiempo real
             </span>
           </div>
           
-          <div class="actividad-reciente-lista">
-            <?php if (empty($actividad)): ?>
-              <div class="actividad-vacia">
-                <i class="fas fa-face-meh"></i>
-                Aún no hay actividad registrada hoy.
-              </div>
-            <?php else: ?>
+          <div class="actividad-reciente-lista" style="flex:1; display:flex; flex-direction:column; gap:12px; justify-content:flex-start;">
+            <?php if (!empty($actividad)): ?>
               <?php foreach ($actividad as $a): ?>
-              <div class="item-actividad-card">
-                <div class="actividad-item-flex">
-                  <span class="punto-actividad-glow <?= $a['aprobado'] ? 'punto-verde-glow' : 'punto-oro-glow' ?>"></span>
+              <div class="item-actividad-card" style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-app); border:1px solid var(--border-color); padding:14px 16px; border-radius:12px;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div class="avatar-mini" style="width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, var(--azul), var(--verde)); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:0.85rem; flex-shrink:0;">
+                    <?= strtoupper(substr($a['nombre_completo'], 0, 1)) ?>
+                  </div>
                   <div>
-                    <strong class="actividad-item-nombre"><?= limpiar($a['nombre_completo']) ?></strong>
-                    <span class="actividad-item-rap">Completó <?= limpiar(substr($a['rap_titulo'],0,28)) ?>...</span>
+                    <div style="font-weight:700; font-size:0.88rem; color:var(--texto-principal);">
+                      <?= limpiar($a['nombre_completo']) ?>
+                    </div>
+                    <div style="font-size:0.78rem; color:var(--texto-secundario);">
+                      Completó <?= limpiar(substr($a['rap_titulo'], 0, 32)) ?>...
+                    </div>
                   </div>
                 </div>
-                <div class="actividad-item-derecha">
-                  <span class="<?= $a['aprobado'] ? 'actividad-puntaje-verde' : 'actividad-puntaje-naranja' ?>"><?= number_format($a['puntaje'], 0) ?>%</span>
-                  <span class="actividad-hora">
-                    <?= date('H:i a', strtotime($a['creado_en'])) ?>
+
+                <div style="text-align:right; flex-shrink:0;">
+                  <span class="badge-completitud <?= $a['aprobado'] ? 'si' : 'no' ?>" style="font-size:0.8rem; font-weight:800; padding:4px 10px;">
+                    <?= number_format($a['puntaje'], 0) ?>%
                   </span>
+                  <div style="font-size:0.7rem; color:var(--texto-tenue); margin-top:4px;">
+                    <?= date('h:i a', strtotime($a['creado_en'])) ?>
+                  </div>
                 </div>
               </div>
               <?php endforeach; ?>
+            <?php else: ?>
+              <div style="text-align:center; padding:30px; color:var(--texto-tenue); font-size:0.9rem;">
+                <i class="fas fa-history" style="font-size:2rem; margin-bottom:12px; opacity:0.3; display:block;"></i>
+                No hay actividad académica reciente.
+              </div>
             <?php endif; ?>
           </div>
         </div>
@@ -175,19 +214,6 @@
   </main>
 </div>
 
-<script>
-  /* Generación dinámica de barras premium con Tooltip nativo */
-  const datos = [12, 8, 15, 22, 18, 5, 11];
-  const max   = Math.max(...datos);
-  const cont  = document.getElementById('grafico-quizzes');
-  datos.forEach((v, i) => {
-    const col = document.createElement('div');
-    col.className = 'columna' + (i === 3 ? ' destacada' : '');
-    col.style.height = (v / max * 100) + '%';
-    col.setAttribute('title', `Quizzes: ${v}`);
-    cont.appendChild(col);
-  });
-</script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
 </body>
 </html>

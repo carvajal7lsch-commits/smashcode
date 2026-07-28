@@ -43,13 +43,15 @@ class AdminController extends Controller {
         $totalXP           = $this->adminModel->obtenerTotalXP();
         $quizzesCompletos  = $this->adminModel->obtenerQuizzesCompletados();
         $actividad         = $this->adminModel->obtenerActividadReciente();
+        $datosSemana       = $this->adminModel->obtenerRendimientoSemanal();
 
         $this->render('admin/dashboard', [
             'totalUsuarios'     => $totalUsuarios,
             'aprendicesActivos' => $aprendicesActivos,
             'totalXP'           => $totalXP,
             'quizzesCompletos'  => $quizzesCompletos,
-            'actividad'         => $actividad
+            'actividad'         => $actividad,
+            'datosSemana'       => $datosSemana
         ]);
     }
 

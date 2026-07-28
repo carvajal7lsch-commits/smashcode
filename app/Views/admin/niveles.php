@@ -37,7 +37,7 @@
       </div>
     </header>
 
-    <div class="pagina-contenido pagina-contenido-admin">
+    <div class="pagina-contenido">
 
       <!-- Encabezado de sección -->
       <div class="encabezado-seccion-admin">
