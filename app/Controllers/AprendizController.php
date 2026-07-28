@@ -303,6 +303,29 @@ class AprendizController extends Controller {
 
 
 
+    public function vocabulario(): void {
+        $pdo = obtenerConexion();
+        $uid = $_SESSION['usuario_id'];
+
+        // Cargar el vocabulario marcado como difícil para repaso (HU02)
+        $stmt = $pdo->prepare(
+            'SELECT v.*, c.nombre AS categoria_nombre, a.nombre AS area_nombre, n.nombre AS nivel_nombre,
+                    (SELECT 1 FROM vocabulario_marcado vm WHERE vm.vocabulario_id = v.id AND vm.usuario_id = ?) AS es_dificil
+             FROM vocabulario v
+             LEFT JOIN categoria_vocabulario c ON c.id = v.categoria_id
+             LEFT JOIN area_clinica a ON a.id = v.area_clinica_id
+             JOIN rap r ON r.id = v.rap_id
+             JOIN nivel n ON n.id = r.nivel_id
+             WHERE v.activo = 1 AND r.activo = 1
+             HAVING es_dificil = 1
+             ORDER BY n.orden, v.termino_en'
+        );
+        $stmt->execute([$uid]);
+        $vocabulario = $stmt->fetchAll();
+
+        $this->render('aprendiz/vocabulario', compact('vocabulario'));
+    }
+
     public function glosario(): void {
         $pdo = obtenerConexion();
         

@@ -29,6 +29,7 @@ $app->get('/aprendiz/rap', 'AprendizController@rap');
 $app->post('/aprendiz/rap/marcar-vocabulario', 'AprendizController@toggleVocabMarcado');
 $app->post('/aprendiz/rap/guardar-progreso', 'AprendizController@guardarProgreso');
 $app->post('/aprendiz/rap/guardar-quiz', 'AprendizController@guardarIntentoQuiz');
+$app->get('/aprendiz/vocabulario', 'AprendizController@vocabulario');
 $app->get('/aprendiz/glosario', 'AprendizController@glosario');
 $app->get('/aprendiz/perfil', 'AprendizController@perfil');
 $app->post('/aprendiz/perfil/actualizar', 'AprendizController@actualizarPerfil');

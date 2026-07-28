@@ -33,8 +33,12 @@
           <i class="fas fa-book-open nav-icono"></i>
           <span>Aprender</span>
         </a>
+      <li>
+        <a href="<?= PROYECTO_PATH ?>/aprendiz/vocabulario" class="nav-enlace <?= strpos($current_uri, '/aprendiz/vocabulario') !== false ? 'activo' : '' ?>">
+          <i class="fas fa-spell-check nav-icono"></i>
+          <span>Mi Vocabulario</span>
+        </a>
       </li>
-
       <li>
         <a href="<?= PROYECTO_PATH ?>/aprendiz/glosario" class="nav-enlace <?= strpos($current_uri, '/aprendiz/glosario') !== false ? 'activo' : '' ?>">
           <i class="fas fa-book-medical nav-icono"></i>
