@@ -17,17 +17,18 @@
   <?php include dirname(__DIR__) . '/partials/sidebar.php'; ?>
 
   <main class="contenido-principal">
-    <header class="header-breadcrumbs">
-      <div class="header-breadcrumbs-path">
-        <i class="fas fa-home"></i>
-        <a href="<?= PROYECTO_PATH ?>/admin">Dashboard</a>
-        <i class="fas fa-chevron-right"></i>
-        <a href="<?= PROYECTO_PATH ?>/admin/raps">RAPs</a>
-        <i class="fas fa-chevron-right"></i>
-        <span>Vocabulario</span>
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin/raps" class="breadcrumb-current" style="text-decoration:none;">RAPs</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-link"><i class="fas fa-spell-check" style="color:var(--azul); margin-right:4px;"></i> Vocabulario</span>
       </div>
-      <div class="header-acciones">
-        <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar tema" title="Cambiar tema">
+      <div class="admin-header-actions">
+        <!-- Botón cambio de tema -->
+        <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
         </button>
@@ -129,6 +130,10 @@
                     <?php if ($v['audio_url']): ?>
                       <button type="button" class="audio-btn" onclick="new Audio('<?= PROYECTO_PATH ?><?= $v['audio_url'] ?>').play()" title="Escuchar audio">
                         <i class="fas fa-volume-up"></i>
+                      </button>
+                    <?php else: ?>
+                      <button type="button" class="audio-btn" onclick="speakTerm('<?= addslashes(limpiar($v['termino_en'])) ?>')" title="Escuchar pronunciación (TTS)">
+                        <i class="fas fa-volume-up" style="color:var(--naranja);"></i>
                       </button>
                     <?php endif; ?>
                   </div>
@@ -241,12 +246,7 @@
 
             <div class="grupo-input">
               <label class="label-input" for="termino_en">Término en Inglés <span class="text-rojo">*</span></label>
-              <div style="display: flex; gap: 8px;">
-                <input type="text" name="termino_en" id="vocab-termino-en" class="input-base" required>
-                <button type="button" class="btn-ia-premium" id="btn-ia-sugerir" onclick="autocompletarIA()" title="Autocompletar con IA">
-                  <i class="fas fa-sparkles"></i> IA
-                </button>
-              </div>
+              <input type="text" name="termino_en" id="vocab-termino-en" class="input-base" required>
             </div>
 
             <div class="grupo-input">
@@ -269,9 +269,13 @@
           <div class="tarjeta tarjeta-margen" style="padding: 20px;">
             <h2 class="form-seccion-titulo" style="font-size: 1rem; margin-bottom: 16px;">Contenido y Clasificación</h2>
 
-            <!-- Audio -->
             <div class="grupo-input">
-              <label class="label-input" for="audio">Archivo de Audio</label>
+              <div class="d-flex" style="justify-content:space-between; align-items:center;">
+                <label class="label-input" for="audio">Archivo de Audio (Máx 2MB)</label>
+                <button type="button" class="btn-premium-blanco" style="font-size:0.75rem; padding:4px 8px;" onclick="probarTTS()">
+                  <i class="fas fa-volume-up" style="color:var(--naranja);"></i> Probar TTS
+                </button>
+              </div>
               <div id="vocab-audio-preview-container" style="display: none; margin-bottom: 12px;">
                 <div class="vocab-audio-preview" style="background: rgba(0,0,0,0.1); padding: 10px; border-radius: 8px;">
                   <audio controls class="vocab-audio-player" id="vocab-audio-player" style="height: 30px; width: 100%;">
@@ -397,57 +401,31 @@
     document.getElementById('modal-vocab').classList.add('visible');
   }
 
-  async function autocompletarIA() {
-    const inputEn = document.getElementById('vocab-termino-en').value.trim();
-    if (!inputEn) {
-      alert("Por favor, ingresa primero el 'Término en Inglés' para usar la Inteligencia Artificial.");
+  // --- Lógica de TTS (Text-to-Speech) ---
+  function speakTerm(text) {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      let utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.9;
+      
+      let voices = window.speechSynthesis.getVoices();
+      let enVoice = voices.find(v => v.lang.startsWith('en'));
+      if (enVoice) utterance.voice = enVoice;
+      
+      window.speechSynthesis.speak(utterance);
+    } else {
+      alert("Tu navegador no soporta síntesis de voz (TTS).");
+    }
+  }
+
+  function probarTTS() {
+    const terminoEn = document.getElementById('vocab-termino-en').value.trim();
+    if (!terminoEn) {
+      alert("Por favor, ingresa un término en inglés para probar el TTS.");
       return;
     }
-
-    const btnIA = document.getElementById('btn-ia-sugerir');
-    const iconoOriginal = btnIA.innerHTML;
-    
-    // Estado de carga
-    btnIA.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btnIA.disabled = true;
-
-    try {
-      const formData = new FormData();
-      formData.append('termino', inputEn);
-
-      const response = await fetch("<?= PROYECTO_PATH ?>/admin/vocabulario/sugerir", {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (data.error) {
-        let errMsg = "Error de IA: " + data.error;
-        if (data.curl_error) errMsg += "\ncURL Error: " + data.curl_error;
-        if (data.detalles) errMsg += "\nDetalles: " + data.detalles;
-        alert(errMsg);
-        console.error(data);
-      } else {
-        // Rellenar campos si llegaron vacíos
-        if (!document.getElementById('vocab-termino-es').value) {
-          document.getElementById('vocab-termino-es').value = data.traduccion || '';
-        }
-        if (!document.getElementById('vocab-ipa').value) {
-          document.getElementById('vocab-ipa').value = data.ipa || '';
-        }
-        if (!document.getElementById('vocab-oracion').value) {
-          document.getElementById('vocab-oracion').value = data.oracion || '';
-        }
-      }
-    } catch (error) {
-      console.error(error);
-      alert("Ocurrió un error al contactar con la Inteligencia Artificial.");
-    } finally {
-      // Restaurar botón
-      btnIA.innerHTML = iconoOriginal;
-      btnIA.disabled = false;
-    }
+    speakTerm(terminoEn);
   }
 </script>
 </body>

@@ -15,15 +15,16 @@
   <?php include dirname(__DIR__) . '/partials/sidebar.php'; ?>
 
   <main class="contenido-principal">
-    <header class="header-breadcrumbs">
-      <div class="header-breadcrumbs-path">
-        <i class="fas fa-home"></i>
-        <a href="<?= PROYECTO_PATH ?>/admin">Dashboard</a>
-        <i class="fas fa-chevron-right"></i>
-        <span>Catálogos</span>
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-link"><i class="fas fa-tags" style="color:var(--azul); margin-right:4px;"></i> Catálogos</span>
       </div>
-      <div class="header-acciones">
-        <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar tema" title="Cambiar tema">
+      <div class="admin-header-actions">
+        <!-- Botón cambio de tema -->
+        <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
         </button>

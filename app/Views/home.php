@@ -6,6 +6,7 @@
   <title>Aprender — SmashCode Enfermería SENA</title>
   <meta name="description" content="Aprende inglés clínico con SmashCode, plataforma gamificada para enfermería SENA.">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
+  <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/layout.css?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script>/* Aplicar tema guardado antes del paint para evitar parpadeo */
   (function(){var t=localStorage.getItem('smashcode_tema');if(t)document.documentElement.setAttribute('data-theme',t);})();
@@ -318,7 +319,7 @@
       <aside class="side-column" aria-label="Panel de gamificación">
           
         <div class="right-stats-bar">
-            <div class="stat"><img src="https://d35aaqx5ub95lt.cloudfront.net/images/flags/us.svg" width="25" alt="EN"></div>
+            <div class="stat"><img src="https://flagcdn.com/us.svg" width="25" alt="EN" style="border-radius:4px;"></div>
             <div class="stat fire"><i class="fas fa-fire"></i> <span>0</span></div>
             <div class="stat gem"><i class="fas fa-gem"></i> <span>0</span></div>
             <div class="stat xp" style="color:var(--duo-blue);"><i class="fas fa-bolt"></i> <span><?= $autenticado ? formatearXP($usuario['xp_puntos']) : '0' ?> XP</span></div>

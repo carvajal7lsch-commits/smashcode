@@ -73,7 +73,7 @@ class GestionUsuarios extends Model {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
             "SELECT id, nombre_completo, correo, rol, activo, bloqueado,
-                    ficha_sena, xp_puntos, nivel_perfil, creado_en
+                    ficha_sena, programa_id, xp_puntos, nivel_perfil, creado_en
              FROM usuarios WHERE id = ? AND eliminado = 0 LIMIT 1"
         );
         $stmt->execute([$id]);
@@ -93,27 +93,27 @@ class GestionUsuarios extends Model {
     /**
      * Crea un nuevo usuario en el sistema.
      */
-    public function crear(string $id, string $nombre, string $correo, string $hash, string $rol, ?string $ficha): bool {
+    public function crear(string $id, string $nombre, string $correo, string $hash, string $rol, ?string $ficha, ?string $programaId): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
-            "INSERT INTO usuarios (id, nombre_completo, correo, contrasena, rol, ficha_sena, activo, correo_verificado)
-             VALUES (?, ?, ?, ?, ?, ?, 1, 1)"
+            "INSERT INTO usuarios (id, nombre_completo, correo, contrasena, rol, ficha_sena, programa_id, activo, correo_verificado)
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)"
         );
-        return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $ficha]);
+        return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $ficha, $programaId]);
     }
 
     /**
-     * Crea una cuenta de instructor con credenciales temporales.
+     * Crea una cuenta con credenciales temporales.
      * Establece debe_cambiar_clave = 1 para forzar el cambio en el primer login.
      */
-    public function crearInstructor(string $id, string $nombre, string $correo, string $hash, ?string $programaId, ?string $ficha): bool {
+    public function crearConClaveTemporal(string $id, string $nombre, string $correo, string $hash, string $rol, ?string $programaId, ?string $ficha): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
             "INSERT INTO usuarios
              (id, nombre_completo, correo, contrasena, rol, programa_id, ficha_sena, activo, correo_verificado, debe_cambiar_clave)
-             VALUES (?, ?, ?, ?, 'instructor', ?, ?, 1, 0, 1)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 1)"
         );
-        return $stmt->execute([$id, $nombre, $correo, $hash, $programaId, $ficha]);
+        return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $programaId, $ficha]);
     }
 
     /**
@@ -142,7 +142,7 @@ class GestionUsuarios extends Model {
      */
     public function softDelete(string $id): bool {
         $pdo  = self::obtenerConexion();
-        $stmt = $pdo->prepare("UPDATE usuarios SET eliminado = 1, activo = 0 WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE usuarios SET eliminado = 1, activo = 0, correo = CONCAT(correo, '__deleted_', UNIX_TIMESTAMP()) WHERE id = ?");
         return $stmt->execute([$id]);
     }
 

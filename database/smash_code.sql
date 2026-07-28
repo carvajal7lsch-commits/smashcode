@@ -352,7 +352,7 @@ INSERT INTO nivel (id, nombre, descripcion, orden, activo, umbral_desbloqueo) VA
 
 -- Un RAP por nivel (contenido lo carga el administrador)
 INSERT INTO rap (id, nivel_id, titulo, orden, activo)
-SELECT UUID(), id, CONCAT('RAP ', orden, ' — ', nombre), 1, 1 FROM nivel ORDER BY orden;
+SELECT UUID(), id, CONCAT('RAP ', orden), 1, 1 FROM nivel ORDER BY orden;
 
 -- Áreas clínicas base
 INSERT INTO area_clinica (id, nombre) VALUES

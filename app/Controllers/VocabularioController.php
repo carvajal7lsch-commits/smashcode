@@ -159,6 +159,12 @@ class VocabularioController extends Controller {
             mkdir($directorioBase, 0777, true);
         }
 
+        // Validación de tamaño (Límite 2MB según HU19)
+        $maxSize = 2 * 1024 * 1024; // 2MB
+        if ($archivo['size'] > $maxSize) {
+            return null; // En una mejora real se lanzaría una excepción o se pasaría el error
+        }
+
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
         // Simple validación de seguridad
         $extensionesPermitidas = ['jpg', 'jpeg', 'png', 'svg', 'mp3', 'ogg', 'wav'];
@@ -175,74 +181,4 @@ class VocabularioController extends Controller {
         return null;
     }
 
-    /**
-     * Llama a la API de Inteligencia Artificial para sugerir la traducción, IPA y oración.
-     */
-    public function sugerir(): void {
-        header('Content-Type: application/json');
-
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['error' => 'Método no permitido']);
-            return;
-        }
-
-        $termino = limpiar($_POST['termino'] ?? '');
-        if (empty($termino)) {
-            echo json_encode(['error' => 'El término es obligatorio']);
-            return;
-        }
-
-        if (empty(GEMINI_API_KEY)) {
-            echo json_encode(['error' => 'Falta configurar la API de IA (GEMINI_API_KEY) en el archivo .env']);
-            return;
-        }
-
-        $prompt = "Actúa como un experto lingüista en inglés médico y general. "
-                . "Para el término en inglés '{$termino}', proporciona exactamente la siguiente información en formato JSON estricto sin backticks ni markdown extra, con estas 3 claves: "
-                . "1. 'traduccion': La traducción más natural al español. "
-                . "2. 'ipa': La transcripción fonética IPA (ej. hɑːrt). "
-                . "3. 'oracion': Una oración corta de ejemplo en inglés usando el término, preferiblemente en contexto médico si aplica, o contexto diario si no.";
-
-        $url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=' . GEMINI_API_KEY;
-        $data = [
-            'contents' => [
-                ['parts' => [['text' => $prompt]]]
-            ]
-        ];
-
-        $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
-        // Desactivar verificación SSL solo para entornos locales (XAMPP/WAMP)
-        if ($_SERVER['SERVER_NAME'] === 'localhost' || $_SERVER['SERVER_NAME'] === '127.0.0.1') {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        }
-
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError = curl_error($ch);
-        curl_close($ch);
-
-        if ($httpCode !== 200) {
-            echo json_encode([
-                'error' => 'Error al contactar con la IA', 
-                'http_code' => $httpCode,
-                'curl_error' => $curlError,
-                'detalles' => $response
-            ]);
-            return;
-        }
-
-        $resultado = json_decode($response, true);
-        $textoExtraido = $resultado['candidates'][0]['content']['parts'][0]['text'] ?? '';
-
-        // Limpiar el JSON si la IA responde con bloques de código markdown
-        $textoExtraido = preg_replace('/```json/i', '', $textoExtraido);
-        $textoExtraido = preg_replace('/```/', '', $textoExtraido);
-        $textoExtraido = trim($textoExtraido);
-
-        echo $textoExtraido;
-    }
 }

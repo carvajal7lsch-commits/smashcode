@@ -17,29 +17,28 @@
   <?php include __DIR__ . '/partials/sidebar.php'; ?>
 
   <main class="contenido-principal">
-    <header class="barra-superior">
-      <div class="stat-xp"><i class="fas fa-clock-rotate-left"></i> Log de Actividad</div>
-      <div style="margin-left: auto; display:flex; align-items:center; gap:16px;">
+    <header class="barra-superior barra-superior-admin">
+      <div class="breadcrumb-admin">
+        <i class="fas fa-home breadcrumb-icon"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin" class="breadcrumb-current" style="text-decoration:none;">Dashboard</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <a href="<?= PROYECTO_PATH ?>/admin/usuarios" class="breadcrumb-current" style="text-decoration:none;">Gestión de Usuarios</a>
+        <i class="fas fa-chevron-right breadcrumb-separator"></i>
+        <span class="breadcrumb-link"><i class="fas fa-clock-rotate-left" style="color:var(--azul); margin-right:4px;"></i> Log de Actividad</span>
+      </div>
+      <div class="admin-header-actions">
         <!-- Botón cambio de tema -->
         <button id="btn-cambiar-tema" class="btn-tema" aria-label="Cambiar a modo claro" title="Cambiar a modo claro">
           <i class="fas fa-sun tema-icono"></i>
           <span class="tema-label">Claro</span>
         </button>
-        <div class="avatar-usuario" style="border: 2px solid var(--verde); background: linear-gradient(135deg, var(--verde), var(--azul)); font-weight: 800; cursor: default; margin: 0;" title="<?= limpiar($_SESSION['nombre']) ?>">
+        <div class="avatar-usuario" title="<?= limpiar($_SESSION['nombre']) ?>">
           <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
         </div>
       </div>
     </header>
 
     <div class="pagina-contenido">
-      <!-- Migas de pan -->
-      <nav style="font-size: 0.78rem; color: var(--texto-tenue); margin-bottom: 20px;">
-        <a href="<?= PROYECTO_PATH ?>/admin" style="color:var(--verde-acento);">Dashboard</a>
-        <i class="fas fa-chevron-right" style="font-size:0.6rem; margin: 0 6px;"></i>
-        <a href="<?= PROYECTO_PATH ?>/admin/usuarios" style="color:var(--verde-acento);">Usuarios</a>
-        <i class="fas fa-chevron-right" style="font-size:0.6rem; margin: 0 6px;"></i>
-        <span>Log de <?= limpiar($usuario['nombre_completo']) ?></span>
-      </nav>
 
       <h1 class="pagina-titulo"><i class="fas fa-clock-rotate-left" style="color:var(--acento-oro);"></i> Historial de Actividad</h1>
 

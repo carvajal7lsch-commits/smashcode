@@ -28,15 +28,21 @@ class AprendizController extends Controller {
 
         // Obtener RAP y nivel
         $stmtRap = $pdo->prepare(
-            'SELECT r.id, r.titulo, r.nivel_id, n.nombre AS nivel_nombre, n.orden AS nivel_orden
+            'SELECT r.id, r.titulo, r.activo AS rap_activo, r.nivel_id, n.nombre AS nivel_nombre, n.orden AS nivel_orden
              FROM rap r
              JOIN nivel n ON n.id = r.nivel_id
-             WHERE r.id = ? AND r.activo = 1'
+             WHERE r.id = ?'
         );
         $stmtRap->execute([$rapId]);
         $rap = $stmtRap->fetch();
 
         if (!$rap) {
+            $this->redirect('');
+            return;
+        }
+
+        $esPreview = in_array(obtenerRolSesion(), ['admin', 'instructor']);
+        if (!$rap['rap_activo'] && !$esPreview) {
             $this->redirect('');
             return;
         }
@@ -309,7 +315,7 @@ class AprendizController extends Controller {
              LEFT JOIN area_clinica a ON a.id = v.area_clinica_id
              JOIN rap r ON r.id = v.rap_id
              JOIN nivel n ON n.id = r.nivel_id
-             WHERE v.activo = 1
+             WHERE v.activo = 1 AND r.activo = 1
              ORDER BY n.orden, v.termino_en'
         );
         $stmt->execute([$uid]);
@@ -325,7 +331,7 @@ class AprendizController extends Controller {
              FROM dialogo d
              JOIN rap r ON r.id = d.rap_id
              JOIN nivel n ON n.id = r.nivel_id
-             WHERE d.activo = 1
+             WHERE d.activo = 1 AND r.activo = 1
              ORDER BY n.orden'
         );
         $dialogos = $stmt->fetchAll();
@@ -346,7 +352,7 @@ class AprendizController extends Controller {
              FROM ejercicio e
              JOIN rap r ON r.id = e.rap_id
              JOIN nivel n ON n.id = r.nivel_id
-             WHERE e.activo = 1
+             WHERE e.activo = 1 AND r.activo = 1
              ORDER BY n.orden, e.tipo'
         );
         $ejercicios = $stmt->fetchAll();
@@ -372,9 +378,9 @@ class AprendizController extends Controller {
                 FROM vocabulario v
                 LEFT JOIN categoria_vocabulario c ON c.id = v.categoria_id
                 LEFT JOIN area_clinica a ON a.id = v.area_clinica_id
-                LEFT JOIN rap r ON r.id = v.rap_id
-                LEFT JOIN nivel n ON n.id = r.nivel_id
-                WHERE v.activo = 1";
+                JOIN rap r ON r.id = v.rap_id
+                JOIN nivel n ON n.id = r.nivel_id
+                WHERE v.activo = 1 AND r.activo = 1";
         
         $params = [];
         if ($areaId) {
