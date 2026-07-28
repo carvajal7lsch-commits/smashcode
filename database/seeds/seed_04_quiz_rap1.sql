@@ -7,7 +7,7 @@
 SET NAMES utf8mb4;
 USE smash_code;
 
-SET @RAP1 = 'be5df679-5166-11f1-b275-8c1645fa3d64';
+SELECT id INTO @RAP1 FROM rap ORDER BY orden ASC LIMIT 1;
 SET @QUIZ1 = 'quiz-rap1-0001';
 
 -- 1. Insertar la configuración del Quiz
