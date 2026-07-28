@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\Progreso;
+use App\Models\Programa;
 use PDO;
 
 class AprendizController extends Controller {
@@ -424,11 +425,18 @@ class AprendizController extends Controller {
             $insigniasGanadas = $userModel->obtenerInsigniasGanadas($uid);
             $todasInsignias   = $userModel->obtenerTodasInsignias();
 
-            // Resolver programa_id de la BD para el leaderboard
+            // Resolver ficha y programa de la BD: el programa alimenta el leaderboard y
+            // ambos pueblan el formulario de datos de formación (HU16)
             $pdo = obtenerConexion();
-            $stmtProg = $pdo->prepare('SELECT programa_id FROM usuarios WHERE id = ? LIMIT 1');
+            $stmtProg = $pdo->prepare('SELECT ficha_sena, programa_id FROM usuarios WHERE id = ? LIMIT 1');
             $stmtProg->execute([$uid]);
-            $programaId = $stmtProg->fetchColumn();
+            $datosFormacion = $stmtProg->fetch() ?: [];
+            $fichaSena  = $datosFormacion['ficha_sena'] ?? '';
+            $programaId = $datosFormacion['programa_id'] ?? '';
+
+            // Programas activos para el selector (mismo modelo que usa el registro)
+            $programaModel = new Programa();
+            $programas = $programaModel->obtenerTodos();
 
             $leaderboard = $userModel->obtenerLeaderboardSemanal($programaId);
             $heatmapActivo = $userModel->obtenerHeatmapActividad($uid);
@@ -439,7 +447,10 @@ class AprendizController extends Controller {
                 'insigniasGanadas' => $insigniasGanadas,
                 'todasInsignias' => $todasInsignias,
                 'leaderboard' => $leaderboard,
-                'heatmapActivo' => $heatmapActivo
+                'heatmapActivo' => $heatmapActivo,
+                'programas' => $programas,
+                'fichaSena' => $fichaSena,
+                'programaId' => $programaId
             ]);
         } else {
             $this->redirect('login');
@@ -496,6 +507,41 @@ class AprendizController extends Controller {
             $nuevoHash = password_hash($claveNueva, PASSWORD_BCRYPT, ['cost' => 12]);
             $userModel->actualizarContrasena($uid, $nuevoHash);
             $this->redirect('aprendiz/perfil?exito=clave');
+
+        } elseif ($accion === 'ficha') {
+            // HU16: datos de formación obligatorios para el aprendiz.
+            // Los usuarios creados con Google llegan aquí desde el callback (?completar=1).
+            $ficha       = trim(limpiar($_POST['ficha_sena'] ?? ''));
+            $programaId  = limpiar($_POST['programa_id'] ?? '');
+            $completando = limpiar($_POST['completar'] ?? '') === '1';
+            // Conservar el modo "completar" en los redirects de error para no perder el aviso
+            $sufijo      = $completando ? '&completar=1' : '';
+
+            if (empty($ficha)) {
+                $this->redirect('aprendiz/perfil?error=ficha' . $sufijo);
+                return;
+            }
+
+            // El programa debe existir y estar activo (mismo modelo que puebla el selector)
+            $programaModel = new Programa();
+            $programa = empty($programaId) ? null : $programaModel->obtenerPorId($programaId);
+            if (!$programa || empty($programa['activo'])) {
+                $this->redirect('aprendiz/perfil?error=programa' . $sufijo);
+                return;
+            }
+
+            if (!$userModel->actualizarFichaYPrograma($uid, $ficha, $programaId)) {
+                $this->redirect('aprendiz/perfil?error=ficha_guardar' . $sufijo);
+                return;
+            }
+
+            // Perfil ya completo: si venía del flujo de Google, seguir al dashboard
+            if ($completando) {
+                $this->redirect('');
+                return;
+            }
+            $this->redirect('aprendiz/perfil?exito=ficha');
+
         } else {
             $this->redirect('aprendiz/perfil');
         }

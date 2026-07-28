@@ -25,7 +25,25 @@
         $xpSiguiente = $nivel * 500;
         $xpPorcentaje = $xpSiguiente > 0 ? min(100, round(($xp / $xpSiguiente) * 100)) : 100;
         $inicialAvatar = strtoupper(substr($usuario['nombre_completo'] ?? 'A', 0, 1));
+        // HU16: el callback de Google manda aquí con ?completar=1 a los aprendices sin ficha/programa
+        $completar = ($_GET['completar'] ?? '') === '1';
       ?>
+
+      <?php if ($completar): ?>
+        <!-- ── AVISO: PERFIL INCOMPLETO (HU16) ── -->
+        <div class="alerta-perfil" style="background: rgba(255,150,0,0.1); border-color: var(--naranja); color: var(--naranja); align-items: flex-start;">
+          <i class="fas fa-triangle-exclamation" style="margin-top:2px;"></i>
+          <div style="flex:1;">
+            <div style="font-weight:800;">Completa tu ficha SENA y programa para continuar</div>
+            <div style="font-weight:600; font-size:0.78rem; margin-top:4px; opacity:0.85;">
+              Los necesitamos para ubicarte en tu grupo y en el leaderboard de tu ficha.
+            </div>
+          </div>
+          <a href="#datos-formacion" style="flex-shrink:0; padding:8px 14px; border-radius:10px; background:var(--naranja); color:#fff; font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.05em;">
+            Completar
+          </a>
+        </div>
+      <?php endif; ?>
 
       <!-- ── HÉROE DEL PERFIL ── -->
       <div class="hero-perfil">
@@ -235,6 +253,64 @@
 
             <button type="submit" class="btn-guardar">
               <i class="fas fa-save"></i> Guardar Nombre
+            </button>
+          </form>
+        </div>
+
+        <!-- Datos de Formación (HU16) -->
+        <div class="config-card" id="datos-formacion"
+             <?php if ($completar): ?>style="order:-1; grid-column: span 2; border-color: var(--naranja); box-shadow: 0 0 0 4px rgba(255,150,0,0.15);"<?php endif; ?>>
+          <div class="config-card-titulo"><i class="fas fa-id-card" style="color:var(--naranja);"></i>Datos de Formación</div>
+
+          <?php if ($exito === 'ficha'): ?>
+            <div class="alerta-perfil alerta-ok"><i class="fas fa-check-circle"></i>Datos de formación actualizados correctamente.</div>
+          <?php endif; ?>
+          <?php if ($error === 'ficha'): ?>
+            <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>La ficha SENA no puede estar vacía.</div>
+          <?php endif; ?>
+          <?php if ($error === 'programa'): ?>
+            <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>Selecciona un programa de formación válido.</div>
+          <?php endif; ?>
+          <?php if ($error === 'ficha_guardar'): ?>
+            <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>No pudimos guardar tus datos de formación. Intenta de nuevo.</div>
+          <?php endif; ?>
+
+          <form method="POST" action="<?= PROYECTO_PATH ?>/aprendiz/perfil/actualizar">
+            <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
+            <input type="hidden" name="accion" value="ficha">
+            <?php if ($completar): ?>
+              <input type="hidden" name="completar" value="1">
+            <?php endif; ?>
+
+            <div class="campo-grupo">
+              <label class="campo-label" for="ficha_sena">Ficha SENA</label>
+              <div class="campo-wrap">
+                <i class="fas fa-id-card campo-ico"></i>
+                <input type="text" id="ficha_sena" name="ficha_sena" class="campo-input-perfil"
+                       value="<?= limpiar($fichaSena ?? '') ?>" placeholder="p. ej. 2234891" required maxlength="50">
+              </div>
+              <small style="color:var(--gris-medio); font-size:0.72rem; margin-top:4px; display:block;">
+                Número de la ficha en la que estás matriculado.
+              </small>
+            </div>
+
+            <div class="campo-grupo">
+              <label class="campo-label" for="programa_id">Programa de formación</label>
+              <div class="campo-wrap">
+                <i class="fas fa-graduation-cap campo-ico"></i>
+                <select id="programa_id" name="programa_id" class="campo-input-perfil" required>
+                  <option value="">Selecciona tu programa</option>
+                  <?php foreach (($programas ?? []) as $p): ?>
+                    <option value="<?= limpiar($p['id']) ?>" <?= ($programaId ?? '') === $p['id'] ? 'selected' : '' ?>>
+                      <?= limpiar($p['nombre']) ?>
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-guardar" style="background:var(--naranja); box-shadow:0 4px 0 #C87700;">
+              <i class="fas fa-save"></i> Guardar Datos de Formación
             </button>
           </form>
         </div>
