@@ -740,10 +740,6 @@ class AuthController extends Controller {
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        // Desactivar verificación SSL solo para entornos locales (XAMPP/WAMP)
-        if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'], true)) {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        }
 
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -776,10 +772,6 @@ class AuthController extends Controller {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
         curl_setopt($ch, CURLOPT_TIMEOUT, 15);
-        // Desactivar verificación SSL solo para entornos locales (XAMPP/WAMP)
-        if (in_array($_SERVER['SERVER_NAME'] ?? '', ['localhost', '127.0.0.1'], true)) {
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        }
 
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
