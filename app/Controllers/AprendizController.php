@@ -301,69 +301,7 @@ class AprendizController extends Controller {
         ]);
     }
 
-    public function vocabulario(): void {
-        $pdo = obtenerConexion();
-        $uid = $_SESSION['usuario_id'];
 
-        // Cargar todo el vocabulario del aprendiz
-        $stmt = $pdo->prepare(
-            'SELECT v.*, c.nombre AS categoria_nombre, a.nombre AS area_nombre, n.nombre AS nivel_nombre,
-                    (SELECT 1 FROM vocabulario_marcado vm WHERE vm.vocabulario_id = v.id AND vm.usuario_id = ?) AS es_dificil
-             FROM vocabulario v
-             LEFT JOIN categoria_vocabulario c ON c.id = v.categoria_id
-             LEFT JOIN area_clinica a ON a.id = v.area_clinica_id
-             JOIN rap r ON r.id = v.rap_id
-             JOIN nivel n ON n.id = r.nivel_id
-             WHERE v.activo = 1 AND r.activo = 1
-             ORDER BY n.orden, v.termino_en'
-        );
-        $stmt->execute([$uid]);
-        $vocabulario = $stmt->fetchAll();
-
-        $this->render('aprendiz/vocabulario', compact('vocabulario'));
-    }
-
-    public function dialogos(): void {
-        $pdo = obtenerConexion();
-        $stmt = $pdo->query(
-            'SELECT d.*, n.nombre AS nivel_nombre
-             FROM dialogo d
-             JOIN rap r ON r.id = d.rap_id
-             JOIN nivel n ON n.id = r.nivel_id
-             WHERE d.activo = 1 AND r.activo = 1
-             ORDER BY n.orden'
-        );
-        $dialogos = $stmt->fetchAll();
-
-        foreach ($dialogos as &$d) {
-            $stmtTur = $pdo->prepare('SELECT * FROM turno_dialogo WHERE dialogo_id = ? ORDER BY orden_turno ASC');
-            $stmtTur->execute([$d['id']]);
-            $d['turnos'] = $stmtTur->fetchAll();
-        }
-
-        $this->render('aprendiz/dialogos', compact('dialogos'));
-    }
-
-    public function ejercicios(): void {
-        $pdo = obtenerConexion();
-        $stmt = $pdo->query(
-            'SELECT e.*, n.nombre AS nivel_nombre
-             FROM ejercicio e
-             JOIN rap r ON r.id = e.rap_id
-             JOIN nivel n ON n.id = r.nivel_id
-             WHERE e.activo = 1 AND r.activo = 1
-             ORDER BY n.orden, e.tipo'
-        );
-        $ejercicios = $stmt->fetchAll();
-
-        foreach ($ejercicios as &$ej) {
-            $stmtOpc = $pdo->prepare('SELECT id, texto, es_correcta, retroalimentacion FROM ejercicio_opcion WHERE ejercicio_id = ?');
-            $stmtOpc->execute([$ej['id']]);
-            $ej['opciones'] = $stmtOpc->fetchAll();
-        }
-
-        $this->render('aprendiz/ejercicios', compact('ejercicios'));
-    }
 
     public function glosario(): void {
         $pdo = obtenerConexion();
