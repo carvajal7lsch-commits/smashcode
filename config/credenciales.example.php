@@ -19,3 +19,8 @@ define('SMTP_PORT', 587);
 
 // Configuración de JWT (Genera una clave segura con: php -r "echo bin2hex(random_bytes(48));")
 define('JWT_SECRET', 'TU_CLAVE_JWT_SECRETA_AQUI');
+
+// Inicio de sesión con Google (OAuth 2.0). Se obtienen en Google Cloud Console.
+define('GOOGLE_CLIENT_ID', '');
+define('GOOGLE_CLIENT_SECRET', '');
+define('GOOGLE_REDIRECT_URI', 'http://localhost/smashcode/login/google/callback');

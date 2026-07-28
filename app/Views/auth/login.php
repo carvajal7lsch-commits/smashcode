@@ -124,8 +124,10 @@
           <i class="fas fa-right-to-bracket"></i> Ingresar
         </button>
         <div class="separador-o">o ingresa con</div>
-        <div class="grupo-botones-social">
-          <button type="button" class="btn btn-social"><i class="fab fa-google"></i> Google</button>
+        <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">
+          <i class="fab fa-google"></i> Continuar con Google
+        </a>
+        <div class="grupo-botones-social mt-10">
           <button type="button" class="btn btn-social"><i class="fab fa-facebook-f"></i> Facebook</button>
         </div>
       </form>
@@ -183,8 +185,10 @@
           <i class="fas fa-user-plus"></i> Crear cuenta
         </button>
         <div class="separador-o">o regístrate con</div>
-        <div class="grupo-botones-social">
-          <button type="button" class="btn btn-social"><i class="fab fa-google"></i> Google</button>
+        <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">
+          <i class="fab fa-google"></i> Continuar con Google
+        </a>
+        <div class="grupo-botones-social mt-10">
           <button type="button" class="btn btn-social"><i class="fab fa-facebook-f"></i> Facebook</button>
         </div>
         <p class="auth-terminos-texto">

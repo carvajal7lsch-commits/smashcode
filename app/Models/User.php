@@ -53,6 +53,54 @@ class User extends Model {
         return $stmt->execute([$id, $nombre, $correo, $hashContrasena, $fichaSena ?: null, $programaId ?: null]);
     }
 
+    /* --------------------------------------------------------
+     * Inicio de sesión con Google (OAuth 2.0)
+     * -------------------------------------------------------- */
+
+    /**
+     * Busca un usuario por su identificador de Google (el claim `sub`).
+     */
+    public function obtenerPorGoogleId(string $googleId): ?array {
+        $pdo = self::obtenerConexion();
+        $stmt = $pdo->prepare('SELECT id, nombre_completo, correo, rol, activo, bloqueado, eliminado, ficha_sena, programa_id, google_id, debe_cambiar_clave FROM usuarios WHERE google_id = ? LIMIT 1');
+        $stmt->execute([$googleId]);
+        $usuario = $stmt->fetch();
+        return $usuario ?: null;
+    }
+
+    /**
+     * Busca un usuario por correo trayendo los campos que necesita el flujo de Google
+     * (ficha_sena y programa_id para HU16, eliminado para no revivir cuentas borradas).
+     * Se mantiene aparte de obtenerPorCorreo() porque ese lo usa el login por contraseña.
+     */
+    public function obtenerPorCorreoParaGoogle(string $correo): ?array {
+        $pdo = self::obtenerConexion();
+        $stmt = $pdo->prepare('SELECT id, nombre_completo, correo, rol, activo, bloqueado, eliminado, ficha_sena, programa_id, google_id, debe_cambiar_clave FROM usuarios WHERE correo = ? LIMIT 1');
+        $stmt->execute([$correo]);
+        $usuario = $stmt->fetch();
+        return $usuario ?: null;
+    }
+
+    /**
+     * Vincula una cuenta ya existente con su identificador de Google.
+     * El correo de Google llega verificado, así que también marca correo_verificado.
+     */
+    public function vincularGoogleId(string $id, string $googleId): bool {
+        $pdo = self::obtenerConexion();
+        $stmt = $pdo->prepare('UPDATE usuarios SET google_id = ?, correo_verificado = 1 WHERE id = ?');
+        return $stmt->execute([$googleId, $id]);
+    }
+
+    /**
+     * Registra un aprendiz autenticado con Google, sin contraseña local.
+     * Requiere la migración 2026_07_27_google_login.sql (contrasena NULLABLE + google_id).
+     */
+    public function registrarConGoogle(string $id, string $nombre, string $correo, string $googleId): bool {
+        $pdo = self::obtenerConexion();
+        $stmt = $pdo->prepare('INSERT INTO usuarios (id, nombre_completo, correo, contrasena, google_id, rol, correo_verificado) VALUES (?, ?, ?, NULL, ?, "aprendiz", 1)');
+        return $stmt->execute([$id, $nombre, $correo, $googleId]);
+    }
+
     /**
      * Actualiza la cantidad de intentos fallidos y el estado de bloqueo de una cuenta.
      */
@@ -145,6 +193,16 @@ class User extends Model {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare('UPDATE usuarios SET nombre_completo = ? WHERE id = ?');
         return $stmt->execute([$nombre, $id]);
+    }
+
+    /**
+     * Actualiza la ficha SENA y el programa de formación del aprendiz (HU16).
+     * Lo necesitan las cuentas creadas con Google, que nacen sin estos datos.
+     */
+    public function actualizarFichaYPrograma(string $id, string $fichaSena, string $programaId): bool {
+        $pdo  = self::obtenerConexion();
+        $stmt = $pdo->prepare('UPDATE usuarios SET ficha_sena = ?, programa_id = ? WHERE id = ?');
+        return $stmt->execute([$fichaSena, $programaId, $id]);
     }
 
     /**

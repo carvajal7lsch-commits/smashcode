@@ -42,6 +42,10 @@ $app->post('/login/ingresar', 'AuthController@ingresar');
 $app->post('/login/registrar', 'AuthController@registrar');
 $app->get('/logout', 'AuthController@logout');
 
+// --- Inicio de Sesión con Google (OAuth 2.0) ---
+$app->get('/login/google', 'AuthController@googleRedirect');
+$app->get('/login/google/callback', 'AuthController@googleCallback');
+
 // --- Recuperación de Contraseñas ---
 $app->get('/recuperar', 'AuthController@showRecuperar');
 $app->post('/recuperar/enviar', 'AuthController@enviarEnlace');
