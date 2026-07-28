@@ -172,93 +172,124 @@
 
       <!-- MAPA DE PROGRESO -->
       <div class="main-column">
-        
-        <?php
-        // Encontrar la sección (nivel) activa actual
-        $seccionActiva = null;
-        if ($autenticado) {
-            foreach ($niveles as $nivel) {
-                if (!isset($mapaProgreso[$nivel['rap_id']]) || !$mapaProgreso[$nivel['rap_id']]['completado']) {
-                    $seccionActiva = $nivel;
-                    break;
+           <?php
+        // Agrupar RAPs por Nivel
+        $nivelesAgrupados = [];
+        foreach ($niveles as $row) {
+            $nId = $row['id'];
+            if (!isset($nivelesAgrupados[$nId])) {
+                $nivelesAgrupados[$nId] = [
+                    'id' => $row['id'],
+                    'nombre' => $row['nombre'],
+                    'orden' => $row['orden'] ?? 1,
+                    'umbral' => $row['umbral_desbloqueo'],
+                    'raps' => []
+                ];
+            }
+            $nivelesAgrupados[$nId]['raps'][] = [
+                'id' => $row['rap_id'],
+                'titulo' => $row['rap_titulo'],
+                'orden' => $row['rap_orden'] ?? 1
+            ];
+        }
+
+        // Calcular promedios de progreso por nivel
+        foreach ($nivelesAgrupados as &$nivelData) {
+            $totalPorcentaje = 0;
+            foreach ($nivelData['raps'] as $rap) {
+                if ($autenticado && isset($mapaProgreso[$rap['id']])) {
+                    $totalPorcentaje += $mapaProgreso[$rap['id']]['porcentaje'];
                 }
             }
+            $nivelData['progreso_promedio'] = count($nivelData['raps']) > 0 ? ($totalPorcentaje / count($nivelData['raps'])) : 0;
         }
-        if (!$seccionActiva) {
-            $seccionActiva = $niveles[0] ?? ['orden' => 1, 'nombre' => 'Conceptos Básicos'];
-        }
-        ?>
+        unset($nivelData);
+
+        $primerActivo = true; // Para el tooltip de EMPEZAR
+        $OFFSETS = ['', '', 'offset-right', 'offset-left', '', 'offset-right'];
+        $todosCompletadosGlobal = true;
+        $promedioNivelAnterior = 100.00; // El nivel 1 siempre está desbloqueado
+        $globalRapIndex = 0; // Para los offsets
         
-        <!-- Green Header Section -->
-        <div class="unit-header">
+        foreach ($nivelesAgrupados as $indexNivel => $nivelData):
+            // Un nivel está desbloqueado si es el primero (orden 1) o si el nivel anterior alcanzó el 80% (o el umbral definido).
+            $nivelDesbloqueado = (!$autenticado) ? ($nivelData['orden'] == 1) : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
+        ?>
+
+        <!-- Header Section para cada Nivel -->
+        <div class="unit-header" style="<?= $nivelDesbloqueado ? '' : 'filter: grayscale(1); opacity: 0.8;' ?>">
             <div class="unit-info">
-                <div class="back-btn" id="header-competencia">
-                    <i class="fas fa-arrow-left"></i> ETAPA 1, SECCIÓN <?= $seccionActiva['orden'] ?>
+                <div class="back-btn">
+                    <i class="fas <?= $nivelDesbloqueado ? 'fa-unlock' : 'fa-lock' ?>"></i> ETAPA 1, SECCIÓN <?= $nivelData['orden'] ?>
                 </div>
-                <h1 id="header-title"><?= limpiar($seccionActiva['nombre']) ?></h1>
+                <h1><?= limpiar($nivelData['nombre']) ?></h1>
             </div>
             <button class="guide-btn"><i class="fas fa-book-open"></i> GUÍA</button>
         </div>
 
-        <!-- Dynamic Path -->
-        <div class="path-container" id="path-container">
+        <div class="path-container" style="padding-bottom: 40px;">
             <?php
-            $primerActivo = true; // Para saber cuál es el nodo actual (para el tooltip EMPEZAR y el progreso)
-            $OFFSETS = ['', '', 'offset-right', 'offset-left', '', 'offset-right'];
-            $todosCompletados = true;
+            $rapAnteriorCompletado = true; // El primer RAP de un nivel desbloqueado siempre está disponible
+            
+            foreach ($nivelData['raps'] as $rap):
+                // Lógica estricta de estado por RAP
+                if (!$nivelDesbloqueado) {
+                    $estadoRap = 'bloqueado';
+                } else {
+                    if ($rapAnteriorCompletado) {
+                        if ($autenticado && isset($mapaProgreso[$rap['id']])) {
+                            if ($mapaProgreso[$rap['id']]['completado']) {
+                                $estadoRap = 'completado';
+                            } else {
+                                $estadoRap = 'en_progreso';
+                            }
+                        } else {
+                            $estadoRap = 'disponible';
+                        }
+                    } else {
+                        $estadoRap = 'bloqueado';
+                    }
+                }
 
-            foreach ($niveles as $i => $nivel):
-              $estado = $autenticado
-                  ? (isset($mapaProgreso[$nivel['rap_id']])
-                      ? ($mapaProgreso[$nivel['rap_id']]['completado'] ? 'completado' : ($mapaProgreso[$nivel['rap_id']]['porcentaje'] > 0 ? 'en_progreso' : 'disponible'))
-                      : ($nivel['orden'] === 1 ? 'disponible' : 'bloqueado')) // Nivel 1 siempre disponible
-                  : ($nivel['orden'] === 1 ? 'disponible' : 'bloqueado');
+                $offsetClase = $OFFSETS[$globalRapIndex % count($OFFSETS)];
+                $globalRapIndex++;
 
-              // Lógica de desbloqueo avanzado
-              if ($autenticado && $estado === 'bloqueado' && $nivel['orden'] > 1) {
-                  $anteriorOrden = $nivel['orden'] - 1;
-                  $nivelAnterior = array_filter($niveles, fn($n) => $n['orden'] === $anteriorOrden);
-                  $nivelAnterior = reset($nivelAnterior);
-                  if ($nivelAnterior && isset($mapaProgreso[$nivelAnterior['rap_id']])) {
-                      if ($mapaProgreso[$nivelAnterior['rap_id']]['porcentaje'] >= 80) {
-                          $estado = 'disponible';
-                      }
-                  }
-              }
+                $esPrincipal = ($estadoRap === 'disponible' || $estadoRap === 'en_progreso') && $primerActivo;
+                if ($esPrincipal) $primerActivo = false;
+                if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
+                if ($estadoRap === 'completado') {
+                    $rapAnteriorCompletado = true;
+                } else {
+                    $rapAnteriorCompletado = false; // Bloquea los siguientes
+                }
 
-              $offsetClase = $OFFSETS[$i % count($OFFSETS)];
-              $esPrincipal = ($estado === 'disponible' || $estado === 'en_progreso') && $primerActivo;
-              if ($esPrincipal) $primerActivo = false;
-              if ($estado !== 'completado') $todosCompletados = false;
+                $urlRap = $autenticado && $estadoRap !== 'bloqueado'
+                    ? PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id'])
+                    : '#';
 
-              $urlRap = $autenticado && $estado !== 'bloqueado'
-                  ? PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($nivel['rap_id'])
-                  : '#';
+                $iconosRefs = ['fa-star', 'fa-book', 'fa-star', 'fa-star', 'fa-heart', 'fa-star'];
+                $iconoAct = $iconosRefs[$globalRapIndex % count($iconosRefs)];
 
-              // Clases e íconos exactos de la referencia
-              $nodeClass = '';
-              $iconHtml = '';
-              $isActive = false;
+                $nodeClass = '';
+                $iconHtml = '';
+                $isActive = false;
 
-              $iconosRefs = ['fa-star', 'fa-book', 'fa-star', 'fa-star', 'fa-heart', 'fa-star'];
-              $iconoAct = $iconosRefs[$i % count($iconosRefs)];
-
-              if ($estado === 'completado') {
-                  $nodeClass = 'star completed';
-                  $iconHtml = '<i class="fas fa-check"></i>';
-              } else if ($esPrincipal) {
-                  $nodeClass = 'star';
-                  $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
-                  $isActive = true;
-              } else {
-                  $nodeClass = 'star-locked';
-                  $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
-              }
+                if ($estadoRap === 'completado') {
+                    $nodeClass = 'star completed';
+                    $iconHtml = '<i class="fas fa-check"></i>';
+                } else if ($esPrincipal) {
+                    $nodeClass = 'star';
+                    $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
+                    $isActive = true;
+                } else {
+                    $nodeClass = 'star-locked';
+                    $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
+                }
             ?>
             <div class="path-item <?= $isActive ? 'current' : 'locked' ?> <?= $offsetClase ?>">
                 <div class="node-wrapper" 
-                     onclick="<?= $estado !== 'bloqueado' ? "window.location='{$urlRap}'" : "mostrarMensajeBloqueado()" ?>" 
-                     title="<?= limpiar($nivel['nombre']) ?>">
+                     onclick="<?= $estadoRap !== 'bloqueado' ? "window.location='{$urlRap}'" : "mostrarMensajeBloqueado()" ?>" 
+                     title="<?= limpiar($rap['titulo']) ?>">
                     
                     <?php if ($isActive): ?>
                         <span class="tooltip" id="start-tooltip">EMPEZAR</span>
@@ -268,9 +299,8 @@
                         <?= $iconHtml ?>
                     </div>
                     
-                    <?php if ($isActive): 
-                        // Progress ring SVG
-                        $pct = isset($mapaProgreso[$nivel['rap_id']]) ? $mapaProgreso[$nivel['rap_id']]['porcentaje'] : 0;
+                    <?php if ($isActive && $autenticado): 
+                        $pct = isset($mapaProgreso[$rap['id']]) ? $mapaProgreso[$rap['id']]['porcentaje'] : 0;
                         $radius = 45;
                         $circumference = 2 * pi() * $radius;
                         $dashoffset = $circumference - ($pct / 100) * $circumference;
@@ -285,15 +315,22 @@
                 </div>
             </div>
             <?php endforeach; ?>
-            
+        </div>
+        
+        <?php 
+            $promedioNivelAnterior = $nivelData['progreso_promedio'];
+        endforeach; 
+        ?>
+        
+        <div class="path-container" style="padding-top: 0;">
             <!-- Cofre final -->
             <?php
-              $chestIndex = count($niveles);
-              $chestOffset = $OFFSETS[$chestIndex % count($OFFSETS)];
+              $chestOffset = $OFFSETS[$globalRapIndex % count($OFFSETS)];
+              $globalRapIndex++;
             ?>
-            <div class="path-item <?= $todosCompletados ? 'completed' : 'locked' ?> <?= $chestOffset ?>">
+            <div class="path-item <?= $todosCompletadosGlobal ? 'completed' : 'locked' ?> <?= $chestOffset ?>">
                 <div class="node-wrapper">
-                    <div class="node <?= $todosCompletados ? 'chest-complete' : 'chest' ?>">
+                    <div class="node <?= $todosCompletadosGlobal ? 'chest-complete' : 'chest' ?>">
                         <i class="fas fa-box-open"></i>
                     </div>
                 </div>
@@ -301,18 +338,16 @@
             
             <!-- Trofeo final -->
             <?php
-              $trophyIndex = count($niveles) + 1;
-              $trophyOffset = $OFFSETS[$trophyIndex % count($OFFSETS)];
+              $trophyOffset = $OFFSETS[$globalRapIndex % count($OFFSETS)];
             ?>
-            <div class="path-item <?= $todosCompletados ? 'completed' : 'locked' ?> <?= $trophyOffset ?>">
+            <div class="path-item <?= $todosCompletadosGlobal ? 'completed' : 'locked' ?> <?= $trophyOffset ?>">
                 <div class="node-wrapper">
-                    <div class="node <?= $todosCompletados ? 'trophy-complete' : 'trophy' ?>">
+                    <div class="node <?= $todosCompletadosGlobal ? 'trophy-complete' : 'trophy' ?>">
                         <i class="fas fa-trophy"></i>
                     </div>
                 </div>
             </div>
-
-        </div>
+        </div>        </div>
       </div>
 
       <!-- PANEL LATERAL DERECHO -->
