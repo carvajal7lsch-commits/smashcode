@@ -190,12 +190,23 @@
         ?>
         
         <!-- Green Header Section -->
+        <?php
+        $descRaps = [
+            'RAP 1' => 'Getting to Know Other People (Fase Análisis)',
+            'RAP 2' => 'Work Life Interaction - Parte 1 (Fase Planeación)',
+            'RAP 3' => 'Work Life Interaction - Parte 2 (Fase Planeación)',
+            'RAP 4' => 'Work Place Communication - Parte 1 (Fase Ejecución)',
+            'RAP 5' => 'Work Place Communication - Parte 2 (Fase Ejecución)',
+            'RAP 6' => 'Professional Practice (Fase Evaluación)',
+        ];
+        $tituloMostrar = $descRaps[$seccionActiva['rap_titulo']] ?? $seccionActiva['nombre'];
+        ?>
         <div class="unit-header">
             <div class="unit-info">
                 <div class="back-btn" id="header-competencia">
                     <i class="fas fa-arrow-left"></i> ETAPA 1, SECCIÓN <?= $seccionActiva['orden'] ?>
                 </div>
-                <h1 id="header-title"><?= limpiar($seccionActiva['nombre']) ?></h1>
+                <h1 id="header-title"><?= limpiar($tituloMostrar) ?></h1>
             </div>
             <button class="guide-btn"><i class="fas fa-book-open"></i> GUÍA</button>
         </div>
