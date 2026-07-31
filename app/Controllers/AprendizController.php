@@ -27,7 +27,7 @@ class AprendizController extends Controller {
 
         // Obtener RAP y nivel
         $stmtRap = $pdo->prepare(
-            'SELECT r.id, r.titulo, r.activo AS rap_activo, r.nivel_id, n.nombre AS nivel_nombre, n.orden AS nivel_orden
+            'SELECT r.id, r.titulo, r.activo AS rap_activo, r.nivel_id, n.nombre AS nivel_nombre, n.orden AS nivel_orden, n.descripcion AS nivel_descripcion
              FROM rap r
              JOIN nivel n ON n.id = r.nivel_id
              WHERE r.id = ?'

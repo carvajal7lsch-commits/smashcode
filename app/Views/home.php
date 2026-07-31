@@ -85,15 +85,23 @@
     }
     .node-wrapper .tooltip {
       position: absolute; top: -45px; left: 50%; transform: translateX(-50%);
-      background: var(--blanco); border: 2px solid var(--duo-gray); padding: 5px 15px;
+      background: var(--blanco); border: 2px solid var(--gris-claro); padding: 5px 15px;
       border-radius: 12px; font-weight: 800; font-size: 14px; color: var(--duo-green);
-      box-shadow: 0 2px 0 var(--duo-gray); animation: bounce 2s infinite ease-in-out;
+      box-shadow: 0 3px 0 var(--gris-claro); animation: bounce 2s infinite ease-in-out;
       white-space: nowrap; z-index: 10;
     }
     .node-wrapper .tooltip::after {
-      content: ''; position: absolute; bottom: -10px; left: 50%;
-      transform: translateX(-50%); border-left: 10px solid transparent;
-      border-right: 10px solid transparent; border-top: 10px solid var(--blanco);
+      content: ''; position: absolute; bottom: -8px; left: 50%;
+      transform: translateX(-50%); border-left: 8px solid transparent;
+      border-right: 8px solid transparent; border-top: 8px solid var(--blanco);
+    }
+    [data-theme="light"] .node-wrapper .tooltip {
+      background: #FFFFFF;
+      border-color: #E2E8F0;
+      box-shadow: 0 3px 0 #E2E8F0;
+    }
+    [data-theme="light"] .node-wrapper .tooltip::after {
+      border-top-color: #FFFFFF;
     }
 
     .node {
@@ -382,7 +390,7 @@
                                 $dashoffset    = $circumference - ($pctRap / 100) * $circumference;
                             ?>
                             <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#e5e5e5" stroke-width="8"/>
+                                <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="var(--gris-claro)" stroke-width="8"/>
                                 <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="8"
                                         stroke-dasharray="<?= $circumference ?>" stroke-dashoffset="<?= $dashoffset ?>"
                                         stroke-linecap="round" transform="rotate(-90 50 50)"/>

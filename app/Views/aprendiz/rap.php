@@ -58,6 +58,31 @@
 
     <!-- ==================== MOMENTO 1: WARM-UP ==================== -->
     <section class="moment-pane active" id="pane-moment-1" aria-labelledby="tab-moment-1">
+      
+      <!-- 1.1 Intro & Objetivos (Contenidos.md) -->
+      <div class="card-moment" style="margin-bottom: 24px;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+          <div style="width:48px; height:48px; border-radius:14px; background:rgba(28,176,246,0.12); color:var(--azul); display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+            <i class="fas fa-bullseye"></i>
+          </div>
+          <div>
+            <h2 style="font-size:1.25rem; margin:0; font-weight:800; color:var(--gris-texto);">Momento 1: Preparación (Intro & Objetivos)</h2>
+            <div style="font-size:0.85rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-top:2px;">
+              <?= limpiar($rap['nivel_nombre']) ?>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px 22px; margin-top:14px;">
+          <h3 style="font-size:1rem; font-weight:800; color:var(--verde); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-compass"></i> Objetivos del Módulo
+          </h3>
+          <p style="color:var(--gris-texto); font-size:1.02rem; line-height:1.6; margin:0; font-weight:600;">
+            "<?= !empty($rap['nivel_descripcion']) ? limpiar($rap['nivel_descripcion']) : 'En este módulo aprenderás las competencias clave de comunicación clínica en inglés.' ?>"
+          </p>
+        </div>
+      </div>
+
       <div class="card-moment">
         <h2>Warm-Up Mini-Game</h2>
         <p style="color:var(--texto-tenue); margin-top:8px;">Match English terms to their Spanish meanings to activate your prior knowledge!</p>
@@ -69,12 +94,17 @@
 
         <div id="warmup-success-msg" style="display:none; text-align:center; margin-top:32px; animation: fadeInUp 0.3s ease;">
           <h3 style="color:var(--verde); font-size:1.4rem; font-weight:800; margin-bottom:12px;">
-            <i class="fas fa-star" style="margin-right:8px;"></i>Warm-Up Completed!
+            <i class="fas fa-star" style="margin-right:8px;"></i>¡Warm-Up Completado!
           </h3>
-          <p style="color:var(--texto-tenue); margin-bottom:24px;">Moment 2 (Absorption) is now unlocked. Let's start studying!</p>
-          <button class="btn-verde" style="margin: 0 auto; display: block;" onclick="switchTab(2)">
-            Continue <i class="fas fa-arrow-right"></i>
-          </button>
+          <p style="color:var(--texto-tenue); margin-bottom:24px;">¡Has completado el Momento 1! El Momento 2 (Absorption) está desbloqueado.</p>
+          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <button class="btn-verde" onclick="finishMomentAndReturn(25)">
+              <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Volver al Mapa
+            </button>
+            <button class="btn-gris" onclick="switchTab(2)" style="padding:10px 20px; font-weight:800;">
+              Siguiente Momento <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -83,19 +113,70 @@
     <section class="moment-pane" id="pane-moment-2" aria-labelledby="tab-moment-2">
       <!-- 2.1 Grammar Pill -->
       <div class="card-moment">
-        <h2>Grammar Pill</h2>
-        <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:16px;">Analyze the grammatical structure of clinical interactions: Subject + Verb + Complement.</p>
-        <div class="grammar-pill">
-          <h3>Forming Patient Registrations & Sentences</h3>
-          <div class="grammar-table">
-            <span class="gt-sujeto" title="Subject">I</span>
-            <span class="gt-verbo" title="Verb To Be">am</span>
-            <span class="gt-complemento" title="Complement">Sarah, your nurse</span>
-          </div>
-          <p style="font-size:0.9rem; text-align:center; color:var(--texto-tenue);">
-            Sujeto (<span style="color:#1cb0f6; font-weight:700;">I</span>) + Verbo To Be (<span style="color:#ff9600; font-weight:700;">am</span>) + Complemento Clínico (<span style="color:#58cc02; font-weight:700;">Sarah, su enfermera</span>).
+        <?php if ($rap['nivel_orden'] == 2): ?>
+          <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-pills" style="color:var(--naranja);"></i> Grammar Pill: Clinical Status vs. Patient History</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:20px;">
+            Aprende a diferenciar las acciones en <strong>Pasado Simple</strong> (lo que le ocurrió al paciente antes de su ingreso) de los <strong>Adjetivos Descriptivos y Estado Actual</strong> (cómo se encuentra hoy Mr. Thomas).
           </p>
-        </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:12px;">
+            <!-- Columna 1: Patient's History (Simple Past) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--morado); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-history"></i> Patient's History (Pasado Simple)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  He <span style="color:var(--naranja); font-weight:900;">fell</span> at the hotel yesterday.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Él se cayó en el hotel ayer)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  He <span style="color:var(--naranja); font-weight:900;">had</span> an accident before admission.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Él tuvo un accidente antes del ingreso)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The paramedics <span style="color:var(--naranja); font-weight:900;">brought</span> him on a stretcher.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Los paramédicos lo trajeron en camilla)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Current Status (Present & Descriptives) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-stethoscope"></i> Current Status (Estado Actual)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  Mr. Thomas <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">pale and tired</span> today.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(El paciente está pálido y cansado hoy)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  His right arm <span style="color:var(--azul); font-weight:900;">has</span> a <span style="color:var(--verde); font-weight:900;">fracture</span>.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Su brazo derecho tiene una fractura)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The room <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">cold</span>, but signs are stable.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(La habitación está fría, pero está estable)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <?php else: ?>
+          <h2>Grammar Pill</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:16px;">Analyze the grammatical structure of clinical interactions: Subject + Verb + Complement.</p>
+          <div class="grammar-pill">
+            <h3>Forming Patient Registrations & Sentences</h3>
+            <div class="grammar-table">
+              <span class="gt-sujeto" title="Subject">I</span>
+              <span class="gt-verbo" title="Verb To Be">am</span>
+              <span class="gt-complemento" title="Complement">Sarah, your nurse</span>
+            </div>
+            <p style="font-size:0.9rem; text-align:center; color:var(--texto-tenue);">
+              Sujeto (<span style="color:#1cb0f6; font-weight:700;">I</span>) + Verbo To Be (<span style="color:#ff9600; font-weight:700;">am</span>) + Complemento Clínico (<span style="color:#58cc02; font-weight:700;">Sarah, su enfermera</span>).
+            </p>
+          </div>
+        <?php endif; ?>
       </div>
 
       <!-- 2.2 Vocabulary Lab Slider -->
@@ -173,9 +254,12 @@
           <?php endforeach; ?>
         <?php endif; ?>
 
-        <div style="text-align:center; margin-top:32px;">
-          <button class="btn-verde" id="btn-unlock-moment-3" onclick="unlockMoment3()">
-            I am ready for Output Practice <i class="fas fa-arrow-right"></i>
+        <div style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+          <button class="btn-verde" id="btn-unlock-moment-3" onclick="finishMomentAndReturn(50)">
+            <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Guardar y Volver al Mapa
+          </button>
+          <button class="btn-gris" onclick="unlockMoment3()" style="padding:10px 20px; font-weight:800;">
+            Ir a Practicar <i class="fas fa-arrow-right"></i>
           </button>
         </div>
       </div>
@@ -465,18 +549,6 @@
     document.getElementById('tab-moment-' + num).classList.add('active');
     document.getElementById('pane-moment-' + num).classList.add('active');
     activeTab = num;
-
-    // Actualizar progreso
-    let pct = (num - 1) * 25;
-    let fill = document.getElementById('header-progress-fill');
-    let txt = document.getElementById('header-progress-text');
-    if (fill && txt) {
-      fill.style.width = pct + '%';
-      txt.textContent = pct + '%';
-    }
-
-    // Reportar progreso al servidor vía AJAX
-    saveProgress(pct);
   }
 
   function saveProgress(pct) {
@@ -797,9 +869,17 @@
     box.querySelectorAll('.option-item').forEach(n => n.classList.remove('selected'));
     node.classList.add('selected');
     
+    let isCorrect = parseInt(node.dataset.correct) === 1;
+    let retroText = node.dataset.retro;
+    if (!isCorrect) {
+      let correctNode = box.querySelector('.option-item[data-correct="1"] span:last-child');
+      let correctAns = correctNode ? correctNode.textContent : '';
+      retroText = 'La respuesta correcta es: ' + correctAns;
+    }
+    
     answersObj[exIdx] = {
-      isCorrect: parseInt(node.dataset.correct) === 1,
-      retro: node.dataset.retro,
+      isCorrect: isCorrect,
+      retro: retroText,
       text: node.querySelector('span:last-child').textContent
     };
   }
@@ -822,9 +902,10 @@
 
     let correctVal = document.getElementById('blank-sentence-' + exIdx).dataset.correct;
 
+    let isCorrect = text.toLowerCase().trim() === correctVal.toLowerCase().trim();
     answersObj[exIdx] = {
-      isCorrect: text.toLowerCase().trim() === correctVal.toLowerCase().trim(),
-      retro: 'Frase completada.',
+      isCorrect: isCorrect,
+      retro: isCorrect ? '¡Frase completada correctamente!' : ('La respuesta correcta es: ' + correctVal),
       text: text
     };
   }
@@ -918,9 +999,11 @@
 
     if (selectedOrderSeq.length === correctArr.length) {
       let isCorrect = selectedOrderSeq.every((val, i) => val === correctArr[i]);
+      let retroMsg = isCorrect ? '¡Has ordenado perfectamente la conversación!' : 'La respuesta correcta es el orden cronológico:\n1. How is Mr. Thomas...\n2. He feels tired. Yesterday he fell...\n3. Did he suffer any fracture?\n4. Yes, he has a fracture...';
+      
       answersObj[exIdx] = {
         isCorrect: isCorrect,
-        retro: isCorrect ? '¡Has ordenado perfectamente la conversación!' : 'El orden no es el correcto.',
+        retro: retroMsg,
         text: selectedOrderSeq.join(' | ')
       };
       validateExercise(exIdx);
@@ -938,9 +1021,10 @@
       let input = document.getElementById('dictation-input-' + exIdx);
       let text = input.value.trim().toLowerCase();
       let correct = input.dataset.correct.toLowerCase().trim();
+      let isCorrect = text === correct;
       ans = {
-        isCorrect: text === correct,
-        retro: text === correct ? '¡Correcto!' : `Incorrecto. Se escribe: "${correct}".`,
+        isCorrect: isCorrect,
+        retro: isCorrect ? '¡Correcto! Has registrado la palabra en las Notas de Enfermería.' : `La respuesta correcta es: "${correct}".`,
         text: text
       };
       answersObj[exIdx] = ans;
@@ -1008,8 +1092,7 @@
       nextBox.classList.add('active');
       updateExerciseHeader();
     } else {
-      // Completó todos los ejercicios!
-      // Otorgar XP en el servidor al final de los ejercicios
+      // Completó todos los ejercicios del Momento 3!
       let userXpFormData = new FormData();
       userXpFormData.append('rap_id', rapId);
       userXpFormData.append('porcentaje', 75); // 75% progress
@@ -1018,7 +1101,25 @@
         body: userXpFormData
       }).then(() => {
         unlockMoment(4);
-        switchTab(4);
+        let carousel = document.getElementById('exercises-carousel');
+        let finishBox = document.createElement('div');
+        finishBox.className = 'card-moment';
+        finishBox.style.cssText = 'text-align:center; padding:32px 20px; animation:fadeInUp 0.3s ease;';
+        finishBox.innerHTML = `
+          <h3 style="color:var(--verde); font-size:1.5rem; font-weight:800; margin-bottom:12px;">
+            <i class="fas fa-check-circle" style="margin-right:8px;"></i>¡Momento 3 (Práctica) Completado!
+          </h3>
+          <p style="color:var(--texto-tenue); margin-bottom:24px;">Has realizado los ejercicios prácticos. El Momento 4 (Quiz) ya está desbloqueado.</p>
+          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
+            <button class="btn-verde" onclick="finishMomentAndReturn(75)">
+              <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Volver al Mapa
+            </button>
+            <button class="btn-morado" onclick="switchTab(4)" style="padding:10px 20px; font-weight:800;">
+              Comenzar Quiz <i class="fas fa-award"></i>
+            </button>
+          </div>
+        `;
+        carousel.appendChild(finishBox);
       });
     }
   }
@@ -1234,6 +1335,13 @@
       ctx.clearRect(0,0,canvas.width,canvas.height);
       canvas.style.display = 'none';
     }, 6000);
+  }
+
+  function finishMomentAndReturn(pct) {
+    saveProgress(pct);
+    setTimeout(() => {
+      window.location.href = '<?= PROYECTO_PATH ?>/';
+    }, 300);
   }
 
   // --- AL CARGAR ---
