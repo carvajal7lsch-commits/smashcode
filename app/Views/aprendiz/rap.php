@@ -1241,6 +1241,13 @@
     initWarmupMatching();
     showVocabItem();
     initExercises();
+
+    // Si la URL tiene ?momento=N, navegar directamente a ese tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const momentoParam = parseInt(urlParams.get('momento'));
+    if (momentoParam && momentoParam >= 1 && momentoParam <= 4 && momentoParam <= maxTabUnlocked) {
+      switchTab(momentoParam);
+    }
   });
 </script>
 
