@@ -1039,8 +1039,9 @@
     let correctArr = correctSeqText.split('|');
 
     if (selectedOrderSeq.length === correctArr.length) {
-      let isCorrect = selectedOrderSeq.every((val, i) => val === correctArr[i]);
-      let retroMsg = isCorrect ? '¡Has ordenado perfectamente la conversación!' : 'La respuesta correcta es el orden cronológico:\n1. How is Mr. Thomas...\n2. He feels tired. Yesterday he fell...\n3. Did he suffer any fracture?\n4. Yes, he has a fracture...';
+      let isCorrect = selectedOrderSeq.every((val, i) => val.trim() === correctArr[i].trim());
+      let formattedCorrect = correctArr.map((line, idx) => `${idx + 1}. ${line.trim()}`).join(' ');
+      let retroMsg = isCorrect ? '¡Has ordenado perfectamente la conversación!' : ('La respuesta correcta es el orden cronológico: ' + formattedCorrect);
       
       answersObj[exIdx] = {
         isCorrect: isCorrect,
