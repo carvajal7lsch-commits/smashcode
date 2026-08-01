@@ -142,30 +142,38 @@
                 'Vocabulario Pro' => 'Aprendiste 50 palabras médicas',
                 'Estudiante Élite' => 'Completaste todos los niveles'
               ];
-              $nombreInsigniasMap = [
-                'Primer Nivel' => 'Primer Nivel',
-                'Racha 7 Días' => 'Racha 7 Días',
-                'Quiz Perfecto' => 'Quiz Perfecto',
-                'Vocabulario Pro' => 'Vocabulario Pro',
-                'Estudiante Élite' => 'Estudiante Élite'
-              ];
 
               $earnedIds = array_column($insigniasGanadas, 'id');
               foreach ($todasInsignias as $insig):
                   $hasEarned = in_array($insig['id'], $earnedIds);
                   $rawNombre = $insig['nombre'];
-                  $cleanNombre = $nombreInsigniasMap[$rawNombre] ?? limpiar($rawNombre);
-                  $cleanDesc = $descInsigniasMap[$rawNombre] ?? limpiar($insig['descripcion']);
+                  
+                  // Normalizador para asegurar tildes impecables
+                  if (mb_stripos($rawNombre, 'Racha') !== false || mb_stripos($rawNombre, '7') !== false) {
+                      $cleanNombre = 'Racha 7 Días';
+                  } elseif (mb_stripos($rawNombre, 'Primer') !== false) {
+                      $cleanNombre = 'Primer Nivel';
+                  } elseif (mb_stripos($rawNombre, 'Perfecto') !== false) {
+                      $cleanNombre = 'Quiz Perfecto';
+                  } elseif (mb_stripos($rawNombre, 'Vocabulario') !== false) {
+                      $cleanNombre = 'Vocabulario Pro';
+                  } elseif (mb_stripos($rawNombre, 'lite') !== false || mb_stripos($rawNombre, 'Élite') !== false || mb_stripos($rawNombre, 'Elite') !== false) {
+                      $cleanNombre = 'Estudiante Élite';
+                  } else {
+                      $cleanNombre = htmlspecialchars($rawNombre);
+                  }
+
+                  $cleanDesc = $descInsigniasMap[$cleanNombre] ?? htmlspecialchars($insig['descripcion']);
             ?>
               <div style="display:flex; flex-direction:column; align-items:center; width:110px; text-align:center; opacity: <?= $hasEarned ? '1' : '0.4' ?>; filter: <?= $hasEarned ? 'none' : 'grayscale(100%)' ?>;">
                 <div style="width:64px; height:64px; border-radius:50%; background:var(--fondo); border:3px solid <?= $hasEarned ? 'var(--naranja)' : 'var(--gris-claro)' ?>; display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:var(--naranja); box-shadow: <?= $hasEarned ? '0 4px 10px rgba(255,150,0,0.2)' : 'none' ?>; transition:all 0.2s;">
-                  <?php if ($rawNombre === 'Quiz Perfecto'): ?>
+                  <?php if ($cleanNombre === 'Quiz Perfecto'): ?>
                     <i class="fas fa-trophy"></i>
-                  <?php elseif ($rawNombre === 'Primer Nivel'): ?>
+                  <?php elseif ($cleanNombre === 'Primer Nivel'): ?>
                     <i class="fas fa-star"></i>
-                  <?php elseif ($rawNombre === 'Racha 7 Días'): ?>
+                  <?php elseif ($cleanNombre === 'Racha 7 Días'): ?>
                     <i class="fas fa-fire"></i>
-                  <?php elseif ($rawNombre === 'Vocabulario Pro'): ?>
+                  <?php elseif ($cleanNombre === 'Vocabulario Pro'): ?>
                     <i class="fas fa-book-medical"></i>
                   <?php else: ?>
                     <i class="fas fa-award"></i>
@@ -196,13 +204,20 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <?php foreach ($historialQuizzes as $q): ?>
+                  <?php foreach ($historialQuizzes as $q): 
+                      $moduloOrden = (int)($q['modulo_orden'] ?? 1);
+                      $rapsSubtextMap = [
+                          1 => 'RAP 1: Presentaciones e Información Personal',
+                          2 => 'RAP 2 y RAP 3: Historia del Paciente, Entorno Hospitalario y Estado Actual',
+                          3 => 'RAP 4 y RAP 5: Interacción con Visitantes, Sugerencias de Mejora y Lista de Chequeo',
+                          4 => 'RAP 6: Práctica Profesional e Instrucciones de Alta'
+                      ];
+                      $subtexto = $rapsSubtextMap[$moduloOrden] ?? limpiar($q['rap_titulo']);
+                  ?>
                     <tr>
                       <td style="padding:12px; font-weight:700;">
                         <div><?= !empty($q['modulo_nombre']) ? limpiar($q['modulo_nombre']) : limpiar($q['rap_titulo']) ?></div>
-                        <?php if (!empty($q['modulo_nombre'])): ?>
-                          <div style="font-size:0.75rem; font-weight:600; color:var(--texto-tenue); margin-top:2px;"><?= limpiar($q['rap_titulo']) ?></div>
-                        <?php endif; ?>
+                        <div style="font-size:0.75rem; font-weight:600; color:var(--texto-tenue); margin-top:2px;"><?= $subtexto ?></div>
                       </td>
                       <td style="padding:12px; text-align:center; font-weight:800; color:<?= $q['aprobado'] ? 'var(--verde)' : 'var(--rojo)' ?>;"><?= (int)$q['puntaje'] ?>%</td>
                       <td style="padding:12px; text-align:center;">
