@@ -73,12 +73,29 @@
           </div>
         </div>
 
+        <?php
+          $introTextos = [
+              1 => '¡Bienvenido! En este primer módulo aprenderás a presentarte, saludar a tus pacientes y colegas, e intercambiar información personal básica en el entorno de enfermería.',
+              2 => 'En este módulo acompañarás a Mr. Thomas en su hospitalización. Al final, serás capaz de describir el estado físico de tus pacientes, detallar su entorno hospitalario y comprender qué les sucedió antes de llegar a urgencias.',
+              3 => '¡Tu turno ha comenzado! En este módulo aprenderás a comunicarte con médicos, colegas y familiares de pacientes. Al final, podrás explicar procedimientos de rutina, interactuar con visitantes y proponer mejoras en tu entorno laboral.',
+              4 => '¡Mr. Thomas se va a casa! En este último módulo, aprenderás a dar instrucciones de alta médica, recomendaciones de cuidado en casa y a evaluar los resultados de tu trabajo analizando las listas de verificación en inglés.'
+          ];
+          $introNarrativa = $introTextos[$rap['nivel_orden']] ?? 'En este módulo aprenderás las competencias clave de comunicación clínica en inglés.';
+        ?>
+
         <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px 22px; margin-top:14px;">
-          <h3 style="font-size:1rem; font-weight:800; color:var(--verde); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
-            <i class="fas fa-compass"></i> Objetivos del Módulo
+          <h3 style="font-size:1rem; font-weight:800; color:var(--azul); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-info-circle"></i> Introducción del Módulo
           </h3>
-          <p style="color:var(--gris-texto); font-size:1.02rem; line-height:1.6; margin:0; font-weight:600;">
-            "<?= !empty($rap['nivel_descripcion']) ? limpiar($rap['nivel_descripcion']) : 'En este módulo aprenderás las competencias clave de comunicación clínica en inglés.' ?>"
+          <p style="color:var(--gris-texto); font-size:1.02rem; line-height:1.6; margin:0 0 16px 0; font-weight:600;">
+            "<?= $introNarrativa ?>"
+          </p>
+
+          <h3 style="font-size:0.95rem; font-weight:800; color:var(--verde); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-compass"></i> Objetivo Pedagógico (<?= limpiar($rap['titulo']) ?>)
+          </h3>
+          <p style="color:var(--texto-tenue); font-size:0.92rem; line-height:1.5; margin:0; font-weight:600;">
+            <?= !empty($rap['nivel_descripcion']) ? limpiar($rap['nivel_descripcion']) : '' ?>
           </p>
         </div>
       </div>
