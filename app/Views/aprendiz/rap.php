@@ -283,6 +283,7 @@
         <?php if (empty($dialogos)): ?>
           <p style="color:var(--texto-tenue); text-align:center;">No clinical dialogues loaded for this RAP.</p>
         <?php else: ?>
+          <?php foreach ($dialogos as $d): ?>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
               <h3 style="font-size:1.15rem; font-weight:800; color:var(--gris-texto);"><i class="fas fa-hospital-user" style="margin-right:8px; color:var(--azul);"></i><?= limpiar($d['titulo']) ?></h3>
               <div style="display:flex; gap:10px; align-items:center;">
