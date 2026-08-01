@@ -383,7 +383,16 @@ class AprendizController extends Controller {
         $categorias = $pdo->query("SELECT id, nombre FROM categoria_vocabulario ORDER BY nombre")->fetchAll();
         $niveles = $pdo->query("SELECT id, nombre FROM nivel ORDER BY orden")->fetchAll();
 
-        $this->render('aprendiz/glosario', compact('vocabulario', 'areas', 'categorias', 'niveles', 'areaId', 'categoriaId', 'nivelId', 'busqueda'));
+        // Obtener vocabulario marcado por el usuario para las estrellas
+        $uid = $_SESSION['usuario_id'] ?? null;
+        $marcados = [];
+        if ($uid) {
+            $stmtMarc = $pdo->prepare('SELECT vocabulario_id FROM vocabulario_marcado WHERE usuario_id = ?');
+            $stmtMarc->execute([$uid]);
+            $marcados = $stmtMarc->fetchAll(PDO::FETCH_COLUMN);
+        }
+
+        $this->render('aprendiz/glosario', compact('vocabulario', 'areas', 'categorias', 'niveles', 'areaId', 'categoriaId', 'nivelId', 'busqueda', 'marcados'));
     }
 
     public function perfil(): void {

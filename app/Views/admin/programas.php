@@ -48,9 +48,9 @@
             Gestiona los programas del SENA. Los programas inactivos no permiten nuevas asignaciones.
           </p>
         </div>
-        <a href="<?= PROYECTO_PATH ?>/admin/programas/crear" class="btn btn-verde" id="btn-nuevo-programa">
+        <button type="button" class="btn btn-verde" id="btn-nuevo-programa" onclick="abrirModalCrearPrograma()">
           <i class="fas fa-plus"></i> Nuevo Programa
-        </a>
+        </button>
       </div>
 
       <!-- Alertas -->
@@ -77,9 +77,9 @@
       <!-- Barra de filtros -->
       <?php if (!empty($programas)): ?>
       <div class="barra-filtros" style="margin-bottom: 20px;">
-        <div class="contenedor-input-search" style="max-width: 360px; margin: 0;">
+        <div class="contenedor-input-search" style="width: 480px !important; min-width: 360px !important; max-width: 500px !important; margin: 0;">
           <i class="fas fa-search icono-search"></i>
-          <input type="text" id="buscar-programa" class="input-busqueda" placeholder="Buscar programa por nombre o descripción...">
+          <input type="text" id="buscar-programa" class="input-busqueda" placeholder="Buscar programa por nombre o descripción..." style="width: 100% !important; box-sizing: border-box !important;">
         </div>
       </div>
       <?php endif; ?>
@@ -90,9 +90,9 @@
           <div style="text-align:center; padding:60px 20px; color:var(--texto-tenue);">
             <i class="fas fa-graduation-cap" style="font-size:3rem; margin-bottom:16px; display:block; opacity:.3;"></i>
             <p style="font-size:var(--texto-sm);">No hay programas registrados aún.</p>
-            <a href="<?= PROYECTO_PATH ?>/admin/programas/crear" class="btn btn-verde" style="margin-top:12px;">
+            <button type="button" class="btn btn-verde" style="margin-top:12px;" onclick="abrirModal('modal-crear-programa')">
               <i class="fas fa-plus"></i> Crear primer programa
-            </a>
+            </button>
           </div>
         <?php else: ?>
           <table class="tabla-usuarios" style="width:100%;">
@@ -136,10 +136,10 @@
                 <td style="text-align:center;">
                   <div style="display:flex; gap:6px; justify-content:center;">
                     <!-- Editar -->
-                    <a href="<?= PROYECTO_PATH ?>/admin/programas/editar?id=<?= $p['id'] ?>"
-                       class="btn-accion btn-editar" title="Editar" id="btn-editar-programa-<?= substr($p['id'],0,8) ?>">
+                    <button type="button" class="btn-accion btn-editar" title="Editar" id="btn-editar-programa-<?= substr($p['id'],0,8) ?>"
+                            onclick="abrirModalEditarPrograma('<?= $p['id'] ?>', '<?= limpiar(addslashes($p['nombre'])) ?>', '<?= limpiar(addslashes($p['descripcion'] ?? '')) ?>')">
                       <i class="fas fa-pen"></i>
-                    </a>
+                    </button>
                     <!-- Toggle activo/inactivo -->
                     <button type="button" class="btn-accion <?= $p['activo'] ? 'btn-suspender' : 'btn-activar' ?>"
                             title="<?= $p['activo'] ? 'Desactivar' : 'Activar' ?>"
@@ -204,8 +204,69 @@
           <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
           <input type="hidden" name="id" id="eliminar-id">
           <div class="modal-acciones" style="gap:12px;">
-            <button type="button" class="btn btn-gris" onclick="cerrarModal('modal-eliminar')">Cancelar</button>
+            <button type="button" class="btn btn-gris" onclick="cerrarModalPrograma('modal-eliminar')">Cancelar</button>
             <button type="submit" class="btn btn-verde" style="background:linear-gradient(135deg, var(--rojo), #DC2626); box-shadow: 0 4px 0 #DC2626;" id="eliminar-btn-confirm">Sí, Eliminar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Crear Programa -->
+    <div class="modal-fondo" id="modal-crear-programa">
+      <div class="modal-caja" style="max-width:520px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid var(--gris-claro); padding-bottom:14px;">
+          <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--texto-principal);">
+            <i class="fas fa-graduation-cap" style="color:var(--verde); margin-right:8px;"></i>Nuevo Programa de Formación
+          </h3>
+          <button type="button" style="background:none; border:none; color:var(--texto-tenue); font-size:1.5rem; cursor:pointer;" onclick="cerrarModalPrograma('modal-crear-programa')">&times;</button>
+        </div>
+        <form method="POST" action="<?= PROYECTO_PATH ?>/admin/programas/guardar">
+          <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
+          
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem; color:var(--texto-principal);">NOMBRE DEL PROGRAMA *</label>
+            <input type="text" name="nombre" class="form-input" required placeholder="Ej: Técnico en Enfermería" style="width:100%; box-sizing:border-box; padding:12px; border-radius:10px; border:1px solid var(--borde-sutil); background:var(--fondo-input); color:var(--texto-principal);">
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem; color:var(--texto-principal);">DESCRIPCIÓN (OPCIONAL)</label>
+            <textarea name="descripcion" class="form-textarea" rows="3" placeholder="Descripción del programa del SENA..." style="width:100%; box-sizing:border-box; padding:12px; border-radius:10px; border:1px solid var(--borde-sutil); background:var(--fondo-input); color:var(--texto-principal); resize:vertical;"></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+            <button type="button" class="btn btn-gris" onclick="cerrarModalPrograma('modal-crear-programa')">Cancelar</button>
+            <button type="submit" class="btn btn-verde"><i class="fas fa-save" style="margin-right:6px;"></i> Guardar Programa</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal: Editar Programa -->
+    <div class="modal-fondo" id="modal-editar-programa">
+      <div class="modal-caja" style="max-width:520px; text-align:left;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:2px solid var(--gris-claro); padding-bottom:14px;">
+          <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--texto-principal);">
+            <i class="fas fa-pen" style="color:var(--azul); margin-right:8px;"></i>Editar Programa de Formación
+          </h3>
+          <button type="button" style="background:none; border:none; color:var(--texto-tenue); font-size:1.5rem; cursor:pointer;" onclick="cerrarModalPrograma('modal-editar-programa')">&times;</button>
+        </div>
+        <form method="POST" action="<?= PROYECTO_PATH ?>/admin/programas/actualizar">
+          <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
+          <input type="hidden" name="id" id="editar-programa-id">
+          
+          <div style="margin-bottom:16px;">
+            <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem; color:var(--texto-principal);">NOMBRE DEL PROGRAMA *</label>
+            <input type="text" id="editar-programa-nombre" name="nombre" class="form-input" required placeholder="Ej: Técnico en Enfermería" style="width:100%; box-sizing:border-box; padding:12px; border-radius:10px; border:1px solid var(--borde-sutil); background:var(--fondo-input); color:var(--texto-principal);">
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem; color:var(--texto-principal);">DESCRIPCIÓN (OPCIONAL)</label>
+            <textarea id="editar-programa-descripcion" name="descripcion" class="form-textarea" rows="3" placeholder="Descripción del programa del SENA..." style="width:100%; box-sizing:border-box; padding:12px; border-radius:10px; border:1px solid var(--borde-sutil); background:var(--fondo-input); color:var(--texto-principal); resize:vertical;"></textarea>
+          </div>
+
+          <div style="display:flex; justify-content:flex-end; gap:12px; margin-top:24px;">
+            <button type="button" class="btn btn-gris" onclick="cerrarModalPrograma('modal-editar-programa')">Cancelar</button>
+            <button type="submit" class="btn btn-azul"><i class="fas fa-save" style="margin-right:6px;"></i> Guardar Cambios</button>
           </div>
         </form>
       </div>
@@ -216,6 +277,24 @@
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/admin_cruds.js"></script>
 <script>
+  function abrirModalCrearPrograma() {
+    const modal = document.getElementById('modal-crear-programa');
+    if (modal) modal.classList.add('visible');
+  }
+
+  function abrirModalEditarPrograma(id, nombre, descripcion) {
+    document.getElementById('editar-programa-id').value = id;
+    document.getElementById('editar-programa-nombre').value = nombre;
+    document.getElementById('editar-programa-descripcion').value = descripcion;
+    const modal = document.getElementById('modal-editar-programa');
+    if (modal) modal.classList.add('visible');
+  }
+
+  function cerrarModalPrograma(id) {
+    const modal = document.getElementById(id);
+    if (modal) modal.classList.remove('visible');
+  }
+
   function abrirModalToggle(id, activo, nombre) {
     document.getElementById('toggle-id').value = id;
     const accion = activo == 1 ? 'Desactivar' : 'Activar';
@@ -250,7 +329,9 @@
 
   // Inicializar búsqueda
   document.addEventListener('DOMContentLoaded', () => {
-    inicializarBusqueda('buscar-programa', '.tabla-usuarios tbody tr');
+    if (typeof inicializarBusqueda === 'function') {
+      inicializarBusqueda('buscar-programa', '.tabla-usuarios tbody tr');
+    }
   });
 </script>
 </body>

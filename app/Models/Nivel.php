@@ -41,6 +41,7 @@ class Nivel extends Model {
                     SUM(CASE WHEN r.activo = 1 THEN 1 ELSE 0 END) AS raps_activos
              FROM nivel n
              LEFT JOIN rap r ON r.nivel_id = n.id
+             WHERE n.orden <= 4
              GROUP BY n.id, n.nombre, n.descripcion, n.imagen_url, n.orden,
                       n.activo, n.umbral_desbloqueo
              ORDER BY n.orden'

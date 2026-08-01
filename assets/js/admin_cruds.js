@@ -3,6 +3,11 @@
  * Incluye lógica de modales, búsqueda en tablas y peticiones AJAX
  */
 
+function abrirModal(id) {
+  const modal = document.getElementById(id);
+  if (modal) modal.classList.add('visible');
+}
+
 function cerrarModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.classList.remove('visible');

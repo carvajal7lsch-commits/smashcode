@@ -477,9 +477,11 @@
                 </div>
 
                 <div style="display:flex; justify-content:flex-end; margin-top:24px; gap:12px;">
-                  <button class="btn btn-verde" id="btn-validate-<?= $idx ?>" onclick="validateExercise('<?= $idx ?>')" style="padding:12px 28px; font-size:1rem; font-weight:800;">
-                    <i class="fas fa-check-circle" style="margin-right:6px;"></i> Verificar
-                  </button>
+                  <?php if ($ej['tipo'] === 'escucha_escribe'): ?>
+                    <button class="btn btn-verde" id="btn-validate-<?= $idx ?>" onclick="validateExercise('<?= $idx ?>')" style="padding:12px 28px; font-size:1rem; font-weight:800;">
+                      <i class="fas fa-check-circle" style="margin-right:6px;"></i> Verificar
+                    </button>
+                  <?php endif; ?>
                   <button class="btn btn-azul" id="btn-next-exercise-<?= $idx ?>" onclick="nextExercise('<?= $idx ?>')" style="display:none; padding:12px 28px; font-size:1rem; font-weight:800;">
                     Continuar <i class="fas fa-arrow-right" style="margin-left:6px;"></i>
                   </button>
@@ -508,8 +510,8 @@
             <div style="font-size:1.4rem; font-weight:900; color:var(--morado);">5:00 min</div>
           </div>
         </div>
-        <button class="btn-morado" style="display:block; width:100%; font-size:1.1rem; padding:14px;" onclick="startQuiz()">
-          Comenzar Evaluación
+        <button class="btn btn-morado" style="display:block; width:100%; font-size:1.1rem; padding:14px 24px; font-weight:800; text-align:center; box-shadow: 0 4px 0 #a855f7;" onclick="startQuiz()">
+          <i class="fas fa-play-circle" style="margin-right:8px;"></i> Comenzar Evaluación
         </button>
       </div>
 
@@ -1140,8 +1142,9 @@
       return;
     }
 
-    // Ocultar botón validar
-    document.getElementById('btn-validate-' + exIdx).style.display = 'none';
+    // Ocultar botón validar si existe
+    let btnVal = document.getElementById('btn-validate-' + exIdx);
+    if (btnVal) btnVal.style.display = 'none';
 
     // Mostrar Banner
     let banner = document.getElementById('val-banner-' + exIdx);

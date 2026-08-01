@@ -65,13 +65,10 @@
 
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <small style="color:var(--gris-medio); font-weight:bold;">Resultados encontrados: <?= count($vocabulario) ?></small>
-            <div style="display:flex; gap:12px;">
+            <div>
               <?php if ($busqueda || $areaId || $categoriaId || $nivelId): ?>
-                <a href="<?= PROYECTO_PATH ?>/aprendiz/glosario" class="btn-gris" style="text-decoration:none; padding:10px 20px; display:inline-flex; align-items:center; border-radius:8px; font-weight:bold;">Limpiar</a>
+                <a href="<?= PROYECTO_PATH ?>/aprendiz/glosario" class="btn-gris" style="text-decoration:none; padding:8px 16px; display:inline-flex; align-items:center; border-radius:8px; font-weight:bold; font-size:0.85rem;">Limpiar Filtros</a>
               <?php endif; ?>
-              <button type="submit" class="btn-verde" style="padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; border: none; color: white; background: #58cc02;">
-                <i class="fas fa-filter"></i> Filtrar
-              </button>
             </div>
           </div>
         </form>
@@ -84,27 +81,36 @@
           </div>
         <?php else: ?>
           <div class="vocab-list" id="vocab-container">
-              <?php foreach ($vocabulario as $v): ?>
-                <div class="vocab-card">
-                    <button class="btn-play-audio" onclick="speakWord('<?= addslashes($v['termino_en']) ?>')"><i class="fas fa-volume-up"></i></button>
+              <?php foreach ($vocabulario as $v): 
+                  $isMarcado = in_array($v['id'], $marcados ?? []);
+              ?>
+                <div class="vocab-card" id="card-<?= $v['id'] ?>">
+                    <button class="btn-play-audio" onclick="speakWord('<?= addslashes($v['termino_en']) ?>')" title="Escuchar pronunciación">
+                      <i class="fas fa-volume-up"></i>
+                    </button>
+                    
                     <div class="vocab-details">
                       <h3 class="vocab-english">
                           <?= htmlspecialchars($v['termino_en']) ?>
-                          <?php if ($v['transcripcion_ipa']): ?>
+                          <?php if (!empty($v['transcripcion_ipa'])): ?>
                               <span style="font-size:0.85rem; color:var(--texto-tenue); font-family:monospace; margin-left:8px;">/<?= htmlspecialchars($v['transcripcion_ipa']) ?>/</span>
                           <?php endif; ?>
                       </h3>
                       <p class="vocab-spanish"><?= htmlspecialchars($v['termino_es']) ?></p>
                       
-                      <div style="margin-top:8px; display:flex; flex-direction:column; gap:4px;">
+                      <div style="margin-top:4px; display:flex; flex-direction:column; gap:2px;">
                         <small class="vocab-tag">
                           <?= htmlspecialchars($v['nivel_nombre']) ?> • <?= htmlspecialchars($v['categoria_nombre'] ?? 'Sustantivo') ?> • <?= htmlspecialchars($v['area_nombre'] ?? 'General') ?>
                         </small>
-                        <?php if ($v['oracion_ejemplo']): ?>
+                        <?php if (!empty($v['oracion_ejemplo'])): ?>
                           <small style="color:var(--texto-secundario); font-style:italic;">"<?= htmlspecialchars($v['oracion_ejemplo']) ?>"</small>
                         <?php endif; ?>
                       </div>
                     </div>
+
+                    <button class="vocab-card-star <?= $isMarcado ? 'active' : '' ?>" onclick="toggleStar('<?= $v['id'] ?>', this)" title="<?= $isMarcado ? 'Quitar de Mi Vocabulario' : 'Marcar para Mi Vocabulario' ?>">
+                      <i class="<?= $isMarcado ? 'fas' : 'far' ?> fa-star"></i>
+                    </button>
                 </div>
               <?php endforeach; ?>
           </div>
@@ -131,10 +137,64 @@
     }
   }
 
-  // Pre-cargar voces al inicio
-  if ('speechSynthesis' in window) {
-    window.speechSynthesis.onvoiceschanged = () => {};
+  function toggleStar(vocabId, btnNode) {
+    let formData = new FormData();
+    formData.append('vocabulario_id', vocabId);
+
+    fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/marcar-vocabulario', {
+      method: 'POST',
+      body: formData
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.exito) {
+        let icon = btnNode.querySelector('i');
+        if (d.marcado) {
+          btnNode.classList.add('active');
+          btnNode.title = 'Quitar de Mi Vocabulario';
+          icon.className = 'fas fa-star';
+        } else {
+          btnNode.classList.remove('active');
+          btnNode.title = 'Marcar para Mi Vocabulario';
+          icon.className = 'far fa-star';
+        }
+      }
+    });
   }
+
+  // Pre-cargar voces y configurar filtrado automático en tiempo real
+  document.addEventListener('DOMContentLoaded', () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = () => {};
+    }
+
+    const form = document.querySelector('form.filtros-card');
+    const searchInput = document.querySelector('input[name="q"]');
+    const selects = document.querySelectorAll('form.filtros-card select');
+
+    // Envío automático al cambiar cualquier select
+    selects.forEach(select => {
+      select.addEventListener('change', () => form.submit());
+    });
+
+    // Envío en tiempo real mientras escribe (debounced 350ms)
+    let debounceTimer;
+    if (searchInput) {
+      // Mantener cursor al final si hay texto
+      if (searchInput.value) {
+        let textLen = searchInput.value.length;
+        searchInput.focus();
+        searchInput.setSelectionRange(textLen, textLen);
+      }
+
+      searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          form.submit();
+        }, 350);
+      });
+    }
+  });
 </script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
 </body>

@@ -572,6 +572,13 @@ button, input, select { font-family: var(--fuente); }
   width: auto;
 }
 
+.btn-morado {
+  background: var(--morado); color: #fff;
+  box-shadow: 0 4px 0 #a855f7;
+  width: auto;
+}
+.btn-morado:hover { filter: brightness(1.05); color: #fff; }
+
 .btn-gris {
   background: var(--gris-claro);
   color: var(--gris-texto);
@@ -859,14 +866,15 @@ button, input, select { font-family: var(--fuente); }
   margin-bottom: 24px;
 }
 .input-busqueda {
-  flex: 1; min-width: 220px;
+  width: 100%; box-sizing: border-box;
+  flex: 1; min-width: 280px;
   padding: 12px 14px 12px 38px;
   border: 2px solid var(--borde); border-radius: var(--radio-sm);
   font-size: 0.9rem; background: var(--blanco);
   color: var(--gris-texto); outline: none; transition: border-color 0.15s;
 }
 .input-busqueda:focus { border-color: var(--verde); box-shadow: 0 0 0 3px rgba(88,204,2,0.15); }
-.contenedor-input-search { position: relative; flex: 1; min-width: 220px; }
+.contenedor-input-search { position: relative; flex: 1; min-width: 360px; max-width: 480px; }
 .icono-search { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gris-medio); }
 .select-filtro {
   padding: 12px 14px; border: 2px solid var(--borde); border-radius: var(--radio-sm);
