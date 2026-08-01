@@ -963,6 +963,7 @@
       retro: retroText,
       text: node.querySelector('span:last-child').textContent
     };
+    validateExercise(exIdx);
   }
 
   // Fill in blanks handler
@@ -989,6 +990,7 @@
       retro: isCorrect ? '¡Frase completada correctamente!' : ('La respuesta correcta es: ' + correctVal),
       text: text
     };
+    validateExercise(exIdx);
   }
 
   function selectColumnMatch(exIdx, column, text, node) {
@@ -1072,12 +1074,7 @@
     bubble.style.cursor = 'pointer';
     bubble.title = 'Haz clic para remover esta opción si te equivocaste';
     bubble.style.transition = 'all 0.2s ease';
-    bubble.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                          <span>${itemText}</span>
-                          <span style="font-size:0.75rem; background:rgba(255,75,75,0.15); color:var(--rojo); padding:4px 10px; border-radius:8px; font-weight:800; margin-left:10px; display:inline-flex; align-items:center; gap:4px;">
-                            <i class="fas fa-times"></i> Quitar
-                          </span>
-                        </div>`;
+    bubble.innerHTML = `<div>${itemText}</div>`;
 
     bubble.onclick = function() {
       if (displayBox.contains(bubble)) {
@@ -1218,12 +1215,12 @@
             <i class="fas fa-check-circle" style="margin-right:8px;"></i>¡Momento 3 (Práctica) Completado!
           </h3>
           <p style="color:var(--texto-tenue); margin-bottom:24px;">Has realizado los ejercicios prácticos. El Momento 4 (Quiz) ya está desbloqueado.</p>
-          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-            <button class="btn-verde" onclick="finishMomentAndReturn(75)">
-              <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Volver al Mapa
+          <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
+            <button class="btn btn-verde" onclick="finishMomentAndReturn(75)" style="padding:12px 24px; font-weight:800;">
+              <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
             </button>
-            <button class="btn-morado" onclick="switchTab(4)" style="padding:10px 20px; font-weight:800;">
-              Comenzar Quiz <i class="fas fa-award"></i>
+            <button class="btn btn-morado" onclick="switchTab(4)" style="padding:12px 24px; font-weight:800;">
+              Comenzar Quiz <i class="fas fa-award" style="margin-left:8px;"></i>
             </button>
           </div>
         `;
