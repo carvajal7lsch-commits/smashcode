@@ -114,12 +114,12 @@
             <i class="fas fa-star" style="margin-right:8px;"></i>¡Warm-Up Completado!
           </h3>
           <p style="color:var(--texto-tenue); margin-bottom:24px;">¡Has completado el Momento 1! El Momento 2 (Absorption) está desbloqueado.</p>
-          <div style="display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-            <button class="btn-verde" onclick="finishMomentAndReturn(25)">
-              <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Volver al Mapa
+          <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
+            <button class="btn btn-verde" onclick="finishMomentAndReturn(25)" style="padding:12px 24px; font-weight:800;">
+              <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
             </button>
-            <button class="btn-gris" onclick="switchTab(2)" style="padding:10px 20px; font-weight:800;">
-              Siguiente Momento <i class="fas fa-arrow-right"></i>
+            <button class="btn btn-azul" onclick="switchTab(2)" style="padding:12px 24px; font-weight:800;">
+              Siguiente Momento <i class="fas fa-arrow-right" style="margin-left:8px;"></i>
             </button>
           </div>
         </div>
@@ -283,12 +283,16 @@
         <?php if (empty($dialogos)): ?>
           <p style="color:var(--texto-tenue); text-align:center;">No clinical dialogues loaded for this RAP.</p>
         <?php else: ?>
-          <?php foreach ($dialogos as $d): ?>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
               <h3 style="font-size:1.15rem; font-weight:800; color:var(--gris-texto);"><i class="fas fa-hospital-user" style="margin-right:8px; color:var(--azul);"></i><?= limpiar($d['titulo']) ?></h3>
-              <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
-                <i class="fas fa-play-circle"></i> Play Full Dialog
-              </button>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
+                  <i class="fas fa-play-circle"></i> Play Full Dialog
+                </button>
+                <button class="btn-stop-dialogue" id="btn-stop-audio-<?= $d['id'] ?>" onclick="stopAudioPlayback()" style="display:none; background:var(--rojo); color:#fff; border:none; border-radius:12px; padding:8px 16px; font-weight:800; font-size:0.85rem; cursor:pointer; box-shadow:0 3px 0 #cc0000; transition:all 0.15s ease;" title="Detener reproducción de audio">
+                  <i class="fas fa-stop-circle"></i> Detener Audio
+                </button>
+              </div>
             </div>
             
             <div class="dialogue-chat" id="dialogue-<?= $d['id'] ?>">
@@ -312,12 +316,12 @@
           <?php endforeach; ?>
         <?php endif; ?>
 
-        <div style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:12px; flex-wrap:wrap;">
-          <button class="btn-verde" id="btn-unlock-moment-3" onclick="finishMomentAndReturn(50)">
-            <i class="fas fa-map-marker-alt" style="margin-right:6px;"></i> Guardar y Volver al Mapa
+        <div style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+          <button class="btn btn-verde" id="btn-unlock-moment-3" onclick="finishMomentAndReturn(50)" style="padding:12px 24px; font-weight:800;">
+            <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
           </button>
-          <button class="btn-gris" onclick="unlockMoment3()" style="padding:10px 20px; font-weight:800;">
-            Ir a Practicar <i class="fas fa-arrow-right"></i>
+          <button class="btn btn-azul" onclick="unlockMoment3()" style="padding:12px 24px; font-weight:800;">
+            Ir a Practicar (Momento 3) <i class="fas fa-arrow-right" style="margin-left:8px;"></i>
           </button>
         </div>
       </div>
@@ -440,7 +444,10 @@
                         </div>
                       <?php endforeach; ?>
                     </div>
-                    <div style="margin-top:20px; font-weight:800; color:var(--azul);">Organized Conversation:</div>
+                    <div style="margin-top:20px; font-weight:800; color:var(--azul); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                      <span>Organized Conversation:</span>
+                      <small style="font-size:0.78rem; color:var(--texto-tenue); font-weight:600;"><i class="fas fa-info-circle" style="margin-right:4px; color:var(--azul);"></i>Haz clic en una opción elegida para quitarla si te equivocaste</small>
+                    </div>
                     <div class="dialogue-chat" id="ordered-chat-display-<?= $idx ?>" style="min-height:80px; padding:12px; margin-top:10px;">
                       <div style="color:var(--gris-medio); text-align:center; font-style:italic;" id="ordered-placeholder-<?= $idx ?>">Empty. Click options above to order.</div>
                     </div>
@@ -468,9 +475,13 @@
                   </div>
                 </div>
 
-                <div style="display:flex; justify-content:flex-end; margin-top:24px;">
-                  <button class="btn-verde" id="btn-validate-<?= $idx ?>" onclick="validateExercise('<?= $idx ?>')">Verificar</button>
-                  <button class="btn-azul" id="btn-next-exercise-<?= $idx ?>" onclick="nextExercise('<?= $idx ?>')" style="display:none;">Continuar</button>
+                <div style="display:flex; justify-content:flex-end; margin-top:24px; gap:12px;">
+                  <button class="btn btn-verde" id="btn-validate-<?= $idx ?>" onclick="validateExercise('<?= $idx ?>')" style="padding:12px 28px; font-size:1rem; font-weight:800;">
+                    <i class="fas fa-check-circle" style="margin-right:6px;"></i> Verificar
+                  </button>
+                  <button class="btn btn-azul" id="btn-next-exercise-<?= $idx ?>" onclick="nextExercise('<?= $idx ?>')" style="display:none; padding:12px 28px; font-size:1rem; font-weight:800;">
+                    Continuar <i class="fas fa-arrow-right" style="margin-left:6px;"></i>
+                  </button>
                 </div>
               </div>
             <?php endforeach; ?>
@@ -833,18 +844,32 @@
   // --- STORYBOOK DIALOGUE PLAYBACK & HIGHLIGHT ---
   let dialogTimeoutList = [];
 
-  function playFullDialogue(diaElementId) {
-    window.speechSynthesis.cancel();
+  function stopAudioPlayback() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     dialogTimeoutList.forEach(t => clearTimeout(t));
     dialogTimeoutList = [];
+    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
+    document.querySelectorAll('.btn-stop-dialogue').forEach(b => b.style.display = 'none');
+  }
+
+  function playFullDialogue(diaElementId) {
+    stopAudioPlayback();
     
     let container = document.getElementById(diaElementId);
+    let diaId = diaElementId.replace('dialogue-', '');
+    let stopBtn = document.getElementById('btn-stop-audio-' + diaId);
+    if (stopBtn) stopBtn.style.display = 'inline-flex';
+
     let bubbles = Array.from(container.querySelectorAll('.chat-bubble'));
-    
     bubbles.forEach(b => b.classList.remove('active-highlight'));
 
     function playTurn(idx) {
-      if (idx >= bubbles.length) return;
+      if (idx >= bubbles.length) {
+        if (stopBtn) stopBtn.style.display = 'none';
+        return;
+      }
       let bubble = bubbles[idx];
       let text = bubble.getAttribute('data-text-en');
       let speaker = bubble.getAttribute('data-speaker') || 'female';
@@ -856,11 +881,13 @@
       
       utterance.onend = () => {
         bubble.classList.remove('active-highlight');
-        // Continuar al siguiente turno tras 0.5s de pausa natural
         let timeout = setTimeout(() => {
           playTurn(idx + 1);
         }, 500);
         dialogTimeoutList.push(timeout);
+      };
+      utterance.onerror = () => {
+        if (stopBtn) stopBtn.style.display = 'none';
       };
     }
     
@@ -868,12 +895,7 @@
   }
 
   function speakSingleTurn(turnId) {
-    window.speechSynthesis.cancel();
-    dialogTimeoutList.forEach(t => clearTimeout(t));
-    dialogTimeoutList = [];
-
-    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
-
+    stopAudioPlayback();
     let bubble = document.getElementById(turnId);
     let text = bubble.getAttribute('data-text-en');
     let speaker = bubble.getAttribute('data-speaker') || 'female';
@@ -1046,9 +1068,35 @@
     bubble.className = 'chat-bubble left';
     bubble.style.width = '100%';
     bubble.style.margin = '4px 0';
-    bubble.innerHTML = `<div>${itemText}</div>`;
-    displayBox.appendChild(bubble);
+    bubble.style.cursor = 'pointer';
+    bubble.title = 'Haz clic para remover esta opción si te equivocaste';
+    bubble.style.transition = 'all 0.2s ease';
+    bubble.innerHTML = `<div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+                          <span>${itemText}</span>
+                          <span style="font-size:0.75rem; background:rgba(255,75,75,0.15); color:var(--rojo); padding:4px 10px; border-radius:8px; font-weight:800; margin-left:10px; display:inline-flex; align-items:center; gap:4px;">
+                            <i class="fas fa-times"></i> Quitar
+                          </span>
+                        </div>`;
 
+    bubble.onclick = function() {
+      if (displayBox.contains(bubble)) {
+        displayBox.removeChild(bubble);
+      }
+      node.style.opacity = '1';
+      node.style.pointerEvents = 'auto';
+
+      let seqIndex = selectedOrderSeq.indexOf(itemText);
+      if (seqIndex !== -1) {
+        selectedOrderSeq.splice(seqIndex, 1);
+      }
+
+      let remaining = displayBox.querySelectorAll('.chat-bubble');
+      if (remaining.length === 0 && placeholder) {
+        placeholder.style.display = 'block';
+      }
+    };
+
+    displayBox.appendChild(bubble);
     selectedOrderSeq.push(itemText);
 
     // Comparar longitud para validar
