@@ -46,9 +46,18 @@ class AprendizController extends Controller {
             return;
         }
 
-        // Obtener Vocabulario
-        $stmtVoc = $pdo->prepare('SELECT * FROM vocabulario WHERE rap_id = ? AND activo = 1');
-        $stmtVoc->execute([$rapId]);
+        // Obtener TODOS los RAPs activos asociados a este mismo nivel para unificar la experiencia del módulo
+        $stmtAllRaps = $pdo->prepare('SELECT id FROM rap WHERE nivel_id = ? AND activo = 1 ORDER BY orden ASC');
+        $stmtAllRaps->execute([$rap['nivel_id']]);
+        $allRapIds = $stmtAllRaps->fetchAll(PDO::FETCH_COLUMN);
+        if (empty($allRapIds)) {
+            $allRapIds = [$rapId];
+        }
+        $inRaps = implode(',', array_fill(0, count($allRapIds), '?'));
+
+        // Obtener Vocabulario unificado de todos los RAPs del módulo
+        $stmtVoc = $pdo->prepare("SELECT * FROM vocabulario WHERE rap_id IN ($inRaps) AND activo = 1 ORDER BY rap_id, id");
+        $stmtVoc->execute($allRapIds);
         $vocabulario = $stmtVoc->fetchAll();
 
         // Obtener vocabulario marcado como difícil por el usuario
@@ -57,9 +66,9 @@ class AprendizController extends Controller {
         $stmtMarc->execute([$uid]);
         $marcados = $stmtMarc->fetchAll(PDO::FETCH_COLUMN);
 
-        // Obtener Diálogos y sus turnos
-        $stmtDia = $pdo->prepare('SELECT * FROM dialogo WHERE rap_id = ? AND activo = 1');
-        $stmtDia->execute([$rapId]);
+        // Obtener Diálogos y sus turnos unificados
+        $stmtDia = $pdo->prepare("SELECT * FROM dialogo WHERE rap_id IN ($inRaps) AND activo = 1 ORDER BY rap_id, id");
+        $stmtDia->execute($allRapIds);
         $dialogos = $stmtDia->fetchAll();
 
         foreach ($dialogos as &$d) {
@@ -68,9 +77,9 @@ class AprendizController extends Controller {
             $d['turnos'] = $stmtTur->fetchAll();
         }
 
-        // Obtener Ejercicios y sus opciones
-        $stmtEj = $pdo->prepare('SELECT * FROM ejercicio WHERE rap_id = ? AND activo = 1');
-        $stmtEj->execute([$rapId]);
+        // Obtener Ejercicios y sus opciones unificados
+        $stmtEj = $pdo->prepare("SELECT * FROM ejercicio WHERE rap_id IN ($inRaps) AND activo = 1 ORDER BY rap_id, id");
+        $stmtEj->execute($allRapIds);
         $ejercicios = $stmtEj->fetchAll();
 
         foreach ($ejercicios as &$ej) {
@@ -79,17 +88,20 @@ class AprendizController extends Controller {
             $ej['opciones'] = $stmtOpc->fetchAll();
         }
 
-        // Obtener Quiz y Preguntas
-        $stmtQuiz = $pdo->prepare('SELECT * FROM quiz WHERE rap_id = ? AND activo = 1 LIMIT 1');
-        $stmtQuiz->execute([$rapId]);
-        $quiz = $stmtQuiz->fetch();
+        // Obtener Quizzes y Preguntas unificados
+        $stmtQuiz = $pdo->prepare("SELECT * FROM quiz WHERE rap_id IN ($inRaps) AND activo = 1");
+        $stmtQuiz->execute($allRapIds);
+        $quizzes = $stmtQuiz->fetchAll();
 
+        $quiz = !empty($quizzes) ? $quizzes[0] : null;
         $preguntas = [];
-        if ($quiz) {
-            $stmtPreg = $pdo->prepare('SELECT id, texto, opciones, respuesta_correcta, retroalimentacion FROM pregunta WHERE quiz_id = ?');
-            $stmtPreg->execute([$quiz['id']]);
+
+        if (!empty($quizzes)) {
+            $quizIds = array_column($quizzes, 'id');
+            $inQuiz = implode(',', array_fill(0, count($quizIds), '?'));
+            $stmtPreg = $pdo->prepare("SELECT id, texto, opciones, respuesta_correcta, retroalimentacion FROM pregunta WHERE quiz_id IN ($inQuiz)");
+            $stmtPreg->execute($quizIds);
             $preguntas = $stmtPreg->fetchAll();
-            // Decodificar opciones JSON
             foreach ($preguntas as &$preg) {
                 $preg['opciones'] = json_decode($preg['opciones'], true);
             }

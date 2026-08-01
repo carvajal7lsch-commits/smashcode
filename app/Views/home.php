@@ -263,49 +263,37 @@
                     ? ($nivelData['orden'] == 1)
                     : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
 
-                $rapAnteriorCompletado = true;
+                $rap = $nivelData['raps'][0] ?? null;
+                if (!$rap) continue;
 
-                foreach ($nivelData['raps'] as $rap):
-                    // Calcular estado y porcentaje del RAP
-                    if (!$nivelDesbloqueado) {
-                        $estadoRap  = 'bloqueado';
-                        $pctRap     = 0;
-                    } elseif (!$rapAnteriorCompletado) {
-                        $estadoRap  = 'bloqueado';
-                        $pctRap     = 0;
-                    } else {
-                        if ($autenticado && isset($mapaProgreso[$rap['id']])) {
-                            $pctRap    = (float)$mapaProgreso[$rap['id']]['porcentaje'];
-                            $estadoRap = $mapaProgreso[$rap['id']]['completado'] ? 'completado' : 'en_progreso';
-                        } else {
-                            $pctRap    = 0;
-                            $estadoRap = 'disponible';
-                        }
-                    }
+                $pctRap = (float)$nivelData['progreso_promedio'];
+                if (!$nivelDesbloqueado) {
+                    $estadoRap = 'bloqueado';
+                } elseif ($pctRap >= 100) {
+                    $estadoRap = 'completado';
+                } elseif ($pctRap > 0) {
+                    $estadoRap = 'en_progreso';
+                } else {
+                    $estadoRap = 'disponible';
+                }
 
-                    // Actualizar flag para el siguiente RAP
-                    if ($estadoRap === 'completado') {
-                        $rapAnteriorCompletado = true;
-                    } else {
-                        $rapAnteriorCompletado = false;
-                    }
-                    if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
+                if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
             ?>
-                    <!-- ── Encabezado de sección del RAP ── -->
-                    <div style="width:100%; text-align:center; margin-bottom:-20px; margin-top:4px;">
+                    <!-- ── Encabezado de sección del Módulo / Nivel ── -->
+                    <div style="width:100%; text-align:center; margin-bottom:-20px; margin-top:24px;">
                         <span style="
                             display: inline-block;
                             background: var(--blanco);
                             border: 2px solid var(--gris-claro);
                             border-radius: 10px;
-                            padding: 5px 16px;
-                            font-size: 12px;
+                            padding: 6px 18px;
+                            font-size: 13px;
                             font-weight: 800;
-                            color: var(--gris-medio);
+                            color: var(--duo-green);
                             letter-spacing: 0.08em;
                             text-transform: uppercase;
                         ">
-                            <i class="fas fa-book-open" style="margin-right:5px; color:var(--duo-green);"></i>
+                            <i class="fas fa-book-open" style="margin-right:6px; color:var(--duo-green);"></i>
                             <?= limpiar($nivelData['nombre']) ?>
                         </span>
                     </div>
@@ -332,8 +320,6 @@
                     if (!$autenticado) {
                         if ($nivelData['orden'] == 1 && $mNum == 1) {
                             $estadoMomento = 'activo';
-                        } elseif ($nivelData['orden'] == 1) {
-                            $estadoMomento = 'bloqueado';
                         } else {
                             $estadoMomento = 'bloqueado';
                         }
@@ -414,7 +400,6 @@
                     </div>
             <?php endforeach; // fin momentos ?>
             <?php
-                endforeach; // fin raps
                 $promedioNivelAnterior = $nivelData['progreso_promedio'];
             endforeach; // fin niveles
             ?>
