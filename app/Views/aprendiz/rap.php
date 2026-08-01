@@ -162,6 +162,47 @@
               </div>
             </div>
           </div>
+        <?php elseif ($rap['nivel_orden'] == 3): ?>
+          <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-pills" style="color:var(--naranja);"></i> Grammar Pill: Daily Routines vs. Happening Now</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:20px;">
+            Aprende a diferenciar el <strong>Presente Simple</strong> (para rutinas laborales diarias) del <strong>Presente Continuo</strong> (para acciones que ocurren en el momento) y fórmulas de cortesía para sugerir mejoras (<em>We should...</em>).
+          </p>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:12px;">
+            <!-- Columna 1: Daily Routine (Present Simple) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--morado); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-calendar-check"></i> Daily Routine (Presente Simple)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  I <span style="color:var(--naranja); font-weight:900;">give</span> medication at 8 AM every day.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Administro medicamentos a las 8 AM todos los días)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  Nurse Sarah <span style="color:var(--naranja); font-weight:900;">checks</span> vital signs during rounds.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(La enfermera verifica signos vitales en las rondas)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Happening Now (Present Continuous) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-clock"></i> Happening Now (Presente Continuo)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  We <span style="color:var(--azul); font-weight:900;">are checking</span> his temperature right now.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Estamos midiendo su temperatura justo ahora)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  I think we <span style="color:var(--verde); font-weight:900;">should update</span> the checklist.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Creo que deberíamos actualizar la lista de chequeo)</div>
+                </div>
+              </div>
+            </div>
+          </div>
         <?php else: ?>
           <h2>Grammar Pill</h2>
           <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:16px;">Analyze the grammatical structure of clinical interactions: Subject + Verb + Complement.</p>
