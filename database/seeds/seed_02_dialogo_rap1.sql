@@ -8,11 +8,14 @@
 SET NAMES utf8mb4;
 USE smash_code;
 
+SELECT id INTO @RAP1 FROM rap ORDER BY orden ASC LIMIT 1;
+
+
 -- Insertar el diálogo principal del RAP 1
 INSERT INTO dialogo (id, rap_id, titulo, contexto, participantes, audio_completo_url, activo)
 VALUES (
     'dia-rap1-presentacion',
-    'be5df679-5166-11f1-b275-8c1645fa3d64',
+    @RAP1,
     'First Day at the Clinic',
     'Nurse Carolina arrives at the clinic for her first shift and meets her colleague David, who has already been working there. They introduce themselves using formal and informal greetings.',
     'Nurse Carolina, Nurse David',

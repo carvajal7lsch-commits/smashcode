@@ -17,7 +17,7 @@ SET @ej4 = 'ej-rap1-arrastrar-01';
 SET @ej5 = 'ej-rap1-escucha-01';
 SET @ej6 = 'ej-rap1-roleplay-01';
 
-SET @RAP1 = 'be5df679-5166-11f1-b275-8c1645fa3d64';
+SELECT id INTO @RAP1 FROM rap ORDER BY orden ASC LIMIT 1;
 
 -- -------------------------------------------------------
 -- EJERCICIO 1: Completar frase — Verbo To Be (ID Card)
