@@ -18,17 +18,110 @@ if (!defined('PROYECTO_PATH')) {
 
 
 /**
- * Sanitiza una cadena para prevenir XSS.
+ * Normaliza y restaura tildes y caracteres en español que hayan sido truncados
+ * o dañados por codificaciones no-UTF8 en servidores y bases de datos.
+ * @param string $texto
+ * @return string
+ */
+function normalizarTextoEspanol(string $texto): string {
+    static $mapaFrases = [
+        // Módulos y RAPs
+        'Mdulo' => 'Módulo',
+        'MDULO' => 'MÓDULO',
+        'Modulo' => 'Módulo',
+        'MODULO' => 'MÓDULO',
+        'Informacin' => 'Información',
+        'Interaccin' => 'Interacción',
+        'Evaluacin' => 'Evaluación',
+        'Planeacin' => 'Planeación',
+        'Ejecucin' => 'Ejecución',
+        'Atencin' => 'Atención',
+        'Prctica' => 'Práctica',
+
+        // Diálogos Módulo 2 - RAP 2
+        'Qu le sucedi a Mr. Thomas ayer antes de llegar a urgencias?' => '¿Qué le sucedió a Mr. Thomas ayer antes de llegar a urgencias?',
+        'Que le sucedio a Mr. Thomas ayer antes de llegar a urgencias?' => '¿Qué le sucedió a Mr. Thomas ayer antes de llegar a urgencias?',
+        'l se cay en la habitacin de su hotel ayer por la tarde.' => 'Él se cayó en la habitación de su hotel ayer por la tarde.',
+        'El se cayo en la habitacion de su hotel ayer por la tarde.' => 'Él se cayó en la habitación de su hotel ayer por la tarde.',
+        'Los paramdicos lo trajeron a la clnica en una camilla?' => '¿Los paramédicos lo trajeron a la clínica en una camilla?',
+        'Los paramedicos lo trajeron a la clinica en una camilla?' => '¿Los paramédicos lo trajeron a la clínica en una camilla?',
+        'S, lo trajeron de inmediato y reportaron una fractura en el brazo derecho.' => 'Sí, lo trajeron de inmediato y reportaron una fractura en el brazo derecho.',
+        'Si, lo trajeron de inmediato y reportaron una fractura en el brazo derecho.' => 'Sí, lo trajeron de inmediato y reportaron una fractura en el brazo derecho.',
+
+        // Diálogos Módulo 2 - RAP 3
+        'Cmo est Mr. Thomas en la habitacin 204 en este momento?' => '¿Cómo está Mr. Thomas en la habitación 204 en este momento?',
+        'Como esta Mr. Thomas en la habitacion 204 en este momento?' => '¿Cómo está Mr. Thomas en la habitación 204 en este momento?',
+        'l est plido y cansado, pero sus signos vitales estn estables.' => 'Él está pálido y cansado, pero sus signos vitales están estables.',
+        'El esta palido y cansado, pero sus signos vitales estan estables.' => 'Él está pálido y cansado, pero sus signos vitales están estables.',
+        'La habitacin es cmoda para l?' => '¿La habitación es cómoda para él?',
+        'La habitacion es comoda para el?' => '¿La habitación es cómoda para él?',
+        'La habitacin est fra, as que l est descansando bajo una cobija caliente.' => 'La habitación está fría, así que él está descansando bajo una cobija caliente.',
+        'La habitacion esta fria, asi que el esta descansando bajo una cobija caliente.' => 'La habitación está fría, así que él está descansando bajo una cobija caliente.',
+
+        // Diálogos Módulo 3 - RAP 4
+        'Disculpe, enfermera, qu le est haciendo a mi padre en este momento?' => 'Disculpe, enfermera, ¿qué le está haciendo a mi padre en este momento?',
+        'Disculpe, enfermera, que le esta haciendo a mi padre en este momento?' => 'Disculpe, enfermera, ¿qué le está haciendo a mi padre en este momento?',
+        'Buenos das. Le estamos midiendo la temperatura y la presin arterial ahora mismo.' => 'Buenos días. Le estamos midiendo la temperatura y la presión arterial ahora mismo.',
+        'Buenos dias. Le estamos midiendo la temperatura y la presion arterial ahora mismo.' => 'Buenos días. Le estamos midiendo la temperatura y la presión arterial ahora mismo.',
+        'Gracias por explicarme. l se encuentra bien?' => 'Gracias por explicarme. ¿Él se encuentra bien?',
+        'Gracias por explicarme. El se encuentra bien?' => 'Gracias por explicarme. ¿Él se encuentra bien?',
+        'S, sus signos vitales estn estables y l est descansando cmodamente.' => 'Sí, sus signos vitales están estables y él está descansando cómodamente.',
+        'Si, sus signos vitales estan estables y el esta descansando comodamente.' => 'Sí, sus signos vitales están estables y él está descansando cómodamente.',
+
+        // Diálogos Módulo 3 - RAP 5
+        'Enfermera Sarah, cmo va progresando nuestra rutina diaria de medicamentos?' => 'Enfermera Sarah, ¿cómo va progresando nuestra rutina diaria de medicamentos?',
+        'Enfermera Sarah, como va progresando nuestra rutina diaria de medicamentos?' => 'Enfermera Sarah, ¿cómo va progresando nuestra rutina diaria de medicamentos?',
+        'Todo va segn lo programado. Administro medicamentos a las 8 AM cada maana.' => 'Todo va según lo programado. Administro medicamentos a las 8 AM cada mañana.',
+        'Todo va segun lo programado. Administro medicamentos a las 8 AM cada manana.' => 'Todo va según lo programado. Administro medicamentos a las 8 AM cada mañana.',
+        'Tiene alguna sugerencia para nuestra lista de chequeo de entrega de turno?' => '¿Tiene alguna sugerencia para nuestra lista de chequeo de entrega de turno?',
+        'S! Creo que deberamos actualizar la lista de chequeo para Mr. Thomas para registrar los signos vitales ms rpido.' => '¡Sí! Creo que deberíamos actualizar la lista de chequeo para Mr. Thomas para registrar los signos vitales más rápido.',
+        'Si! Creo que deberiamos actualizar la lista de chequeo para Mr. Thomas para registrar los signos vitales mas rapido.' => '¡Sí! Creo que deberíamos actualizar la lista de chequeo para Mr. Thomas para registrar los signos vitales más rápido.',
+
+        // Palabras clínicas individuales truncadas o sin tilde
+        'habitacin' => 'habitación',
+        'presin' => 'presión',
+        'clnica' => 'clínica',
+        'Clnica' => 'Clínica',
+        'mdico' => 'médico',
+        'Mdico' => 'Médico',
+        'plido' => 'pálido',
+        'Plido' => 'Pálido',
+        'paramdicos' => 'paramédicos',
+        'Paramdicos' => 'Paramédicos',
+        'Pulsixmetro' => 'Pulsioxímetro',
+        'Pulsioxmetro' => 'Pulsioxímetro',
+        'Gluacmetro' => 'Gluciómetro',
+        'Glucimetro' => 'Gluciómetro',
+        'cmodamente' => 'cómodamente',
+        'deberamos' => 'deberíamos',
+        'maana' => 'mañana',
+        'ms rpido' => 'más rápido',
+        'se cay' => 'se cayó',
+        'le sucedi' => 'le sucedió',
+        'est fra' => 'está fría',
+        'cmoda' => 'cómoda',
+        'diagnstico' => 'diagnóstico',
+        'Diagnstico' => 'Diagnóstico',
+        'oxgeno' => 'oxígeno',
+        'Oxgeno' => 'Oxígeno',
+        'administracin' => 'administración',
+        'Administracin' => 'Administración',
+        'medicacin' => 'medicación',
+        'Medicacin' => 'Medicación',
+        'interaccin' => 'interacción',
+        'Interaccin' => 'Interacción'
+    ];
+
+    return strtr($texto, $mapaFrases);
+}
+
+/**
+ * Sanitiza una cadena para prevenir XSS y restaura tildes en español.
  * @param string $valor Cadena de entrada
- * @return string Cadena segura
+ * @return string Cadena segura y normalizada
  */
 function limpiar(string $valor): string {
-    if (strpos($valor, 'Mdulo') !== false) {
-        $valor = str_replace('Mdulo', 'Módulo', $valor);
-    }
-    if (strpos($valor, 'MDULO') !== false) {
-        $valor = str_replace('MDULO', 'MÓDULO', $valor);
-    }
+    $valor = normalizarTextoEspanol($valor);
     return htmlspecialchars(strip_tags(trim($valor)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
