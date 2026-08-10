@@ -85,15 +85,23 @@
     }
     .node-wrapper .tooltip {
       position: absolute; top: -45px; left: 50%; transform: translateX(-50%);
-      background: var(--blanco); border: 2px solid var(--duo-gray); padding: 5px 15px;
+      background: var(--blanco); border: 2px solid var(--gris-claro); padding: 5px 15px;
       border-radius: 12px; font-weight: 800; font-size: 14px; color: var(--duo-green);
-      box-shadow: 0 2px 0 var(--duo-gray); animation: bounce 2s infinite ease-in-out;
+      box-shadow: 0 3px 0 var(--gris-claro); animation: bounce 2s infinite ease-in-out;
       white-space: nowrap; z-index: 10;
     }
     .node-wrapper .tooltip::after {
-      content: ''; position: absolute; bottom: -10px; left: 50%;
-      transform: translateX(-50%); border-left: 10px solid transparent;
-      border-right: 10px solid transparent; border-top: 10px solid var(--blanco);
+      content: ''; position: absolute; bottom: -8px; left: 50%;
+      transform: translateX(-50%); border-left: 8px solid transparent;
+      border-right: 8px solid transparent; border-top: 8px solid var(--blanco);
+    }
+    [data-theme="light"] .node-wrapper .tooltip {
+      background: #FFFFFF;
+      border-color: #E2E8F0;
+      box-shadow: 0 3px 0 #E2E8F0;
+    }
+    [data-theme="light"] .node-wrapper .tooltip::after {
+      border-top-color: #FFFFFF;
     }
 
     .node {
@@ -241,100 +249,161 @@
 
         <div class="path-container" style="padding-bottom: 40px;">
             <?php
+            // Definir los 4 Momentos pedagógicos (igual para todos los RAPs)
+            $momentosDef = [
+                1 => ['nombre' => 'Warm-Up',    'icono' => 'fa-gamepad',     'umbral' => 0],
+                2 => ['nombre' => 'Absorption',  'icono' => 'fa-book-reader', 'umbral' => 25],
+                3 => ['nombre' => 'Practice',    'icono' => 'fa-dumbbell',    'umbral' => 50],
+                4 => ['nombre' => 'Quiz',        'icono' => 'fa-award',       'umbral' => 75],
+            ];
+
             foreach ($nivelesAgrupados as $indexNivel => $nivelData):
-                // Un nivel está desbloqueado si es el primero (orden 1) o si el nivel anterior alcanzó el 80% (o el umbral definido).
-                $nivelDesbloqueado = (!$autenticado) ? ($nivelData['orden'] == 1) : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
-                $rapAnteriorCompletado = true; // El primer RAP de un nivel desbloqueado siempre está disponible
-                
-                foreach ($nivelData['raps'] as $rap):
-                    // Lógica estricta de estado por RAP
-                    if (!$nivelDesbloqueado) {
-                        $estadoRap = 'bloqueado';
+                // Un nivel está desbloqueado si es el primero o si el nivel anterior alcanzó 80%
+                $nivelDesbloqueado = (!$autenticado)
+                    ? ($nivelData['orden'] == 1)
+                    : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
+
+                $rap = $nivelData['raps'][0] ?? null;
+                if (!$rap) continue;
+
+                $pctRap = (float)$nivelData['progreso_promedio'];
+                if (!$nivelDesbloqueado) {
+                    $estadoRap = 'bloqueado';
+                } elseif ($pctRap >= 100) {
+                    $estadoRap = 'completado';
+                } elseif ($pctRap > 0) {
+                    $estadoRap = 'en_progreso';
+                } else {
+                    $estadoRap = 'disponible';
+                }
+
+                if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
+            ?>
+                    <!-- ── Encabezado de sección del Módulo / Nivel ── -->
+                    <div style="width:100%; text-align:center; margin-bottom:-20px; margin-top:24px;">
+                        <span style="
+                            display: inline-block;
+                            background: var(--blanco);
+                            border: 2px solid var(--gris-claro);
+                            border-radius: 10px;
+                            padding: 6px 18px;
+                            font-size: 13px;
+                            font-weight: 800;
+                            color: var(--duo-green);
+                            letter-spacing: 0.08em;
+                            text-transform: uppercase;
+                        ">
+                            <i class="fas fa-book-open" style="margin-right:6px; color:var(--duo-green);"></i>
+                            <?= limpiar($nivelData['nombre']) ?>
+                        </span>
+                    </div>
+
+            <?php foreach ($momentosDef as $mNum => $mDef):
+                    // Estado de este momento según el porcentaje del RAP
+                    if ($estadoRap === 'bloqueado') {
+                        $estadoMomento = 'bloqueado';
+                    } elseif ($pctRap >= 100 || $estadoRap === 'completado') {
+                        $estadoMomento = 'completado';
+                    } elseif ($pctRap >= $mDef['umbral']) {
+                        // Si ya pasó el umbral del siguiente momento, este ya fue completado
+                        $umbralSiguiente = $mNum < 4 ? $momentosDef[$mNum + 1]['umbral'] : 101;
+                        if ($pctRap >= $umbralSiguiente) {
+                            $estadoMomento = 'completado';
+                        } elseif ($pctRap >= $mDef['umbral']) {
+                            $estadoMomento = 'activo';
+                        }
                     } else {
-                        if ($rapAnteriorCompletado) {
-                            if ($autenticado && isset($mapaProgreso[$rap['id']])) {
-                                if ($mapaProgreso[$rap['id']]['completado']) {
-                                    $estadoRap = 'completado';
-                                } else {
-                                    $estadoRap = 'en_progreso';
-                                }
-                            } else {
-                                $estadoRap = 'disponible';
-                            }
+                        $estadoMomento = 'bloqueado';
+                    }
+
+                    // Si no hay usuario autenticado, solo el Momento 1 del RAP 1 está activo
+                    if (!$autenticado) {
+                        if ($nivelData['orden'] == 1 && $mNum == 1) {
+                            $estadoMomento = 'activo';
                         } else {
-                            $estadoRap = 'bloqueado';
+                            $estadoMomento = 'bloqueado';
                         }
                     }
 
+                    // Determinar si es la esfera activa principal (tooltip EMPEZAR)
+                    $esPrincipal = ($estadoMomento === 'activo') && $primerActivo;
+                    if ($esPrincipal) $primerActivo = false;
+
+                    // Offset zigzag continuo
                     $offsetClase = $OFFSETS[$globalRapIndex % count($OFFSETS)];
                     $globalRapIndex++;
 
-                    $esPrincipal = ($estadoRap === 'disponible' || $estadoRap === 'en_progreso') && $primerActivo;
-                    if ($esPrincipal) $primerActivo = false;
-                    if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
-                    if ($estadoRap === 'completado') {
-                        $rapAnteriorCompletado = true;
-                    } else {
-                        $rapAnteriorCompletado = false; // Bloquea los siguientes
-                    }
-
-                    $urlRap = $autenticado && $estadoRap !== 'bloqueado'
-                        ? PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id'])
+                    // URL del momento
+                    $urlMomento = ($autenticado && $estadoMomento !== 'bloqueado')
+                        ? PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id']) . '&momento=' . $mNum
                         : '#';
 
-                    $iconosRefs = ['fa-star', 'fa-book', 'fa-star', 'fa-star', 'fa-heart', 'fa-star'];
-                    $iconoAct = $iconosRefs[$globalRapIndex % count($iconosRefs)];
-
-                    $nodeClass = '';
-                    $iconHtml = '';
-                    $isActive = false;
-
-                    if ($estadoRap === 'completado') {
+                    // Clases y HTML del nodo según estado
+                    if ($estadoMomento === 'completado') {
                         $nodeClass = 'star completed';
-                        $iconHtml = '<i class="fas fa-check"></i>';
-                    } else if ($esPrincipal) {
+                        $iconHtml  = '<i class="fas fa-check"></i>';
+                        $isActive  = false;
+                    } elseif ($estadoMomento === 'activo') {
                         $nodeClass = 'star';
-                        $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
-                        $isActive = true;
+                        $iconHtml  = '<i class="fas ' . $mDef['icono'] . '"></i>';
+                        $isActive  = $esPrincipal;
                     } else {
                         $nodeClass = 'star-locked';
-                        $iconHtml = '<i class="fas '.$iconoAct.'"></i>';
+                        $iconHtml  = '<i class="fas ' . $mDef['icono'] . '"></i>';
+                        $isActive  = false;
                     }
-                ?>
-                <div class="path-item <?= $isActive ? 'current' : 'locked' ?> <?= $offsetClase ?>">
-                    <div class="node-wrapper" 
-                         onclick="<?= $estadoRap !== 'bloqueado' ? "window.location='{$urlRap}'" : "mostrarMensajeBloqueado()" ?>" 
-                         title="<?= limpiar($rap['titulo']) ?>">
-                        
-                        <?php if ($isActive): ?>
-                            <span class="tooltip" id="start-tooltip">EMPEZAR</span>
-                        <?php endif; ?>
-                        
-                        <div class="node <?= $nodeClass ?>" <?= $isActive ? 'id="star-node"' : '' ?>>
-                            <?= $iconHtml ?>
-                        </div>
-                        
-                        <?php if ($isActive && $autenticado): 
-                            $pct = isset($mapaProgreso[$rap['id']]) ? $mapaProgreso[$rap['id']]['porcentaje'] : 0;
-                            $radius = 45;
-                            $circumference = 2 * pi() * $radius;
-                            $dashoffset = $circumference - ($pct / 100) * $circumference;
-                        ?>
-                        <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
-                            <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#e5e5e5" stroke-width="8"/>
-                            <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="8"
-                                    stroke-dasharray="<?= $circumference ?>" stroke-dashoffset="<?= $dashoffset ?>"
-                                    stroke-linecap="round" transform="rotate(-90 50 50)"/>
-                        </svg>
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php endforeach; ?>
-            <?php 
-                $promedioNivelAnterior = $nivelData['progreso_promedio'];
-            endforeach; 
+
+                    // Label debajo de la esfera
+                    $momentoLabel = 'M' . $mNum . ': ' . $mDef['nombre'];
             ?>
-            
+                    <div class="path-item <?= $isActive ? 'current' : '' ?> <?= $offsetClase ?>"
+                         style="<?= $isActive ? 'z-index:50;' : '' ?>">
+                        <div class="node-wrapper"
+                             onclick="<?= $estadoMomento !== 'bloqueado' ? "window.location='{$urlMomento}'" : "mostrarMensajeBloqueado()" ?>"
+                             title="<?= limpiar($nivelData['nombre']) ?> — <?= $mDef['nombre'] ?>">
+
+                            <?php if ($isActive): ?>
+                                <span class="tooltip" id="start-tooltip-<?= $globalRapIndex ?>">EMPEZAR</span>
+                            <?php endif; ?>
+
+                            <div class="node <?= $nodeClass ?>" <?= $isActive ? 'id="star-node"' : '' ?>>
+                                <?= $iconHtml ?>
+                            </div>
+
+                            <?php if ($isActive && $autenticado):
+                                $radius        = 45;
+                                $circumference = 2 * pi() * $radius;
+                                $dashoffset    = $circumference - ($pctRap / 100) * $circumference;
+                            ?>
+                            <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
+                                <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="var(--gris-claro)" stroke-width="8"/>
+                                <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="8"
+                                        stroke-dasharray="<?= $circumference ?>" stroke-dashoffset="<?= $dashoffset ?>"
+                                        stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                            </svg>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Label del momento -->
+                        <div style="
+                            position: absolute;
+                            bottom: -22px;
+                            left: 50%;
+                            transform: translateX(-50%);
+                            font-size: 10px;
+                            font-weight: 800;
+                            color: var(--gris-medio);
+                            white-space: nowrap;
+                            letter-spacing: 0.04em;
+                            text-transform: uppercase;
+                        "><?= $momentoLabel ?></div>
+                    </div>
+            <?php endforeach; // fin momentos ?>
+            <?php
+                $promedioNivelAnterior = $nivelData['progreso_promedio'];
+            endforeach; // fin niveles
+            ?>
+
             <!-- Cofre final -->
             <?php
               $chestOffset = $OFFSETS[$globalRapIndex % count($OFFSETS)];
@@ -347,7 +416,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <!-- Trofeo final -->
             <?php
               $trophyOffset = $OFFSETS[$globalRapIndex % count($OFFSETS)];
@@ -360,7 +429,10 @@
                 </div>
             </div>
         </div>
+
       </div>
+
+
 
       <!-- PANEL LATERAL DERECHO -->
       <aside class="side-column" aria-label="Panel de gamificación">

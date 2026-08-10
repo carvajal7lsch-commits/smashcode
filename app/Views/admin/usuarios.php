@@ -477,7 +477,7 @@
         <label class="etiqueta-campo" for="crear_programa" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Programa de Formación <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
         <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-graduation-cap icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
-          <select id="crear_programa" name="programa_id" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
+          <select id="crear_programa" name="programa_id" class="select-premium" style="width:100%; padding:11px 14px 11px 38px; cursor:pointer; background:var(--fondo-input); color:var(--texto-principal); border:1px solid var(--borde-sutil); border-radius:10px;">
             <option value="">— Sin programa asignado —</option>
             <?php foreach ($programas as $p): ?>
               <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>
@@ -487,8 +487,8 @@
       </div>
 
       <div class="modal-acciones" style="gap:12px;">
-        <button type="button" class="btn-premium btn-premium-blanco" onclick="cerrarModal('modal-crear-usuario')">Cancelar</button>
-        <button type="submit" class="btn-premium btn-premium-verde" id="crear-btn-submit"><i class="fas fa-user-plus"></i> Crear Cuenta</button>
+        <button type="button" class="btn btn-gris" onclick="cerrarModal('modal-crear-usuario')">Cancelar</button>
+        <button type="submit" class="btn btn-verde" id="crear-btn-submit"><i class="fas fa-user-plus"></i> Crear Cuenta</button>
       </div>
     </form>
   </div>
@@ -529,7 +529,7 @@
         <label class="etiqueta-campo" for="editar-rol" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Rol de Cuenta *</label>
         <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-shield-halved icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
-          <select id="editar-rol" name="rol" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;" onchange="adaptarModalEditar(this.value)">
+          <select id="editar-rol" name="rol" class="select-premium" style="width:100%; padding:11px 14px 11px 38px; cursor:pointer; background:var(--fondo-input); color:var(--texto-principal); border:1px solid var(--borde-sutil); border-radius:10px;" onchange="adaptarModalEditar(this.value)">
             <option value="aprendiz">Aprendiz</option>
             <option value="instructor">Instructor</option>
             <option value="admin">Administrador</option>
@@ -551,7 +551,7 @@
         <label class="etiqueta-campo" for="editar-programa" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Programa de Formación <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
         <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-graduation-cap icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
-          <select id="editar-programa" name="programa_id" class="select-premium" style="width:100%; padding-left:38px; cursor:pointer;">
+          <select id="editar-programa" name="programa_id" class="select-premium" style="width:100%; padding:11px 14px 11px 38px; cursor:pointer; background:var(--fondo-input); color:var(--texto-principal); border:1px solid var(--borde-sutil); border-radius:10px;">
             <option value="">— Sin programa asignado —</option>
             <?php foreach ($programas as $p): ?>
               <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>

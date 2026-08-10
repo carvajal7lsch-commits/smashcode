@@ -58,6 +58,48 @@
 
     <!-- ==================== MOMENTO 1: WARM-UP ==================== -->
     <section class="moment-pane active" id="pane-moment-1" aria-labelledby="tab-moment-1">
+      
+      <!-- 1.1 Intro & Objetivos (Contenidos.md) -->
+      <div class="card-moment" style="margin-bottom: 24px;">
+        <div style="display:flex; align-items:center; gap:16px; margin-bottom:12px;">
+          <div style="width:48px; height:48px; border-radius:14px; background:rgba(28,176,246,0.12); color:var(--azul); display:flex; align-items:center; justify-content:center; font-size:1.4rem;">
+            <i class="fas fa-bullseye"></i>
+          </div>
+          <div>
+            <h2 style="font-size:1.25rem; margin:0; font-weight:800; color:var(--gris-texto);">Momento 1: Preparación (Intro & Objetivos)</h2>
+            <div style="font-size:0.85rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-top:2px;">
+              <?= limpiar($rap['nivel_nombre']) ?>
+            </div>
+          </div>
+        </div>
+
+        <?php
+          $introTextos = [
+              1 => '¡Bienvenido! En este primer módulo aprenderás a presentarte, saludar a tus pacientes y colegas, e intercambiar información personal básica en el entorno de enfermería.',
+              2 => 'En este módulo acompañarás a Mr. Thomas en su hospitalización. Al final, serás capaz de describir el estado físico de tus pacientes, detallar su entorno hospitalario y comprender qué les sucedió antes de llegar a urgencias.',
+              3 => '¡Tu turno ha comenzado! En este módulo aprenderás a comunicarte con médicos, colegas y familiares de pacientes. Al final, podrás explicar procedimientos de rutina, interactuar con visitantes y proponer mejoras en tu entorno laboral.',
+              4 => '¡Mr. Thomas se va a casa! En este último módulo, aprenderás a dar instrucciones de alta médica, recomendaciones de cuidado en casa y a evaluar los resultados de tu trabajo analizando las listas de verificación en inglés.'
+          ];
+          $introNarrativa = $introTextos[$rap['nivel_orden']] ?? 'En este módulo aprenderás las competencias clave de comunicación clínica en inglés.';
+        ?>
+
+        <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px 22px; margin-top:14px;">
+          <h3 style="font-size:1rem; font-weight:800; color:var(--azul); margin-bottom:8px; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-info-circle"></i> Introducción del Módulo
+          </h3>
+          <p style="color:var(--gris-texto); font-size:1.02rem; line-height:1.6; margin:0 0 16px 0; font-weight:600;">
+            "<?= $introNarrativa ?>"
+          </p>
+
+          <h3 style="font-size:0.95rem; font-weight:800; color:var(--verde); margin-bottom:6px; display:flex; align-items:center; gap:8px;">
+            <i class="fas fa-compass"></i> Objetivo Pedagógico (<?= limpiar($rap['titulo']) ?>)
+          </h3>
+          <p style="color:var(--texto-tenue); font-size:0.92rem; line-height:1.5; margin:0; font-weight:600;">
+            <?= !empty($rap['nivel_descripcion']) ? limpiar($rap['nivel_descripcion']) : '' ?>
+          </p>
+        </div>
+      </div>
+
       <div class="card-moment">
         <h2>Warm-Up Mini-Game</h2>
         <p style="color:var(--texto-tenue); margin-top:8px;">Match English terms to their Spanish meanings to activate your prior knowledge!</p>
@@ -69,12 +111,17 @@
 
         <div id="warmup-success-msg" style="display:none; text-align:center; margin-top:32px; animation: fadeInUp 0.3s ease;">
           <h3 style="color:var(--verde); font-size:1.4rem; font-weight:800; margin-bottom:12px;">
-            <i class="fas fa-star" style="margin-right:8px;"></i>Warm-Up Completed!
+            <i class="fas fa-star" style="margin-right:8px;"></i>¡Warm-Up Completado!
           </h3>
-          <p style="color:var(--texto-tenue); margin-bottom:24px;">Moment 2 (Absorption) is now unlocked. Let's start studying!</p>
-          <button class="btn-verde" style="margin: 0 auto; display: block;" onclick="switchTab(2)">
-            Continue <i class="fas fa-arrow-right"></i>
-          </button>
+          <p style="color:var(--texto-tenue); margin-bottom:24px;">¡Has completado el Momento 1! El Momento 2 (Absorption) está desbloqueado.</p>
+          <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
+            <button class="btn btn-verde" onclick="finishMomentAndReturn(25)" style="padding:12px 24px; font-weight:800;">
+              <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
+            </button>
+            <button class="btn btn-azul" onclick="switchTab(2)" style="padding:12px 24px; font-weight:800;">
+              Siguiente Momento <i class="fas fa-arrow-right" style="margin-left:8px;"></i>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -83,19 +130,111 @@
     <section class="moment-pane" id="pane-moment-2" aria-labelledby="tab-moment-2">
       <!-- 2.1 Grammar Pill -->
       <div class="card-moment">
-        <h2>Grammar Pill</h2>
-        <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:16px;">Analyze the grammatical structure of clinical interactions: Subject + Verb + Complement.</p>
-        <div class="grammar-pill">
-          <h3>Forming Patient Registrations & Sentences</h3>
-          <div class="grammar-table">
-            <span class="gt-sujeto" title="Subject">I</span>
-            <span class="gt-verbo" title="Verb To Be">am</span>
-            <span class="gt-complemento" title="Complement">Sarah, your nurse</span>
-          </div>
-          <p style="font-size:0.9rem; text-align:center; color:var(--texto-tenue);">
-            Sujeto (<span style="color:#1cb0f6; font-weight:700;">I</span>) + Verbo To Be (<span style="color:#ff9600; font-weight:700;">am</span>) + Complemento Clínico (<span style="color:#58cc02; font-weight:700;">Sarah, su enfermera</span>).
+        <?php if ($rap['nivel_orden'] == 2): ?>
+          <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-pills" style="color:var(--naranja);"></i> Grammar Pill: Clinical Status vs. Patient History</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:20px;">
+            Aprende a diferenciar las acciones en <strong>Pasado Simple</strong> (lo que le ocurrió al paciente antes de su ingreso) de los <strong>Adjetivos Descriptivos y Estado Actual</strong> (cómo se encuentra hoy Mr. Thomas).
           </p>
-        </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:12px;">
+            <!-- Columna 1: Patient's History (Simple Past) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--morado); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-history"></i> Patient's History (Pasado Simple)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  He <span style="color:var(--naranja); font-weight:900;">fell</span> at the hotel yesterday.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Él se cayó en el hotel ayer)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  He <span style="color:var(--naranja); font-weight:900;">had</span> an accident before admission.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Él tuvo un accidente antes del ingreso)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The paramedics <span style="color:var(--naranja); font-weight:900;">brought</span> him on a stretcher.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Los paramédicos lo trajeron en camilla)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Current Status (Present & Descriptives) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-stethoscope"></i> Current Status (Estado Actual)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  Mr. Thomas <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">pale and tired</span> today.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(El paciente está pálido y cansado hoy)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  His right arm <span style="color:var(--azul); font-weight:900;">has</span> a <span style="color:var(--verde); font-weight:900;">fracture</span>.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Su brazo derecho tiene una fractura)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The room <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">cold</span>, but signs are stable.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(La habitación está fría, pero está estable)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <?php elseif ($rap['nivel_orden'] == 3): ?>
+          <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-pills" style="color:var(--naranja);"></i> Grammar Pill: Daily Routines vs. Happening Now</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:20px;">
+            Aprende a diferenciar el <strong>Presente Simple</strong> (para rutinas laborales diarias) del <strong>Presente Continuo</strong> (para acciones que ocurren en el momento) y fórmulas de cortesía para sugerir mejoras (<em>We should...</em>).
+          </p>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:12px;">
+            <!-- Columna 1: Daily Routine (Present Simple) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--morado); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-calendar-check"></i> Daily Routine (Presente Simple)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  I <span style="color:var(--naranja); font-weight:900;">give</span> medication at 8 AM every day.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Administro medicamentos a las 8 AM todos los días)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  Nurse Sarah <span style="color:var(--naranja); font-weight:900;">checks</span> vital signs during rounds.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(La enfermera verifica signos vitales en las rondas)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Happening Now (Present Continuous) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-clock"></i> Happening Now (Presente Continuo)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  We <span style="color:var(--azul); font-weight:900;">are checking</span> his temperature right now.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Estamos midiendo su temperatura justo ahora)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  I think we <span style="color:var(--verde); font-weight:900;">should update</span> the checklist.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Creo que deberíamos actualizar la lista de chequeo)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        <?php else: ?>
+          <h2>Grammar Pill</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:16px;">Analyze the grammatical structure of clinical interactions: Subject + Verb + Complement.</p>
+          <div class="grammar-pill">
+            <h3>Forming Patient Registrations & Sentences</h3>
+            <div class="grammar-table">
+              <span class="gt-sujeto" title="Subject">I</span>
+              <span class="gt-verbo" title="Verb To Be">am</span>
+              <span class="gt-complemento" title="Complement">Sarah, your nurse</span>
+            </div>
+            <p style="font-size:0.9rem; text-align:center; color:var(--texto-tenue);">
+              Sujeto (<span style="color:#1cb0f6; font-weight:700;">I</span>) + Verbo To Be (<span style="color:#ff9600; font-weight:700;">am</span>) + Complemento Clínico (<span style="color:#58cc02; font-weight:700;">Sarah, su enfermera</span>).
+            </p>
+          </div>
+        <?php endif; ?>
       </div>
 
       <!-- 2.2 Vocabulary Lab Slider -->
@@ -145,11 +284,16 @@
           <p style="color:var(--texto-tenue); text-align:center;">No clinical dialogues loaded for this RAP.</p>
         <?php else: ?>
           <?php foreach ($dialogos as $d): ?>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
               <h3 style="font-size:1.15rem; font-weight:800; color:var(--gris-texto);"><i class="fas fa-hospital-user" style="margin-right:8px; color:var(--azul);"></i><?= limpiar($d['titulo']) ?></h3>
-              <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
-                <i class="fas fa-play-circle"></i> Play Full Dialog
-              </button>
+              <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
+                  <i class="fas fa-play-circle"></i> Play Full Dialog
+                </button>
+                <button class="btn-stop-dialogue" id="btn-stop-audio-<?= $d['id'] ?>" onclick="stopAudioPlayback()" style="display:none; background:var(--rojo); color:#fff; border:none; border-radius:12px; padding:8px 16px; font-weight:800; font-size:0.85rem; cursor:pointer; box-shadow:0 3px 0 #cc0000; transition:all 0.15s ease;" title="Detener reproducción de audio">
+                  <i class="fas fa-stop-circle"></i> Detener Audio
+                </button>
+              </div>
             </div>
             
             <div class="dialogue-chat" id="dialogue-<?= $d['id'] ?>">
@@ -173,9 +317,12 @@
           <?php endforeach; ?>
         <?php endif; ?>
 
-        <div style="text-align:center; margin-top:32px;">
-          <button class="btn-verde" id="btn-unlock-moment-3" onclick="unlockMoment3()">
-            I am ready for Output Practice <i class="fas fa-arrow-right"></i>
+        <div style="text-align:center; margin-top:32px; display:flex; justify-content:center; gap:16px; flex-wrap:wrap;">
+          <button class="btn btn-verde" id="btn-unlock-moment-3" onclick="finishMomentAndReturn(50)" style="padding:12px 24px; font-weight:800;">
+            <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
+          </button>
+          <button class="btn btn-azul" onclick="unlockMoment3()" style="padding:12px 24px; font-weight:800;">
+            Ir a Practicar (Momento 3) <i class="fas fa-arrow-right" style="margin-left:8px;"></i>
           </button>
         </div>
       </div>
@@ -298,7 +445,10 @@
                         </div>
                       <?php endforeach; ?>
                     </div>
-                    <div style="margin-top:20px; font-weight:800; color:var(--azul);">Organized Conversation:</div>
+                    <div style="margin-top:20px; font-weight:800; color:var(--azul); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                      <span>Organized Conversation:</span>
+                      <small style="font-size:0.78rem; color:var(--texto-tenue); font-weight:600;"><i class="fas fa-info-circle" style="margin-right:4px; color:var(--azul);"></i>Haz clic en una opción elegida para quitarla si te equivocaste</small>
+                    </div>
                     <div class="dialogue-chat" id="ordered-chat-display-<?= $idx ?>" style="min-height:80px; padding:12px; margin-top:10px;">
                       <div style="color:var(--gris-medio); text-align:center; font-style:italic;" id="ordered-placeholder-<?= $idx ?>">Empty. Click options above to order.</div>
                     </div>
@@ -326,9 +476,15 @@
                   </div>
                 </div>
 
-                <div style="display:flex; justify-content:flex-end; margin-top:24px;">
-                  <button class="btn-verde" id="btn-validate-<?= $idx ?>" onclick="validateExercise('<?= $idx ?>')">Verificar</button>
-                  <button class="btn-azul" id="btn-next-exercise-<?= $idx ?>" onclick="nextExercise('<?= $idx ?>')" style="display:none;">Continuar</button>
+                <div style="display:flex; justify-content:flex-end; margin-top:24px; gap:12px;">
+                  <?php if ($ej['tipo'] === 'escucha_escribe'): ?>
+                    <button class="btn btn-verde" id="btn-validate-<?= $idx ?>" onclick="validateExercise('<?= $idx ?>')" style="padding:12px 28px; font-size:1rem; font-weight:800;">
+                      <i class="fas fa-check-circle" style="margin-right:6px;"></i> Verificar
+                    </button>
+                  <?php endif; ?>
+                  <button class="btn btn-azul" id="btn-next-exercise-<?= $idx ?>" onclick="nextExercise('<?= $idx ?>')" style="display:none; padding:12px 28px; font-size:1rem; font-weight:800;">
+                    Continuar <i class="fas fa-arrow-right" style="margin-left:6px;"></i>
+                  </button>
                 </div>
               </div>
             <?php endforeach; ?>
@@ -354,8 +510,8 @@
             <div style="font-size:1.4rem; font-weight:900; color:var(--morado);">5:00 min</div>
           </div>
         </div>
-        <button class="btn-morado" style="display:block; width:100%; font-size:1.1rem; padding:14px;" onclick="startQuiz()">
-          Comenzar Evaluación
+        <button class="btn btn-morado" style="display:block; width:100%; font-size:1.1rem; padding:14px 24px; font-weight:800; text-align:center; box-shadow: 0 4px 0 #a855f7;" onclick="startQuiz()">
+          <i class="fas fa-play-circle" style="margin-right:8px;"></i> Comenzar Evaluación
         </button>
       </div>
 
@@ -465,18 +621,6 @@
     document.getElementById('tab-moment-' + num).classList.add('active');
     document.getElementById('pane-moment-' + num).classList.add('active');
     activeTab = num;
-
-    // Actualizar progreso
-    let pct = (num - 1) * 25;
-    let fill = document.getElementById('header-progress-fill');
-    let txt = document.getElementById('header-progress-text');
-    if (fill && txt) {
-      fill.style.width = pct + '%';
-      txt.textContent = pct + '%';
-    }
-
-    // Reportar progreso al servidor vía AJAX
-    saveProgress(pct);
   }
 
   function saveProgress(pct) {
@@ -703,18 +847,32 @@
   // --- STORYBOOK DIALOGUE PLAYBACK & HIGHLIGHT ---
   let dialogTimeoutList = [];
 
-  function playFullDialogue(diaElementId) {
-    window.speechSynthesis.cancel();
+  function stopAudioPlayback() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     dialogTimeoutList.forEach(t => clearTimeout(t));
     dialogTimeoutList = [];
+    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
+    document.querySelectorAll('.btn-stop-dialogue').forEach(b => b.style.display = 'none');
+  }
+
+  function playFullDialogue(diaElementId) {
+    stopAudioPlayback();
     
     let container = document.getElementById(diaElementId);
+    let diaId = diaElementId.replace('dialogue-', '');
+    let stopBtn = document.getElementById('btn-stop-audio-' + diaId);
+    if (stopBtn) stopBtn.style.display = 'inline-flex';
+
     let bubbles = Array.from(container.querySelectorAll('.chat-bubble'));
-    
     bubbles.forEach(b => b.classList.remove('active-highlight'));
 
     function playTurn(idx) {
-      if (idx >= bubbles.length) return;
+      if (idx >= bubbles.length) {
+        if (stopBtn) stopBtn.style.display = 'none';
+        return;
+      }
       let bubble = bubbles[idx];
       let text = bubble.getAttribute('data-text-en');
       let speaker = bubble.getAttribute('data-speaker') || 'female';
@@ -726,11 +884,13 @@
       
       utterance.onend = () => {
         bubble.classList.remove('active-highlight');
-        // Continuar al siguiente turno tras 0.5s de pausa natural
         let timeout = setTimeout(() => {
           playTurn(idx + 1);
         }, 500);
         dialogTimeoutList.push(timeout);
+      };
+      utterance.onerror = () => {
+        if (stopBtn) stopBtn.style.display = 'none';
       };
     }
     
@@ -738,12 +898,7 @@
   }
 
   function speakSingleTurn(turnId) {
-    window.speechSynthesis.cancel();
-    dialogTimeoutList.forEach(t => clearTimeout(t));
-    dialogTimeoutList = [];
-
-    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
-
+    stopAudioPlayback();
     let bubble = document.getElementById(turnId);
     let text = bubble.getAttribute('data-text-en');
     let speaker = bubble.getAttribute('data-speaker') || 'female';
@@ -797,11 +952,20 @@
     box.querySelectorAll('.option-item').forEach(n => n.classList.remove('selected'));
     node.classList.add('selected');
     
+    let isCorrect = parseInt(node.dataset.correct) === 1;
+    let retroText = node.dataset.retro;
+    if (!isCorrect) {
+      let correctNode = box.querySelector('.option-item[data-correct="1"] span:last-child');
+      let correctAns = correctNode ? correctNode.textContent : '';
+      retroText = 'La respuesta correcta es: ' + correctAns;
+    }
+    
     answersObj[exIdx] = {
-      isCorrect: parseInt(node.dataset.correct) === 1,
-      retro: node.dataset.retro,
+      isCorrect: isCorrect,
+      retro: retroText,
       text: node.querySelector('span:last-child').textContent
     };
+    validateExercise(exIdx);
   }
 
   // Fill in blanks handler
@@ -822,11 +986,13 @@
 
     let correctVal = document.getElementById('blank-sentence-' + exIdx).dataset.correct;
 
+    let isCorrect = text.toLowerCase().trim() === correctVal.toLowerCase().trim();
     answersObj[exIdx] = {
-      isCorrect: text.toLowerCase().trim() === correctVal.toLowerCase().trim(),
-      retro: 'Frase completada.',
+      isCorrect: isCorrect,
+      retro: isCorrect ? '¡Frase completada correctamente!' : ('La respuesta correcta es: ' + correctVal),
       text: text
     };
+    validateExercise(exIdx);
   }
 
   function selectColumnMatch(exIdx, column, text, node) {
@@ -907,9 +1073,30 @@
     bubble.className = 'chat-bubble left';
     bubble.style.width = '100%';
     bubble.style.margin = '4px 0';
+    bubble.style.cursor = 'pointer';
+    bubble.title = 'Haz clic para remover esta opción si te equivocaste';
+    bubble.style.transition = 'all 0.2s ease';
     bubble.innerHTML = `<div>${itemText}</div>`;
-    displayBox.appendChild(bubble);
 
+    bubble.onclick = function() {
+      if (displayBox.contains(bubble)) {
+        displayBox.removeChild(bubble);
+      }
+      node.style.opacity = '1';
+      node.style.pointerEvents = 'auto';
+
+      let seqIndex = selectedOrderSeq.indexOf(itemText);
+      if (seqIndex !== -1) {
+        selectedOrderSeq.splice(seqIndex, 1);
+      }
+
+      let remaining = displayBox.querySelectorAll('.chat-bubble');
+      if (remaining.length === 0 && placeholder) {
+        placeholder.style.display = 'block';
+      }
+    };
+
+    displayBox.appendChild(bubble);
     selectedOrderSeq.push(itemText);
 
     // Comparar longitud para validar
@@ -917,10 +1104,13 @@
     let correctArr = correctSeqText.split('|');
 
     if (selectedOrderSeq.length === correctArr.length) {
-      let isCorrect = selectedOrderSeq.every((val, i) => val === correctArr[i]);
+      let isCorrect = selectedOrderSeq.every((val, i) => val.trim() === correctArr[i].trim());
+      let formattedCorrect = correctArr.map((line, idx) => `${idx + 1}. ${line.trim()}`).join(' ');
+      let retroMsg = isCorrect ? '¡Has ordenado perfectamente la conversación!' : ('La respuesta correcta es el orden cronológico: ' + formattedCorrect);
+      
       answersObj[exIdx] = {
         isCorrect: isCorrect,
-        retro: isCorrect ? '¡Has ordenado perfectamente la conversación!' : 'El orden no es el correcto.',
+        retro: retroMsg,
         text: selectedOrderSeq.join(' | ')
       };
       validateExercise(exIdx);
@@ -938,9 +1128,10 @@
       let input = document.getElementById('dictation-input-' + exIdx);
       let text = input.value.trim().toLowerCase();
       let correct = input.dataset.correct.toLowerCase().trim();
+      let isCorrect = text === correct;
       ans = {
-        isCorrect: text === correct,
-        retro: text === correct ? '¡Correcto!' : `Incorrecto. Se escribe: "${correct}".`,
+        isCorrect: isCorrect,
+        retro: isCorrect ? '¡Correcto! Has registrado la palabra en las Notas de Enfermería.' : `La respuesta correcta es: "${correct}".`,
         text: text
       };
       answersObj[exIdx] = ans;
@@ -951,8 +1142,9 @@
       return;
     }
 
-    // Ocultar botón validar
-    document.getElementById('btn-validate-' + exIdx).style.display = 'none';
+    // Ocultar botón validar si existe
+    let btnVal = document.getElementById('btn-validate-' + exIdx);
+    if (btnVal) btnVal.style.display = 'none';
 
     // Mostrar Banner
     let banner = document.getElementById('val-banner-' + exIdx);
@@ -1008,8 +1200,7 @@
       nextBox.classList.add('active');
       updateExerciseHeader();
     } else {
-      // Completó todos los ejercicios!
-      // Otorgar XP en el servidor al final de los ejercicios
+      // Completó todos los ejercicios del Momento 3!
       let userXpFormData = new FormData();
       userXpFormData.append('rap_id', rapId);
       userXpFormData.append('porcentaje', 75); // 75% progress
@@ -1018,7 +1209,25 @@
         body: userXpFormData
       }).then(() => {
         unlockMoment(4);
-        switchTab(4);
+        let carousel = document.getElementById('exercises-carousel');
+        let finishBox = document.createElement('div');
+        finishBox.className = 'card-moment';
+        finishBox.style.cssText = 'text-align:center; padding:32px 20px; animation:fadeInUp 0.3s ease;';
+        finishBox.innerHTML = `
+          <h3 style="color:var(--verde); font-size:1.5rem; font-weight:800; margin-bottom:12px;">
+            <i class="fas fa-check-circle" style="margin-right:8px;"></i>¡Momento 3 (Práctica) Completado!
+          </h3>
+          <p style="color:var(--texto-tenue); margin-bottom:24px;">Has realizado los ejercicios prácticos. El Momento 4 (Quiz) ya está desbloqueado.</p>
+          <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
+            <button class="btn btn-verde" onclick="finishMomentAndReturn(75)" style="padding:12px 24px; font-weight:800;">
+              <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
+            </button>
+            <button class="btn btn-morado" onclick="switchTab(4)" style="padding:12px 24px; font-weight:800;">
+              Comenzar Quiz <i class="fas fa-award" style="margin-left:8px;"></i>
+            </button>
+          </div>
+        `;
+        carousel.appendChild(finishBox);
       });
     }
   }
@@ -1236,11 +1445,25 @@
     }, 6000);
   }
 
+  function finishMomentAndReturn(pct) {
+    saveProgress(pct);
+    setTimeout(() => {
+      window.location.href = '<?= PROYECTO_PATH ?>/';
+    }, 300);
+  }
+
   // --- AL CARGAR ---
   document.addEventListener('DOMContentLoaded', () => {
     initWarmupMatching();
     showVocabItem();
     initExercises();
+
+    // Si la URL tiene ?momento=N, navegar directamente a ese tab
+    const urlParams = new URLSearchParams(window.location.search);
+    const momentoParam = parseInt(urlParams.get('momento'));
+    if (momentoParam && momentoParam >= 1 && momentoParam <= 4 && momentoParam <= maxTabUnlocked) {
+      switchTab(momentoParam);
+    }
   });
 </script>
 

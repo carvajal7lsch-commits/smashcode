@@ -46,7 +46,7 @@
             <i class="fas fa-layer-group icono-seccion-admin"></i>Gestión de Niveles
           </h1>
           <p class="desc-seccion-admin">
-            6 niveles fijos alineados al MCER (A1 → B2) · Solo se pueden editar, no crear ni eliminar.
+            4 módulos/niveles fijos alineados al MCER (A1 → B1+) · Solo se pueden editar.
           </p>
         </div>
       </div>
@@ -101,9 +101,9 @@
 
       <!-- Barra de filtros -->
       <div class="barra-filtros barra-filtros-admin">
-        <div class="contenedor-input-search contenedor-search-admin">
+        <div class="contenedor-input-search contenedor-search-admin" style="width: 480px !important; min-width: 360px !important; max-width: 500px !important;">
           <i class="fas fa-search icono-search"></i>
-          <input type="text" id="buscar-nivel" class="input-busqueda" placeholder="Buscar nivel por nombre o descripción...">
+          <input type="text" id="buscar-nivel" class="input-busqueda" placeholder="Buscar nivel por nombre o descripción..." style="width: 100% !important; box-sizing: border-box !important;">
         </div>
         <select id="filtrar-estado" class="select-filtro select-filtro-admin">
           <option value="todos">Todos los estados</option>
@@ -115,8 +115,8 @@
       <!-- Grid de niveles -->
       <div class="grid-niveles">
         <?php
-        $mcer = ['A1', 'A2', 'B1', 'B1+', 'B2-', 'B2'];
-        $iconosNivel = ['🩺','💊','🏥','📋','🚑','🩻'];
+        $mcer = ['A1', 'A2', 'B1', 'B1+'];
+        $iconosNivel = ['🩺','💊','🏥','📋'];
 
         foreach ($niveles as $n):
           $orden = (int)$n['orden'];

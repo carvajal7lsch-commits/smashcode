@@ -204,10 +204,12 @@ class User extends Model {
     public function obtenerHistorialQuizzes(string $usuarioId): array {
         $pdo = self::obtenerConexion();
         $stmt = $pdo->prepare(
-            'SELECT i.id, i.puntaje, i.aprobado, i.numero_intento, i.duracion_seg, i.creado_en, r.titulo AS rap_titulo
+            'SELECT i.id, i.puntaje, i.aprobado, i.numero_intento, i.duracion_seg, i.creado_en, 
+                    r.titulo AS rap_titulo, n.nombre AS modulo_nombre, n.orden AS modulo_orden
              FROM intento_quiz i
              JOIN quiz q ON q.id = i.quiz_id
              JOIN rap r ON r.id = q.rap_id
+             JOIN nivel n ON n.id = r.nivel_id
              WHERE i.usuario_id = ?
              ORDER BY i.creado_en DESC'
         );

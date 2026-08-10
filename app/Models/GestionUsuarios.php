@@ -18,7 +18,7 @@ class GestionUsuarios extends Model {
         $pdo = self::obtenerConexion();
         $offset = ($pagina - 1) * $porPagina;
 
-        $sql    = "SELECT id, nombre_completo, correo, rol, activo, bloqueado, ficha_sena,
+        $sql    = "SELECT id, nombre_completo, correo, rol, activo, bloqueado, ficha_sena, programa_id,
                           xp_puntos, nivel_perfil, creado_en, eliminado
                    FROM usuarios
                    WHERE eliminado = 0";
