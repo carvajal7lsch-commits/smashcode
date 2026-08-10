@@ -11,6 +11,7 @@
   </script>
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/layout.css?v=<?= time() ?>">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/aprendiz.css?v=<?= time() ?>">
+  <script src="<?= PROYECTO_PATH ?>/assets/js/sonidos.js"></script>
 </head>
 <body>
 
@@ -764,6 +765,7 @@
         selectedEs.className = 'matching-card correct';
         matchedCount++;
         
+        if (window.SonidosApp) SonidosApp.playCorrect();
         speakText(selectedEn.textContent);
 
         selectedEn = null;
@@ -779,6 +781,7 @@
         let nodeEs = selectedEs;
         nodeEn.classList.add('incorrect');
         nodeEs.classList.add('incorrect');
+        if (window.SonidosApp) SonidosApp.playIncorrect();
         setTimeout(() => {
           nodeEn.classList.remove('selected', 'incorrect');
           nodeEs.classList.remove('selected', 'incorrect');
@@ -1188,6 +1191,7 @@
       icon.className = 'fas fa-check-circle';
       title.textContent = '¡Excelente trabajo!';
       expl.textContent = ans.retro || '¡Respuesta correcta!';
+      if (window.SonidosApp) SonidosApp.playCorrect();
       
       // Dar puntos XP en caliente para la UI
       exercisePoints += 10;
@@ -1198,6 +1202,7 @@
       icon.className = 'fas fa-times-circle';
       title.textContent = 'Respuesta incorrecta';
       expl.textContent = ans.retro || 'Inténtalo de nuevo en la siguiente sesión.';
+      if (window.SonidosApp) SonidosApp.playIncorrect();
     }
 
     // Mostrar continuar
@@ -1393,6 +1398,8 @@
       xpBox.textContent = `+${data.xp_ganados} XP`;
       badgeBox.textContent = data.insignia_ganada || 'Quiz Completado';
 
+      if (window.SonidosApp) SonidosApp.playVictory();
+
       // Confetti!
       triggerConfetti();
       
@@ -1414,6 +1421,7 @@
       msg.textContent = `Has obtenido ${pct}%. Necesitas un mínimo de ${quizMinPct}% para aprobar la lección.`;
       xpBox.textContent = '+0 XP';
       badgeBox.textContent = 'Ninguna';
+      if (window.SonidosApp) SonidosApp.playIncorrect();
     }
   }
 

@@ -380,14 +380,12 @@
 
           <div class="campo-grupo">
             <label class="campo-label">Tema de la interfaz</label>
-            <div style="display:flex; gap:12px; margin-top:4px;">
-              <button onclick="cambiarTema('dark')" id="btn-tema-oscuro"
-                style="flex:1; padding:10px; border-radius:10px; border:2px solid var(--gris-claro); background:var(--fondo); color:var(--gris-texto); font-family:var(--fuente); font-weight:800; cursor:pointer; font-size:0.82rem; transition:all 0.2s;">
-                <i class="fas fa-moon" style="margin-right:6px;"></i>Oscuro
+            <div style="display:flex; gap:12px; margin-top:6px;">
+              <button type="button" onclick="cambiarTema('dark')" id="btn-tema-oscuro" class="btn-tema-opcion">
+                <i class="fas fa-moon"></i> <span>Oscuro</span>
               </button>
-              <button onclick="cambiarTema('light')" id="btn-tema-claro"
-                style="flex:1; padding:10px; border-radius:10px; border:2px solid var(--gris-claro); background:var(--fondo); color:var(--gris-texto); font-family:var(--fuente); font-weight:800; cursor:pointer; font-size:0.82rem; transition:all 0.2s;">
-                <i class="fas fa-sun" style="margin-right:6px;"></i>Claro
+              <button type="button" onclick="cambiarTema('light')" id="btn-tema-claro" class="btn-tema-opcion">
+                <i class="fas fa-sun"></i> <span>Claro</span>
               </button>
             </div>
           </div>
@@ -397,13 +395,13 @@
           <div style="display:flex; align-items:center; justify-content:space-between; padding:12px 0;">
             <div>
               <div style="font-size:0.85rem; font-weight:700; color:var(--gris-texto);">Sonidos de la app</div>
-              <div style="font-size:0.72rem; color:var(--gris-medio); margin-top:2px;">Efectos de sonido al completar lecciones</div>
+              <div style="font-size:0.72rem; color:var(--gris-medio); margin-top:2px;">Efectos de sonido al completar lecciones y quizzes</div>
             </div>
-            <label class="toggle-switch" style="position:relative; display:inline-block; width:44px; height:24px;">
+            <label class="toggle-switch" style="position:relative; display:inline-block; width:46px; height:26px; cursor:pointer;">
               <input type="checkbox" id="toggle-sonido" style="opacity:0; width:0; height:0;" onchange="toggleSonido(this)">
-              <span style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background:var(--gris-claro); border-radius:34px; transition:.3s;"
+              <span style="position:absolute; top:0; left:0; right:0; bottom:0; background:var(--gris-claro); border-radius:34px; transition:all 0.3s ease;"
                     id="toggle-sonido-track">
-                <span style="position:absolute; height:18px; width:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s;" id="toggle-sonido-thumb"></span>
+                <span style="position:absolute; height:20px; width:20px; left:3px; bottom:3px; background:#fff; border-radius:50%; box-shadow:0 2px 5px rgba(0,0,0,0.2); transition:all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" id="toggle-sonido-thumb"></span>
               </span>
             </label>
           </div>
@@ -431,17 +429,51 @@
   </main>
 </div>
 
+<style>
+  .btn-tema-opcion {
+    flex: 1;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 2px solid var(--gris-claro);
+    background: var(--fondo);
+    color: var(--gris-texto);
+    font-family: var(--fuente);
+    font-weight: 800;
+    cursor: pointer;
+    font-size: 0.84rem;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-tema-opcion:hover {
+    border-color: var(--verde);
+  }
+  .btn-tema-opcion.activo {
+    border-color: var(--verde) !important;
+    color: var(--verde) !important;
+    background: rgba(88, 204, 2, 0.12) !important;
+    box-shadow: 0 0 10px rgba(88, 204, 2, 0.2);
+  }
+</style>
+
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
+<script src="<?= PROYECTO_PATH ?>/assets/js/sonidos.js"></script>
 <script>
   function actualizarBotonesTema() {
     const tema = document.documentElement.getAttribute('data-theme') || 'dark';
     const btnOscuro = document.getElementById('btn-tema-oscuro');
     const btnClaro  = document.getElementById('btn-tema-claro');
     if (!btnOscuro || !btnClaro) return;
-    const estiloActivo   = 'border-color: var(--verde); color: var(--verde); background: rgba(88,204,2,0.1);';
-    const estiloInactivo = '';
-    btnOscuro.style.cssText += tema === 'dark' ? estiloActivo : estiloInactivo;
-    btnClaro.style.cssText  += tema === 'light' ? estiloActivo : estiloInactivo;
+
+    if (tema === 'dark') {
+      btnOscuro.classList.add('activo');
+      btnClaro.classList.remove('activo');
+    } else {
+      btnClaro.classList.add('activo');
+      btnOscuro.classList.remove('activo');
+    }
   }
 
   function cambiarTema(nuevoTema) {
@@ -465,24 +497,37 @@
   function toggleSonido(cb) {
     const track = document.getElementById('toggle-sonido-track');
     const thumb = document.getElementById('toggle-sonido-thumb');
-    if (cb.checked) {
+    const habilitado = cb.checked;
+    
+    if (habilitado) {
       track.style.background = 'var(--verde)';
       thumb.style.transform = 'translateX(20px)';
-      localStorage.setItem('smashcode_sonido', '1');
+      SonidosApp.setHabilitado(true);
+      SonidosApp.playToggle(true);
     } else {
       track.style.background = 'var(--gris-claro)';
       thumb.style.transform = 'translateX(0)';
-      localStorage.setItem('smashcode_sonido', '0');
+      SonidosApp.playToggle(false);
+      SonidosApp.setHabilitado(false);
     }
   }
 
   document.addEventListener('DOMContentLoaded', function() {
     actualizarBotonesTema();
-    const sonido = localStorage.getItem('smashcode_sonido') === '1';
+    const habilitado = SonidosApp.estaHabilitado();
     const cbSonido = document.getElementById('toggle-sonido');
-    if (cbSonido && sonido) {
-      cbSonido.checked = true;
-      toggleSonido(cbSonido);
+    const track = document.getElementById('toggle-sonido-track');
+    const thumb = document.getElementById('toggle-sonido-thumb');
+    
+    if (cbSonido) {
+      cbSonido.checked = habilitado;
+      if (habilitado) {
+        track.style.background = 'var(--verde)';
+        thumb.style.transform = 'translateX(20px)';
+      } else {
+        track.style.background = 'var(--gris-claro)';
+        thumb.style.transform = 'translateX(0)';
+      }
     }
   });
 </script>
