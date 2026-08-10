@@ -80,15 +80,10 @@
       </a>
     </li>
 
-    <li><span class="nav-grupo-titulo">Reportes</span></li>
+    <li><span class="nav-grupo-titulo">Configuración</span></li>
     <li>
-      <a href="<?= PROYECTO_PATH ?>/admin/analytics" class="nav-enlace">
-        <i class="fas fa-chart-line nav-icono"></i><span>Analytics</span>
-      </a>
-    </li>
-    <li>
-      <a href="<?= PROYECTO_PATH ?>/admin/configuracion" class="nav-enlace">
-        <i class="fas fa-gear nav-icono"></i><span>Configuración</span>
+      <a href="<?= PROYECTO_PATH ?>/admin/gamificacion" class="nav-enlace <?= strpos($_SERVER['REQUEST_URI'] ?? '', '/admin/gamificacion') !== false ? 'activo' : '' ?>">
+        <i class="fas fa-trophy nav-icono"></i><span>Puntos y Gamificación</span>
       </a>
     </li>
     <li>

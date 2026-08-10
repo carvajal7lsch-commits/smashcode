@@ -91,6 +91,10 @@ $app->post('/admin/dialogos/delete',     'AdminDialogoController@delete');
 $app->get('/admin/quizzes',              'AdminQuizController@index');
 $app->post('/admin/quizzes/save',        'AdminQuizController@save');
 
+// --- Configuración de Gamificación y Puntos (XP) ---
+$app->get('/admin/gamificacion',         'AdminController@gamificacion');
+$app->post('/admin/gamificacion/guardar','AdminController@guardarGamificacion');
+
 
 // --- Módulo de Niveles (HU10) — Instructor ---
 $app->get('/instructor/niveles',             'InstructorController@niveles');

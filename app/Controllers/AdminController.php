@@ -7,6 +7,7 @@ use App\Models\GestionUsuarios;
 use App\Models\Nivel;
 use App\Models\Programa;
 use App\Models\User;
+use App\Models\GamificacionConfig;
 
 /**
  * AdminController.php
@@ -627,4 +628,42 @@ class AdminController extends Controller {
 
         $this->redirect('admin/raps?exito=estado');
     }
+
+    /**
+     * Muestra la vista de configuración de puntos XP y gamificación.
+     */
+    public function gamificacion(): void {
+        $gamModel = new GamificacionConfig();
+        $config = $gamModel->obtenerTodas();
+        $exito = limpiar($_GET['exito'] ?? '');
+        $error = limpiar($_GET['error'] ?? '');
+
+        $this->render('admin/gamificacion', compact('config', 'exito', 'error'));
+    }
+
+    /**
+     * Guarda la configuración de puntos XP y gamificación.
+     */
+    public function guardarGamificacion(): void {
+        if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+            $this->redirect('admin/gamificacion?error=csrf');
+            return;
+        }
+
+        $valores = [
+            'xp_ejercicio_correcto' => (int)($_POST['xp_ejercicio_correcto'] ?? 10),
+            'xp_quiz_aprobado'     => (int)($_POST['xp_quiz_aprobado'] ?? 50),
+            'xp_quiz_perfecto'     => (int)($_POST['xp_quiz_perfecto'] ?? 100),
+            'xp_por_nivel'         => (int)($_POST['xp_por_nivel'] ?? 500),
+            'dias_racha_insignia'  => (int)($_POST['dias_racha_insignia'] ?? 7)
+        ];
+
+        $gamModel = new GamificacionConfig();
+        if ($gamModel->guardarConfiguracion($valores)) {
+            $this->redirect('admin/gamificacion?exito=guardado');
+        } else {
+            $this->redirect('admin/gamificacion?error=guardado');
+        }
+    }
 }
+

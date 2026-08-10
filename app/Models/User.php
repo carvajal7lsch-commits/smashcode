@@ -24,11 +24,18 @@ class User extends Model {
     }
 
     /**
-     * Busca un usuario por su ID único (incluyendo el flag de primer login).
+     * Busca un usuario por su ID único (incluyendo programa SENA, ficha y metadatos).
      */
     public function obtenerPorId(string $id): ?array {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT nombre_completo, xp_puntos, nivel_perfil, rol, correo, debe_cambiar_clave FROM usuarios WHERE id = ? LIMIT 1');
+        $stmt = $pdo->prepare(
+            'SELECT u.id, u.nombre_completo, u.xp_puntos, u.nivel_perfil, u.rol, u.correo, 
+                    u.ficha_sena, u.programa_id, u.debe_cambiar_clave, u.creado_en,
+                    p.nombre AS programa_nombre
+             FROM usuarios u
+             LEFT JOIN programa_formacion p ON p.id = u.programa_id
+             WHERE u.id = ? LIMIT 1'
+        );
         $stmt->execute([$id]);
         $usuario = $stmt->fetch();
         return $usuario ?: null;
@@ -167,7 +174,7 @@ class User extends Model {
     }
 
     /**
-     * Incrementa los puntos XP de un usuario y recalcula su nivel de perfil.
+     * Incrementa los puntos XP de un usuario y recalcula su nivel de perfil dinámicamente.
      */
     public function actualizarXP(string $id, int $puntos): bool {
         $pdo = self::obtenerConexion();
@@ -182,9 +189,13 @@ class User extends Model {
                 return false;
             }
 
+            // Obtener valor configurable de XP por nivel
+            $gamConfig = new GamificacionConfig();
+            $xpPorNivel = $gamConfig->obtenerValor('xp_por_nivel', 500);
+            if ($xpPorNivel <= 0) $xpPorNivel = 500;
+
             $nuevoXp = (int)$user['xp_puntos'] + $puntos;
-            // Nivel = floor(XP / 500) + 1
-            $nuevoNivel = (int)floor($nuevoXp / 500) + 1;
+            $nuevoNivel = (int)floor($nuevoXp / $xpPorNivel) + 1;
 
             $stmtUpdate = $pdo->prepare('UPDATE usuarios SET xp_puntos = ?, nivel_perfil = ? WHERE id = ?');
             $stmtUpdate->execute([$nuevoXp, $nuevoNivel, $id]);
@@ -196,6 +207,89 @@ class User extends Model {
             error_log('[User Model] Error en actualizarXP: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Calcula la escala de rango clínico oficial (HU15) basada en los puntos XP acumulados.
+     * Escala: Novato Clínico (Nivel 1) → Intermedio Clínico (Nivel 2) → Avanzado Clínico (Nivel 3) → Experto Clínico (Nivel 4+)
+     */
+    public function calcularRangoClinico(int $xp, int $xpPorNivel = 500): array {
+        if ($xpPorNivel <= 0) $xpPorNivel = 500;
+        
+        $nivel = (int)floor($xp / $xpPorNivel) + 1;
+        $xpSiguienteNivel = $nivel * $xpPorNivel;
+        $xpBaseNivel = ($nivel - 1) * $xpPorNivel;
+        $xpEnEsteNivel = $xp - $xpBaseNivel;
+        $porcentaje = $xpPorNivel > 0 ? min(100, max(0, round(($xpEnEsteNivel / $xpPorNivel) * 100))) : 100;
+        $xpFaltantes = max(0, $xpSiguienteNivel - $xp);
+
+        switch ($nivel) {
+            case 1:
+                $rangoNombre = 'Novato Clínico';
+                $rangoIcono = 'fa-shield-heart';
+                $rangoColor = 'var(--azul)';
+                break;
+            case 2:
+                $rangoNombre = 'Intermedio Clínico';
+                $rangoIcono = 'fa-stethoscope';
+                $rangoColor = 'var(--verde)';
+                break;
+            case 3:
+                $rangoNombre = 'Avanzado Clínico';
+                $rangoIcono = 'fa-user-doctor';
+                $rangoColor = 'var(--naranja)';
+                break;
+            default:
+                $rangoNombre = 'Experto Clínico';
+                $rangoIcono = 'fa-crown';
+                $rangoColor = 'var(--morado)';
+                break;
+        }
+
+        return [
+            'nivel' => $nivel,
+            'rango_nombre' => $rangoNombre,
+            'rango_icono' => $rangoIcono,
+            'rango_color' => $rangoColor,
+            'xp_actual' => $xp,
+            'xp_base_nivel' => $xpBaseNivel,
+            'xp_siguiente_nivel' => $xpSiguienteNivel,
+            'xp_faltantes' => $xpFaltantes,
+            'porcentaje' => $porcentaje
+        ];
+    }
+
+    /**
+     * Calcula la racha actual de días activos consecutivos de estudio (HU05/HU15).
+     */
+    public function calcularRachaDias(string $usuarioId): int {
+        $pdo = self::obtenerConexion();
+        $fechas = $this->obtenerHeatmapActividad($usuarioId);
+        if (empty($fechas)) {
+            return 0;
+        }
+
+        // Fechas únicas ordenadas descendentemente
+        $fechas = array_unique($fechas);
+        rsort($fechas);
+
+        $hoy = date('Y-m-d');
+        $ayer = date('Y-m-d', strtotime('-1 day'));
+
+        // Si no practicó ni hoy ni ayer, la racha activa es 0
+        if (!in_array($hoy, $fechas) && !in_array($ayer, $fechas)) {
+            return 0;
+        }
+
+        $racha = 0;
+        $fechaCursor = in_array($hoy, $fechas) ? $hoy : $ayer;
+
+        while (in_array($fechaCursor, $fechas)) {
+            $racha++;
+            $fechaCursor = date('Y-m-d', strtotime($fechaCursor . ' -1 day'));
+        }
+
+        return $racha;
     }
 
     /**

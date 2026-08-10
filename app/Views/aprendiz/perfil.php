@@ -21,13 +21,24 @@
         $exito = limpiar($_GET['exito'] ?? '');
         $error = limpiar($_GET['error'] ?? '');
         $xp    = (int)($usuario['xp_puntos'] ?? 0);
-        $nivel = (int)($usuario['nivel_perfil'] ?? 1);
-        $xpSiguiente = $nivel * 500;
-        $xpPorcentaje = $xpSiguiente > 0 ? min(100, round(($xp / $xpSiguiente) * 100)) : 100;
         $inicialAvatar = strtoupper(substr($usuario['nombre_completo'] ?? 'A', 0, 1));
+        
+        $rango = $rangoClinico ?? [
+            'nivel' => 1,
+            'rango_nombre' => 'Novato Clínico',
+            'rango_icono' => 'fa-shield-heart',
+            'rango_color' => 'var(--azul)',
+            'xp_actual' => $xp,
+            'xp_siguiente_nivel' => 500,
+            'xp_faltantes' => max(0, 500 - $xp),
+            'porcentaje' => min(100, round(($xp / 500) * 100))
+        ];
+
+        $racha = (int)($rachaDias ?? 0);
+        $quizzesAprobados = count(array_filter($historialQuizzes ?? [], fn($q) => (int)$q['aprobado'] === 1));
       ?>
 
-      <!-- ── HÉROE DEL PERFIL ── -->
+      <!-- ── HÉROE DEL PERFIL (HU16 / HU15) ── -->
       <div class="hero-perfil">
         <div class="avatar-hero"><?= $inicialAvatar ?></div>
         <div class="hero-info">
@@ -36,74 +47,101 @@
             <i class="fas fa-envelope"></i>
             <?= limpiar($usuario['correo'] ?? '') ?>
           </p>
+
           <div class="hero-badges">
-            <span class="hero-badge badge-xp"><i class="fas fa-bolt"></i><?= number_format($xp) ?> XP</span>
-            <span class="hero-badge badge-nivel"><i class="fas fa-star"></i>Nivel <?= $nivel ?></span>
-            <span class="hero-badge badge-rol"><i class="fas fa-user-graduate"></i>Aprendiz</span>
+            <span class="hero-badge badge-rol"><i class="fas fa-user-graduate"></i>Aprendiz SENA</span>
+            <?php if (!empty($usuario['ficha_sena'])): ?>
+              <span class="hero-badge" style="background:rgba(28,176,246,0.12); color:var(--azul); border:1px solid rgba(28,176,246,0.3);">
+                <i class="fas fa-id-card"></i> Ficha: <?= limpiar($usuario['ficha_sena']) ?>
+              </span>
+            <?php endif; ?>
+            <?php if (!empty($usuario['programa_nombre'])): ?>
+              <span class="hero-badge" style="background:rgba(155,89,182,0.12); color:var(--morado); border:1px solid rgba(155,89,182,0.3);">
+                <i class="fas fa-book-medical"></i> <?= limpiar($usuario['programa_nombre']) ?>
+              </span>
+            <?php endif; ?>
+            <span class="hero-badge badge-nivel" style="background:rgba(255,150,0,0.12); color:var(--naranja); border:1px solid rgba(255,150,0,0.3);">
+              <i class="fas <?= $rango['rango_icono'] ?>"></i> <?= $rango['rango_nombre'] ?> (Nivel <?= $rango['nivel'] ?>)
+            </span>
           </div>
+
           <div class="xp-section">
             <div class="xp-barra-wrap">
               <div class="xp-label">
-                <span>Progreso al siguiente nivel</span>
-                <span><?= $xp ?> / <?= $xpSiguiente ?> XP</span>
+                <span>Progreso al siguiente rango (<?= $rango['xp_faltantes'] ?> XP faltantes)</span>
+                <span><?= number_format($rango['xp_actual']) ?> / <?= number_format($rango['xp_siguiente_nivel']) ?> XP</span>
               </div>
               <div class="xp-barra">
-                <div class="xp-fill" style="width: <?= $xpPorcentaje ?>%"></div>
+                <div class="xp-fill" style="width: <?= $rango['porcentaje'] ?>%"></div>
               </div>
             </div>
-            <span style="font-size:1.6rem; font-weight:900; color:var(--verde); min-width:48px; text-align:right;"><?= $xpPorcentaje ?>%</span>
+            <span style="font-size:1.6rem; font-weight:900; color:var(--verde); min-width:48px; text-align:right;"><?= $rango['porcentaje'] ?>%</span>
           </div>
         </div>
       </div>
 
-      <!-- ── ESTADÍSTICAS RÁPIDAS ── -->
+      <!-- ── ESTADÍSTICAS RÁPIDAS (HU05 / HU15) ── -->
       <div class="config-card" style="padding: 20px 28px;">
-        <div class="config-card-titulo"><i class="fas fa-chart-bar" style="color:var(--azul);"></i>Mis Estadísticas</div>
+        <div class="config-card-titulo"><i class="fas fa-chart-line" style="color:var(--azul);"></i>Mis Métricas Clínicas</div>
         <div class="stats-quick">
           <div class="stat-q">
-            <div class="stat-q-val" style="color:var(--naranja);"><?= number_format($xp) ?></div>
-            <div class="stat-q-lbl">XP Total</div>
+            <div class="stat-q-val" style="color:var(--naranja);"><i class="fas fa-bolt" style="font-size:1.2rem; margin-right:4px;"></i><?= number_format($xp) ?></div>
+            <div class="stat-q-lbl">Puntos XP Totales</div>
           </div>
           <div class="stat-q">
-            <div class="stat-q-val" style="color:var(--verde);"><?= $nivel ?></div>
-            <div class="stat-q-lbl">Nivel Actual</div>
+            <div class="stat-q-val" style="color:var(--rojo);"><i class="fas fa-fire" style="font-size:1.2rem; margin-right:4px;"></i><?= $racha ?> Días</div>
+            <div class="stat-q-lbl">Racha Activa</div>
           </div>
           <div class="stat-q">
-            <div class="stat-q-val" style="color:var(--azul);"><?= $xpPorcentaje ?>%</div>
-            <div class="stat-q-lbl">Avance Nivel</div>
+            <div class="stat-q-val" style="color:var(--verde);"><i class="fas fa-check-circle" style="font-size:1.2rem; margin-right:4px;"></i><?= $quizzesAprobados ?></div>
+            <div class="stat-q-lbl">Quizzes Aprobados</div>
+          </div>
+          <div class="stat-q">
+            <div class="stat-q-val" style="color:var(--azul);"><i class="fas <?= $rango['rango_icono'] ?>" style="font-size:1.2rem; margin-right:4px;"></i>Nivel <?= $rango['nivel'] ?></div>
+            <div class="stat-q-lbl"><?= $rango['rango_nombre'] ?></div>
           </div>
         </div>
       </div>
 
-      <!-- ── GRID DE CONFIGURACIÓN ── -->
+      <!-- ── GRID DE INFORMACIÓN Y GAMIFICACIÓN ── -->
       <div class="config-grid">
 
-        <!-- Leaderboard -->
+        <!-- Leaderboard Semanal de Ficha (HU15) -->
         <div class="config-card">
-          <div class="config-card-titulo"><i class="fas fa-ranking-star" style="color:var(--azul);"></i>Leaderboard de Ficha</div>
+          <div class="config-card-titulo"><i class="fas fa-ranking-star" style="color:var(--azul);"></i>Leaderboard de Programa / Ficha</div>
           <?php if (empty($leaderboard)): ?>
-            <p style="color:var(--texto-tenue); font-size:0.8rem; text-align:center; padding:12px;">Completa lecciones para entrar al ranking.</p>
+            <p style="color:var(--texto-tenue); font-size:0.85rem; text-align:center; padding:20px;">Aún no hay actividad registrada en tu programa esta semana.</p>
           <?php else: ?>
             <div style="display:flex; flex-direction:column; gap:8px;">
               <?php foreach ($leaderboard as $pos => $uRank): 
-                $isMe = $uRank['id'] === $_SESSION['usuario_id'];
+                $isMe = ($uRank['id'] === $_SESSION['usuario_id']);
+                $medalla = '';
+                if ($pos === 0) $medalla = '🥇';
+                elseif ($pos === 1) $medalla = '🥈';
+                elseif ($pos === 2) $medalla = '🥉';
               ?>
-                <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:10px; border:2px solid <?= $isMe ? 'var(--verde)' : 'var(--gris-claro)' ?>; background: <?= $isMe ? 'rgba(88,204,2,0.08)' : 'var(--fondo)' ?>;">
-                  <div style="display:flex; align-items:center; gap:8px;">
-                    <span style="font-weight:900; width:20px; color:var(--gris-medio);">#<?= $pos + 1 ?></span>
-                    <span style="font-weight:<?= $isMe ? '800' : '700' ?>; font-size:0.85rem; color:var(--gris-texto);"><?= htmlspecialchars($uRank['nombre_completo']) ?></span>
+                <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:12px; border:2px solid <?= $isMe ? 'var(--verde)' : 'var(--gris-claro)' ?>; background: <?= $isMe ? 'rgba(88,204,2,0.1)' : 'var(--fondo)' ?>; transition:all 0.2s;">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <span style="font-weight:900; width:24px; text-align:center; font-size:0.95rem; color:var(--gris-medio);"><?= $medalla ?: '#' . ($pos + 1) ?></span>
+                    <div>
+                      <span style="font-weight:<?= $isMe ? '800' : '700' ?>; font-size:0.88rem; color:var(--gris-texto); display:block;">
+                        <?= htmlspecialchars($uRank['nombre_completo']) ?> <?= $isMe ? '<small style="color:var(--verde); font-weight:800;">(Tú)</small>' : '' ?>
+                      </span>
+                      <small style="font-size:0.72rem; color:var(--texto-tenue);">Nivel <?= (int)$uRank['nivel_perfil'] ?></small>
+                    </div>
                   </div>
-                  <span style="font-weight:800; font-size:0.85rem; color:var(--naranja);"><?= number_format($uRank['xp_puntos']) ?> XP</span>
+                  <span style="font-weight:800; font-size:0.9rem; color:var(--naranja);"><i class="fas fa-bolt" style="font-size:0.75rem;"></i> <?= number_format($uRank['xp_puntos']) ?> XP</span>
                 </div>
               <?php endforeach; ?>
             </div>
           <?php endif; ?>
         </div>
 
-        <!-- Heatmap de Actividad -->
+        <!-- Heatmap de Actividad (HU05 / HU15) -->
         <div class="config-card">
-          <div class="config-card-titulo"><i class="fas fa-calendar-check" style="color:var(--verde);"></i>Actividad (Últimos 90 Días)</div>
-          <p style="font-size:0.75rem; color:var(--texto-tenue); margin-bottom:12px;">Visualiza tu constancia y días activos de estudio clínico.</p>
+          <div class="config-card-titulo"><i class="fas fa-calendar-check" style="color:var(--verde);"></i>Constancia de Estudio (Últimos 90 Días)</div>
+          <p style="font-size:0.78rem; color:var(--texto-tenue); margin-bottom:12px;">Visualiza tu constancia y días activos de práctica en SmashCode.</p>
+          
           <div style="display:grid; grid-template-columns: repeat(13, 1fr); gap:6px;">
             <?php 
               $today = new DateTime();
@@ -115,40 +153,43 @@
                   $startDate->modify('+1 day');
               }
               foreach ($dateList as $dVal):
-                  $isActiveDay = in_array($dVal, $heatmapActivo);
+                  $isActiveDay = in_array($dVal, $heatmapActivo ?? []);
             ?>
-              <div style="aspect-ratio:1; border-radius:3px; background: <?= $isActiveDay ? 'var(--verde)' : 'var(--gris-claro)' ?>; border: 1px solid <?= $isActiveDay ? 'var(--verde-oscuro)' : 'transparent' ?>; box-shadow: <?= $isActiveDay ? '0 0 6px rgba(88,204,2,0.4)' : 'none' ?>;" 
-                   title="<?= date('d/m/Y', strtotime($dVal)) . ($isActiveDay ? ' - Día Activo' : ' - Sin actividad') ?>">
+              <div style="aspect-ratio:1; border-radius:4px; background: <?= $isActiveDay ? 'var(--verde)' : 'var(--gris-claro)' ?>; border: 1px solid <?= $isActiveDay ? 'var(--verde-oscuro)' : 'transparent' ?>; box-shadow: <?= $isActiveDay ? '0 0 6px rgba(88,204,2,0.5)' : 'none' ?>;" 
+                   title="<?= date('d/m/Y', strtotime($dVal)) . ($isActiveDay ? ' • ¡Día de práctica activo!' : ' • Sin actividad') ?>">
               </div>
             <?php endforeach; ?>
           </div>
-          <div style="display:flex; align-items:center; gap:8px; margin-top:12px; font-size:0.68rem; color:var(--gris-medio); justify-content:flex-end;">
-            <span>Menos</span>
-            <div style="width:10px; height:10px; border-radius:2px; background:var(--gris-claro);"></div>
-            <div style="width:10px; height:10px; border-radius:2px; background:var(--verde);"></div>
-            <span>Más</span>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; margin-top:14px; font-size:0.75rem; color:var(--gris-medio);">
+            <span>🔥 Racha actual: <strong style="color:var(--rojo);"><?= $racha ?> días consecutivos</strong></span>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span>Menos</span>
+              <div style="width:10px; height:10px; border-radius:2px; background:var(--gris-claro);"></div>
+              <div style="width:10px; height:10px; border-radius:2px; background:var(--verde);"></div>
+              <span>Más</span>
+            </div>
           </div>
         </div>
 
-        <!-- Colección de Insignias -->
+        <!-- Colección de Insignias y Logros (HU07) -->
         <div class="config-card" style="grid-column: span 2;">
-          <div class="config-card-titulo"><i class="fas fa-medal" style="color:var(--naranja);"></i>Colección de Insignias</div>
-          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:10px; justify-content:center;">
+          <div class="config-card-titulo"><i class="fas fa-medal" style="color:var(--naranja);"></i>Colección de Insignias y Logros Clínicos</div>
+          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; justify-content:center;">
             <?php 
               $descInsigniasMap = [
-                'Primer Nivel' => 'Completaste tu primer nivel',
-                'Racha 7 Días' => '7 días consecutivos de práctica',
-                'Quiz Perfecto' => 'Obtuviste 100% en un quiz',
-                'Vocabulario Pro' => 'Aprendiste 50 palabras médicas',
-                'Estudiante Élite' => 'Completaste todos los niveles'
+                'Primer Nivel' => 'Completaste con éxito tu primer nivel',
+                'Racha 7 Días' => '7 días consecutivos de práctica clínica',
+                'Quiz Perfecto' => 'Obtuviste 100% de aciertos en un quiz',
+                'Vocabulario Pro' => 'Aprendiste 50 términos médicos',
+                'Estudiante Élite' => 'Completaste todos los módulos del curso'
               ];
 
-              $earnedIds = array_column($insigniasGanadas, 'id');
+              $earnedIds = array_column($insigniasGanadas ?? [], 'id');
               foreach ($todasInsignias as $insig):
                   $hasEarned = in_array($insig['id'], $earnedIds);
                   $rawNombre = $insig['nombre'];
                   
-                  // Normalizador para asegurar tildes impecables
                   if (mb_stripos($rawNombre, 'Racha') !== false || mb_stripos($rawNombre, '7') !== false) {
                       $cleanNombre = 'Racha 7 Días';
                   } elseif (mb_stripos($rawNombre, 'Primer') !== false) {
@@ -165,8 +206,8 @@
 
                   $cleanDesc = $descInsigniasMap[$cleanNombre] ?? htmlspecialchars($insig['descripcion']);
             ?>
-              <div style="display:flex; flex-direction:column; align-items:center; width:110px; text-align:center; opacity: <?= $hasEarned ? '1' : '0.4' ?>; filter: <?= $hasEarned ? 'none' : 'grayscale(100%)' ?>;">
-                <div style="width:64px; height:64px; border-radius:50%; background:var(--fondo); border:3px solid <?= $hasEarned ? 'var(--naranja)' : 'var(--gris-claro)' ?>; display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:var(--naranja); box-shadow: <?= $hasEarned ? '0 4px 10px rgba(255,150,0,0.2)' : 'none' ?>; transition:all 0.2s;">
+              <div style="display:flex; flex-direction:column; align-items:center; width:120px; text-align:center; opacity: <?= $hasEarned ? '1' : '0.35' ?>; filter: <?= $hasEarned ? 'none' : 'grayscale(100%)' ?>; transition:all 0.2s;">
+                <div style="width:68px; height:68px; border-radius:50%; background:var(--fondo); border:3px solid <?= $hasEarned ? 'var(--naranja)' : 'var(--gris-claro)' ?>; display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:var(--naranja); box-shadow: <?= $hasEarned ? '0 4px 12px rgba(255,150,0,0.25)' : 'none' ?>;">
                   <?php if ($cleanNombre === 'Quiz Perfecto'): ?>
                     <i class="fas fa-trophy"></i>
                   <?php elseif ($cleanNombre === 'Primer Nivel'): ?>
@@ -179,28 +220,33 @@
                     <i class="fas fa-award"></i>
                   <?php endif; ?>
                 </div>
-                <div style="font-size:0.78rem; font-weight:800; margin-top:8px; color:var(--gris-texto);"><?= $cleanNombre ?></div>
-                <div style="font-size:0.65rem; color:var(--texto-tenue); margin-top:2px; line-height:1.2;"><?= $cleanDesc ?></div>
+                <div style="font-size:0.82rem; font-weight:800; margin-top:8px; color:var(--gris-texto);"><?= $cleanNombre ?></div>
+                <div style="font-size:0.68rem; color:var(--texto-tenue); margin-top:2px; line-height:1.2;"><?= $cleanDesc ?></div>
+                <?php if ($hasEarned): ?>
+                  <span style="display:inline-block; margin-top:4px; font-size:0.65rem; font-weight:800; color:var(--verde);"><i class="fas fa-check"></i> Desbloqueada</span>
+                <?php else: ?>
+                  <span style="display:inline-block; margin-top:4px; font-size:0.65rem; color:var(--texto-tenue);"><i class="fas fa-lock"></i> Bloqueada</span>
+                <?php endif; ?>
               </div>
             <?php endforeach; ?>
           </div>
         </div>
 
-        <!-- Historial de Quizzes -->
+        <!-- Historial de Evaluaciones y Quizzes (HU05) -->
         <div class="config-card" style="grid-column: span 2;">
-          <div class="config-card-titulo"><i class="fas fa-clock-rotate-left" style="color:var(--morado);"></i>Historial de Evaluaciones</div>
+          <div class="config-card-titulo"><i class="fas fa-clock-rotate-left" style="color:var(--morado);"></i>Historial de Evaluaciones y Quizzes</div>
           <?php if (empty($historialQuizzes)): ?>
-            <p style="color:var(--texto-tenue); text-align:center; padding: 20px;">No has completado ninguna evaluación final de RAP todavía.</p>
+            <p style="color:var(--texto-tenue); text-align:center; padding: 24px; font-size:0.88rem;">No has completado ninguna evaluación final de RAP todavía.</p>
           <?php else: ?>
             <div style="overflow-x:auto;">
               <table class="vocab-table" style="width:100%; border:none;">
                 <thead>
                   <tr>
-                    <th style="padding:10px 12px;">Quiz / Resultado de Aprendizaje</th>
-                    <th style="padding:10px 12px; text-align:center;">Puntaje</th>
-                    <th style="padding:10px 12px; text-align:center;">Resultado</th>
-                    <th style="padding:10px 12px; text-align:center;">Intento</th>
-                    <th style="padding:10px 12px; text-align:right;">Fecha</th>
+                    <th style="padding:12px;">Módulo / Resultado de Aprendizaje</th>
+                    <th style="padding:12px; text-align:center;">Puntaje</th>
+                    <th style="padding:12px; text-align:center;">Resultado</th>
+                    <th style="padding:12px; text-align:center;">Intento</th>
+                    <th style="padding:12px; text-align:right;">Fecha</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -208,8 +254,8 @@
                       $moduloOrden = (int)($q['modulo_orden'] ?? 1);
                       $rapsSubtextMap = [
                           1 => 'RAP 1: Presentaciones e Información Personal',
-                          2 => 'RAP 2 y RAP 3: Historia del Paciente, Entorno Hospitalario y Estado Actual',
-                          3 => 'RAP 4 y RAP 5: Interacción con Visitantes, Sugerencias de Mejora y Lista de Chequeo',
+                          2 => 'RAP 2 y RAP 3: Historia del Paciente y Entorno Hospitalario',
+                          3 => 'RAP 4 y RAP 5: Interacción con Visitantes y Lista de Chequeo',
                           4 => 'RAP 6: Práctica Profesional e Instrucciones de Alta'
                       ];
                       $subtexto = $rapsSubtextMap[$moduloOrden] ?? limpiar($q['rap_titulo']);
@@ -219,14 +265,14 @@
                         <div><?= !empty($q['modulo_nombre']) ? limpiar($q['modulo_nombre']) : limpiar($q['rap_titulo']) ?></div>
                         <div style="font-size:0.75rem; font-weight:600; color:var(--texto-tenue); margin-top:2px;"><?= $subtexto ?></div>
                       </td>
-                      <td style="padding:12px; text-align:center; font-weight:800; color:<?= $q['aprobado'] ? 'var(--verde)' : 'var(--rojo)' ?>;"><?= (int)$q['puntaje'] ?>%</td>
+                      <td style="padding:12px; text-align:center; font-weight:800; font-size:1rem; color:<?= $q['aprobado'] ? 'var(--verde)' : 'var(--rojo)' ?>;"><?= (int)$q['puntaje'] ?>%</td>
                       <td style="padding:12px; text-align:center;">
-                        <span class="tag-badge <?= $q['aprobado'] ? 'nivel' : 'cat' ?>" style="font-size:0.65rem; display:inline-block; padding:3px 8px;">
+                        <span class="tag-badge <?= $q['aprobado'] ? 'nivel' : 'cat' ?>" style="font-size:0.7rem; display:inline-block; padding:4px 10px; font-weight:800;">
                           <?= $q['aprobado'] ? 'APROBADO' : 'REPROBADO' ?>
                         </span>
                       </td>
                       <td style="padding:12px; text-align:center; font-weight:700;">#<?= $q['numero_intento'] ?></td>
-                      <td style="padding:12px; text-align:right; font-size:0.8rem; color:var(--texto-tenue);"><?= date('d/m/Y H:i', strtotime($q['creado_en'])) ?></td>
+                      <td style="padding:12px; text-align:right; font-size:0.82rem; color:var(--texto-tenue);"><?= date('d/m/Y H:i', strtotime($q['creado_en'])) ?></td>
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
@@ -235,9 +281,9 @@
           <?php endif; ?>
         </div>
 
-        <!-- Datos Personales -->
+        <!-- Datos Personales (HU16) -->
         <div class="config-card">
-          <div class="config-card-titulo"><i class="fas fa-user-pen" style="color:var(--verde);"></i>Datos Personales</div>
+          <div class="config-card-titulo"><i class="fas fa-user-pen" style="color:var(--verde);"></i>Datos del Aprendiz</div>
 
           <?php if ($exito === 'nombre'): ?>
             <div class="alerta-perfil alerta-ok"><i class="fas fa-check-circle"></i>Nombre actualizado correctamente.</div>
@@ -260,7 +306,7 @@
             </div>
 
             <div class="campo-grupo">
-              <label class="campo-label">Correo electrónico</label>
+              <label class="campo-label">Correo institucional</label>
               <div class="campo-wrap">
                 <i class="fas fa-envelope campo-ico"></i>
                 <input type="email" class="campo-input-perfil"
@@ -277,7 +323,7 @@
           </form>
         </div>
 
-        <!-- Seguridad -->
+        <!-- Seguridad y Contraseña (HU08) -->
         <div class="config-card">
           <div class="config-card-titulo"><i class="fas fa-shield-halved" style="color:var(--azul);"></i>Seguridad y Contraseña</div>
 
@@ -328,7 +374,7 @@
           </form>
         </div>
 
-        <!-- Preferencias -->
+        <!-- Preferencias de Apariencia -->
         <div class="config-card">
           <div class="config-card-titulo"><i class="fas fa-palette" style="color:var(--morado);"></i>Preferencias de Apariencia</div>
 
@@ -363,11 +409,11 @@
           </div>
         </div>
 
-        <!-- Cerrar sesión -->
+        <!-- Zona de Riesgo -->
         <div class="config-card danger-zone">
           <div class="config-card-titulo"><i class="fas fa-triangle-exclamation"></i>Zona de Riesgo</div>
           <p style="font-size:0.85rem; color:var(--gris-medio); margin-bottom:20px; line-height:1.6;">
-            Al cerrar sesión perderás acceso hasta que inicies sesión nuevamente. Tu progreso y XP siempre se guardan automáticamente.
+            Al cerrar sesión perderás acceso temporal hasta que ingreses tus credenciales nuevamente. Tu progreso y XP siempre se guardan automáticamente.
           </p>
           <a href="<?= PROYECTO_PATH ?>/logout"
              style="display:flex; align-items:center; justify-content:center; gap:10px; width:100%; padding:12px; border-radius:12px;
@@ -387,7 +433,6 @@
 
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
 <script>
-  // Resaltar el botón del tema activo
   function actualizarBotonesTema() {
     const tema = document.documentElement.getAttribute('data-theme') || 'dark';
     const btnOscuro = document.getElementById('btn-tema-oscuro');
@@ -402,7 +447,6 @@
   function cambiarTema(nuevoTema) {
     document.documentElement.setAttribute('data-theme', nuevoTema);
     localStorage.setItem('smashcode_tema', nuevoTema);
-    // Actualizar el botón en la sidebar también
     const btnSidebar = document.getElementById('btn-cambiar-tema');
     if (btnSidebar) {
       const ico = btnSidebar.querySelector('.tema-icono');
@@ -432,7 +476,6 @@
     }
   }
 
-  // Al cargar: restaurar preferencias
   document.addEventListener('DOMContentLoaded', function() {
     actualizarBotonesTema();
     const sonido = localStorage.getItem('smashcode_sonido') === '1';

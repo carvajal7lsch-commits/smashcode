@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\Progreso;
+use App\Models\GamificacionConfig;
 use PDO;
 
 class AprendizController extends Controller {
@@ -265,11 +266,17 @@ class AprendizController extends Controller {
             // Completado al 100% al aprobar
             $progresoModel->actualizarProgreso($uid, $rapId, 100.00, 1);
 
-            // Recompensas de Gamificación
+            // Recompensas de Gamificación dinámicas
             $userModel = new User();
+            $gamConfig = new GamificacionConfig();
             
-            // Otorgar XP (+50 XP por aprobación)
-            $xpGanados = 50;
+            $xpQuizAprobado = $gamConfig->obtenerValor('xp_quiz_aprobado', 50);
+            $xpQuizPerfecto = $gamConfig->obtenerValor('xp_quiz_perfecto', 100);
+
+            $xpGanados = $xpQuizAprobado;
+            if ($puntaje === 100.00) {
+                $xpGanados += $xpQuizPerfecto;
+            }
             $userModel->actualizarXP($uid, $xpGanados);
 
             // Verificar e Insignias
@@ -401,22 +408,42 @@ class AprendizController extends Controller {
             $userModel = new User();
             $usuario = $userModel->obtenerPorId($uid);
 
+            // Cargar configuración de gamificación
+            $gamConfig = new GamificacionConfig();
+            $configGam = $gamConfig->obtenerTodas();
+            $xpPorNivel = $configGam['xp_por_nivel'] ?? 500;
+            $diasRachaMeta = $configGam['dias_racha_insignia'] ?? 7;
+
+            // Rango clínico y Racha actual
+            $rangoClinico = $userModel->calcularRangoClinico((int)($usuario['xp_puntos'] ?? 0), $xpPorNivel);
+            $rachaDias = $userModel->calcularRachaDias($uid);
+
+            $pdo = obtenerConexion();
+
+            // Verificar e insignia de racha automática
+            if ($rachaDias >= $diasRachaMeta) {
+                $stmtIns = $pdo->prepare('SELECT id FROM insignia WHERE nombre LIKE "%Racha%" LIMIT 1');
+                $stmtIns->execute();
+                $insRachaId = $stmtIns->fetchColumn();
+                if ($insRachaId) {
+                    $userModel->otorgarInsignia($uid, $insRachaId);
+                }
+            }
+
             // Cargar datos extra para gamificación
             $historialQuizzes = $userModel->obtenerHistorialQuizzes($uid);
             $insigniasGanadas = $userModel->obtenerInsigniasGanadas($uid);
             $todasInsignias   = $userModel->obtenerTodasInsignias();
 
-            // Resolver programa_id de la BD para el leaderboard
-            $pdo = obtenerConexion();
-            $stmtProg = $pdo->prepare('SELECT programa_id FROM usuarios WHERE id = ? LIMIT 1');
-            $stmtProg->execute([$uid]);
-            $programaId = $stmtProg->fetchColumn();
-
+            $programaId = $usuario['programa_id'] ?? null;
             $leaderboard = $userModel->obtenerLeaderboardSemanal($programaId);
             $heatmapActivo = $userModel->obtenerHeatmapActividad($uid);
 
             $this->render('aprendiz/perfil', [
                 'usuario' => $usuario,
+                'rangoClinico' => $rangoClinico,
+                'rachaDias' => $rachaDias,
+                'configGam' => $configGam,
                 'historialQuizzes' => $historialQuizzes,
                 'insigniasGanadas' => $insigniasGanadas,
                 'todasInsignias' => $todasInsignias,
