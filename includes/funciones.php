@@ -81,3 +81,46 @@ function redirigir(string $ruta): void {
 function formatearXP(int $puntos): string {
     return number_format($puntos, 0, ',', '.');
 }
+
+/**
+ * Detecta si el hablante de un diálogo es masculino o femenino para síntesis de voz (TTS).
+ * @param string $hablante Nombre o rol del hablante
+ * @param int $ordenTurno Orden secuencial del turno
+ * @return string 'male' o 'female'
+ */
+function detectarGeneroHablante(string $hablante, int $ordenTurno = 1): string {
+    $h = mb_strtolower(trim($hablante));
+    
+    // Nombres o roles masculinos
+    if (
+        strpos($h, 'david') !== false ||
+        strpos($h, 'mr.') !== false ||
+        strpos($h, 'carlos') !== false ||
+        strpos($h, 'doctor') !== false ||
+        strpos($h, 'manager') !== false ||
+        strpos($h, 'enfermero') !== false ||
+        strpos($h, 'male') !== false ||
+        strpos($h, 'nurse a') !== false
+    ) {
+        return 'male';
+    }
+
+    // Nombres o roles femeninos
+    if (
+        strpos($h, 'carolina') !== false ||
+        strpos($h, 'sarah') !== false ||
+        strpos($h, 'mrs.') !== false ||
+        strpos($h, 'ms.') !== false ||
+        strpos($h, 'miss') !== false ||
+        strpos($h, 'enfermera') !== false ||
+        strpos($h, 'female') !== false ||
+        strpos($h, 'daughter') !== false ||
+        strpos($h, 'nurse b') !== false
+    ) {
+        return 'female';
+    }
+
+    // Por defecto alternar por orden de turno (impares masculino / interlocutor 1, pares femenino / interlocutor 2)
+    return ($ordenTurno % 2 === 1) ? 'male' : 'female';
+}
+

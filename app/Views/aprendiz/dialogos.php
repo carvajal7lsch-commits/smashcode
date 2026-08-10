@@ -48,16 +48,19 @@
               <div class="dialogue-chat" id="dialogue-<?= $d['id'] ?>">
                 <?php foreach ($d['turnos'] as $t): ?>
                   <?php 
-                    $isNurse = strpos(strtolower($t['hablante']), 'nurse') !== false || strpos(strtolower($t['hablante']), 'enfermer') !== false;
+                    $speakerGender = detectarGeneroHablante($t['hablante'] ?? '', (int)($t['orden_turno'] ?? 1));
+                    $isRightBubble = ($speakerGender === 'female');
                   ?>
-                  <div class="chat-bubble <?= $isNurse ? 'right' : 'left' ?>" 
+                  <div class="chat-bubble <?= $isRightBubble ? 'right' : 'left' ?>" 
                        id="turno-<?= $t['id'] ?>" 
                        data-text-en="<?= htmlspecialchars($t['texto_en']) ?>"
-                       data-speaker="<?= $isNurse ? 'female' : 'male' ?>">
-                    <div class="chat-sender"><?= htmlspecialchars($t['hablante']) ?></div>
+                       data-speaker="<?= $speakerGender ?>">
+                    <div class="chat-sender">
+                      <i class="fas fa-<?= $speakerGender === 'male' ? 'mars' : 'venus' ?>" style="margin-right:4px; font-size:0.8rem; color:<?= $speakerGender === 'male' ? 'var(--azul)' : 'var(--naranja)' ?>;"></i><?= htmlspecialchars($t['hablante']) ?>
+                    </div>
                     <div class="chat-text-en"><?= htmlspecialchars($t['texto_en']) ?></div>
                     <div class="chat-text-es"><?= htmlspecialchars($t['texto_es']) ?></div>
-                    <button class="chat-bubble-play" onclick="speakSingleTurn('turno-<?= $t['id'] ?>')">
+                    <button class="chat-bubble-play" onclick="speakSingleTurn('turno-<?= $t['id'] ?>')" title="Escuchar este turno (Voz <?= $speakerGender === 'male' ? 'Masculina' : 'Femenina' ?>)">
                       <i class="fas fa-volume-up"></i>
                     </button>
                   </div>
@@ -74,27 +77,56 @@
   let dialogTimeoutList = [];
 
   function speakText(text, gender = 'female') {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      let utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.9;
-      
-      let voices = window.speechSynthesis.getVoices();
-      let enVoices = voices.filter(v => v.lang.startsWith('en'));
-      
+    if (!('speechSynthesis' in window)) {
+      return null;
+    }
+    window.speechSynthesis.cancel();
+    let utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    
+    let voices = window.speechSynthesis.getVoices();
+    let enVoices = voices.filter(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+    
+    let isMale = (gender === 'male' || gender === 'hombre');
+    
+    if (isMale) {
+      utterance.pitch = 0.78; 
+      utterance.rate  = 0.88; 
+
       if (enVoices.length > 0) {
-        if (gender === 'female') {
-          let fVoice = enVoices.find(v => v.name.toLowerCase().includes('zira') || v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('google'));
-          utterance.voice = fVoice || enVoices[0];
+        let mVoice = enVoices.find(v => {
+          let n = v.name.toLowerCase();
+          return (n.includes('david') || n.includes('male') || n.includes('guy') || n.includes('george') || 
+                  n.includes('mark') || n.includes('james') || n.includes('daniel') || n.includes('alex') || 
+                  n.includes('christopher') || n.includes('richard')) && 
+                 !n.includes('female') && !n.includes('zira') && !n.includes('jenny');
+        });
+        if (mVoice) {
+          utterance.voice = mVoice;
         } else {
-          let mVoice = enVoices.find(v => v.name.toLowerCase().includes('david') || v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('microsoft'));
-          utterance.voice = mVoice || enVoices[0];
+          let altVoice = enVoices.find(v => !v.name.toLowerCase().includes('zira') && !v.name.toLowerCase().includes('jenny'));
+          if (altVoice) utterance.voice = altVoice;
         }
       }
-      window.speechSynthesis.speak(utterance);
-      return utterance;
+    } else {
+      utterance.pitch = 1.20; 
+      utterance.rate  = 0.94; 
+
+      if (enVoices.length > 0) {
+        let fVoice = enVoices.find(v => {
+          let n = v.name.toLowerCase();
+          return n.includes('zira') || n.includes('female') || n.includes('jenny') || 
+                 n.includes('aria') || n.includes('samantha') || n.includes('victoria') || 
+                 n.includes('karen') || n.includes('catherine') || n.includes('google');
+        });
+        if (fVoice) {
+          utterance.voice = fVoice;
+        }
+      }
     }
+
+    window.speechSynthesis.speak(utterance);
+    return utterance;
   }
 
   function playFullDialogue(diaElementId) {
