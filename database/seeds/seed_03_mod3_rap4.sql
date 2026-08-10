@@ -5,7 +5,12 @@ SET NAMES utf8mb4;
 USE smash_code;
 
 -- Obtener ID del RAP 4 (Módulo 3, Orden 1)
-SELECT r.id INTO @RAP4 FROM rap r JOIN nivel n ON r.nivel_id = n.id WHERE n.orden = 3 AND r.orden = 1 LIMIT 1;
+SET @NIV3 = (SELECT id FROM nivel WHERE orden = 3 LIMIT 1);
+INSERT INTO rap (id, nivel_id, titulo, orden, activo)
+SELECT UUID(), @NIV3, 'RAP 4: Interacción con Visitantes y Presente Continuo', 1, 1
+WHERE NOT EXISTS (SELECT 1 FROM rap WHERE nivel_id = @NIV3 AND orden = 1);
+
+SELECT r.id INTO @RAP4 FROM rap r WHERE r.nivel_id = @NIV3 AND r.orden = 1 LIMIT 1;
 SELECT id INTO @CAT_SUST FROM categoria_vocabulario WHERE nombre = 'Sustantivo' LIMIT 1;
 SELECT id INTO @CAT_VERB FROM categoria_vocabulario WHERE nombre = 'Verbo' LIMIT 1;
 SELECT id INTO @CAT_ADJ FROM categoria_vocabulario WHERE nombre = 'Adjetivo' LIMIT 1;

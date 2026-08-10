@@ -5,7 +5,12 @@ SET NAMES utf8mb4;
 USE smash_code;
 
 -- Obtener ID del RAP 5 (Módulo 3, Orden 2)
-SELECT r.id INTO @RAP5 FROM rap r JOIN nivel n ON r.nivel_id = n.id WHERE n.orden = 3 AND r.orden = 2 LIMIT 1;
+SET @NIV3 = (SELECT id FROM nivel WHERE orden = 3 LIMIT 1);
+INSERT INTO rap (id, nivel_id, titulo, orden, activo)
+SELECT UUID(), @NIV3, 'RAP 5: Sugerencias de Mejora y Lista de Chequeo', 2, 1
+WHERE NOT EXISTS (SELECT 1 FROM rap WHERE nivel_id = @NIV3 AND orden = 2);
+
+SELECT r.id INTO @RAP5 FROM rap r WHERE r.nivel_id = @NIV3 AND r.orden = 2 LIMIT 1;
 SELECT id INTO @CAT_SUST FROM categoria_vocabulario WHERE nombre = 'Sustantivo' LIMIT 1;
 SELECT id INTO @CAT_VERB FROM categoria_vocabulario WHERE nombre = 'Verbo' LIMIT 1;
 SELECT id INTO @CAT_ADJ FROM categoria_vocabulario WHERE nombre = 'Adjetivo' LIMIT 1;
@@ -26,7 +31,7 @@ DELETE FROM quiz WHERE rap_id = @RAP5;
 INSERT INTO vocabulario (id, rap_id, termino_en, termino_es, categoria_id, area_clinica_id, transcripcion_ipa, audio_url, imagen_url, oracion_ejemplo, nivel_dificultad, activo) VALUES
 (UUID(), @RAP5, 'Checklist', 'Lista de chequeo', @CAT_SUST, @AREA_GEN, '/ˈtʃɛklɪst/', NULL, NULL, 'Fill out the nursing checklist for this shift.', 'A1', 1),
 (UUID(), @RAP5, 'Nurse Manager', 'Jefe de enfermería', @CAT_SUST, @AREA_GEN, '/nɜːrs ˈmænɪdʒər/', NULL, NULL, 'Propose an improvement to the Nurse Manager.', 'A1', 1),
-(UUID(), @RAP5, 'Give medication', 'Administrar medicamento', @CAT_VERBO, @AREA_GEN, '/ɡɪv ˌmɛdɪˈkeɪʃən/', NULL, NULL, 'I give medication at 8 AM as part of our routine.', 'A1', 1),
+(UUID(), @RAP5, 'Give medication', 'Administrar medicamento', @CAT_VERB, @AREA_GEN, '/ɡɪv ˌmɛdɪˈkeɪʃən/', NULL, NULL, 'I give medication at 8 AM as part of our routine.', 'A1', 1),
 (UUID(), @RAP5, 'Routine', 'Rutina', @CAT_SUST, @AREA_GEN, '/ruːˈtiːn/', NULL, NULL, 'Daily routine includes morning rounds and checklist update.', 'A1', 1),
 (UUID(), @RAP5, 'Syringe', 'Jeringa', @CAT_SUST, @AREA_GEN, '/sɪˈrɪndʒ/', NULL, NULL, 'Prepare a sterile syringe for routine medication.', 'A1', 1),
 (UUID(), @RAP5, 'IV Drip', 'Goteo intravenoso', @CAT_SUST, @AREA_GEN, '/aɪ viː drɪp/', NULL, NULL, 'Check the IV drip flow rate every hour.', 'A1', 1),

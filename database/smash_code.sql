@@ -341,18 +341,29 @@ CREATE TABLE IF NOT EXISTS respuesta_quiz (
 INSERT INTO programa_formacion (id, nombre, descripcion) VALUES
 (UUID(), 'Técnico en Enfermería', 'Programa técnico de enfermería del SENA - Regional Departamento');
 
--- 6 Niveles fijos alineados al MCER (A1 → B2)
+-- 4 Módulos fijos alineados al MCER (A1 → B1+)
 INSERT INTO nivel (id, nombre, descripcion, orden, activo, umbral_desbloqueo) VALUES
-(UUID(), 'Nivel 1 - A1 Básico',       'Fundamentos del inglés clínico. Saludos, presentaciones y vocabulario esencial de enfermería.',    1, 1, 0.00),
-(UUID(), 'Nivel 2 - A2 Elemental',    'Comunicación elemental en contextos de atención al paciente.',                                       2, 1, 80.00),
-(UUID(), 'Nivel 3 - B1 Pre-intermedio','Interacciones clínicas más complejas: signos vitales, procedimientos y reporte de turno.',          3, 1, 80.00),
-(UUID(), 'Nivel 4 - B1+ Intermedio',  'Documentación clínica, formularios y comunicación con el equipo médico.',                           4, 1, 80.00),
-(UUID(), 'Nivel 5 - B2 Pre-avanzado', 'Escenarios de emergencia, farmacología y comunicación especializada.',                              5, 1, 80.00),
-(UUID(), 'Nivel 6 - B2 Avanzado',     'Dominio completo de la comunicación clínica en inglés para enfermería profesional.',                6, 1, 80.00);
+(UUID(), 'Módulo 1: Getting to Know Other People', 'Fase Análisis — RAP 1: Presentaciones, saludos e información personal en contexto clínico.',    1, 1, 0.00),
+(UUID(), 'Módulo 2: Work Life Interaction',        'Fase Planeación — RAP 2 y 3: Describir pacientes, entornos hospitalarios y experiencias pasadas.', 2, 1, 80.00),
+(UUID(), 'Módulo 3: Work Place Communication',     'Fase Ejecución — RAP 4 y 5: Comunicación con médicos, colegas y familiares de pacientes.',        3, 1, 80.00),
+(UUID(), 'Módulo 4: Professional Practice',        'Fase Evaluación — RAP 6: Práctica profesional e instrucciones de alta médica.',                   4, 1, 80.00);
 
--- Un RAP por nivel (contenido lo carga el administrador)
+-- RAPs curriculares (6 RAPs distribuidos en los 4 módulos)
 INSERT INTO rap (id, nivel_id, titulo, orden, activo)
-SELECT UUID(), id, CONCAT('RAP ', orden), 1, 1 FROM nivel ORDER BY orden;
+SELECT UUID(), id, 'RAP 1: Presentaciones e Información Personal', 1, 1 FROM nivel WHERE orden = 1;
+
+INSERT INTO rap (id, nivel_id, titulo, orden, activo)
+SELECT UUID(), id, 'RAP 2: Historia del Paciente y Pasado Simple', 1, 1 FROM nivel WHERE orden = 2
+UNION ALL
+SELECT UUID(), id, 'RAP 3: Entorno Hospitalario y Estado Actual', 2, 1 FROM nivel WHERE orden = 2;
+
+INSERT INTO rap (id, nivel_id, titulo, orden, activo)
+SELECT UUID(), id, 'RAP 4: Interacción con Visitantes y Presente Continuo', 1, 1 FROM nivel WHERE orden = 3
+UNION ALL
+SELECT UUID(), id, 'RAP 5: Sugerencias de Mejora y Lista de Chequeo', 2, 1 FROM nivel WHERE orden = 3;
+
+INSERT INTO rap (id, nivel_id, titulo, orden, activo)
+SELECT UUID(), id, 'RAP 6: Práctica Profesional e Instrucciones de Alta', 1, 1 FROM nivel WHERE orden = 4;
 
 -- Áreas clínicas base
 INSERT INTO area_clinica (id, nombre) VALUES
