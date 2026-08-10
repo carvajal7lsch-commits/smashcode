@@ -290,8 +290,8 @@
                 <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
                   <i class="fas fa-play-circle"></i> Play Full Dialog
                 </button>
-                <button class="btn-stop-dialogue" id="btn-stop-audio-<?= $d['id'] ?>" onclick="stopAudioPlayback()" style="display:none; background:var(--rojo); color:#fff; border:none; border-radius:12px; padding:8px 16px; font-weight:800; font-size:0.85rem; cursor:pointer; box-shadow:0 3px 0 #cc0000; transition:all 0.15s ease;" title="Detener reproducción de audio">
-                  <i class="fas fa-stop-circle"></i> Detener Audio
+                <button class="btn-stop-dialogue" id="btn-stop-audio-<?= $d['id'] ?>" onclick="stopAudioPlayback()" style="display:none;" title="Stop audio playback">
+                  <i class="fas fa-stop-circle"></i> Stop Dialog
                 </button>
               </div>
             </div>

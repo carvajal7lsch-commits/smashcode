@@ -40,9 +40,14 @@
                   <h3 class="dialogue-title-main"><i class="fas fa-notes-medical"></i><?= htmlspecialchars($d['titulo']) ?></h3>
                   <small class="dialogue-subtitle"><?= htmlspecialchars($d['nivel_nombre']) ?> • <?= htmlspecialchars($d['participantes']) ?></small>
                 </div>
-                <button class="btn-azul btn-dialogue-play" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
-                  <i class="fas fa-play"></i> Reproducir Diálogo
-                </button>
+                <div style="display:flex; gap:10px; align-items:center;">
+                  <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
+                    <i class="fas fa-play-circle"></i> Play Full Dialog
+                  </button>
+                  <button class="btn-stop-dialogue" id="btn-stop-audio-<?= $d['id'] ?>" onclick="stopAudioPlayback()" style="display:none;" title="Stop audio playback">
+                    <i class="fas fa-stop-circle"></i> Stop Dialog
+                  </button>
+                </div>
               </div>
               
               <div class="dialogue-chat" id="dialogue-<?= $d['id'] ?>">
@@ -129,18 +134,32 @@
     return utterance;
   }
 
-  function playFullDialogue(diaElementId) {
-    window.speechSynthesis.cancel();
+  function stopAudioPlayback() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
     dialogTimeoutList.forEach(t => clearTimeout(t));
     dialogTimeoutList = [];
+    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
+    document.querySelectorAll('.btn-stop-dialogue').forEach(b => b.style.display = 'none');
+  }
+
+  function playFullDialogue(diaElementId) {
+    stopAudioPlayback();
     
     let container = document.getElementById(diaElementId);
+    let diaId = diaElementId.replace('dialogue-', '');
+    let stopBtn = document.getElementById('btn-stop-audio-' + diaId);
+    if (stopBtn) stopBtn.style.display = 'inline-flex';
+
     let bubbles = Array.from(container.querySelectorAll('.chat-bubble'));
-    
     bubbles.forEach(b => b.classList.remove('active-highlight'));
 
     function playTurn(idx) {
-      if (idx >= bubbles.length) return;
+      if (idx >= bubbles.length) {
+        if (stopBtn) stopBtn.style.display = 'none';
+        return;
+      }
       let bubble = bubbles[idx];
       let text = bubble.getAttribute('data-text-en');
       let speaker = bubble.getAttribute('data-speaker') || 'female';

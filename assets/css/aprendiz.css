@@ -645,6 +645,33 @@
       box-shadow: none;
     }
 
+    .btn-stop-dialogue {
+      background: linear-gradient(135deg, #ff4b4b, #ea2b2b);
+      color: #ffffff;
+      border: none;
+      padding: 10px 20px;
+      font-weight: 800;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-radius: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 0 #c92020, 0 4px 10px rgba(255, 75, 75, 0.25);
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    .btn-stop-dialogue:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #c92020, 0 6px 14px rgba(255, 75, 75, 0.35);
+      filter: brightness(1.05);
+    }
+    .btn-stop-dialogue:active {
+      transform: translateY(3px);
+      box-shadow: none;
+    }
+
     /* Moment 3: Exercises Carousel */
     .exercise-box { display: none; }
     .exercise-box.active { display: block; }
