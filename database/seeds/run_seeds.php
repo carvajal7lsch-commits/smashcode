@@ -37,6 +37,7 @@ try {
     // 2. Ejecutar cada semilla en orden
     $seeds = [
         'seed_00_update_niveles.sql',
+        'seed_00_mod1_rap1.sql',
         'seed_01_mod2_rap2.sql',
         'seed_02_mod2_rap3.sql',
         'seed_03_mod3_rap4.sql',

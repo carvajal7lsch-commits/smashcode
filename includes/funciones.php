@@ -38,6 +38,29 @@ function normalizarTextoEspanol(string $texto): string {
         'Atencin' => 'Atención',
         'Prctica' => 'Práctica',
 
+        // Diálogos Módulo 1 - RAP 1 (First Day at the Clinic)
+        'Buenos das! Bienvenida a la clnica. Eres la nueva enfermera?' => '¡Buenos días! Bienvenida a la clínica. ¿Eres la nueva enfermera?',
+        'Buenos das! Bienvenida a la clinica. Eres la nueva enfermera?' => '¡Buenos días! Bienvenida a la clínica. ¿Eres la nueva enfermera?',
+        'Buenos dias! Bienvenida a la clinica. Eres la nueva enfermera?' => '¡Buenos días! Bienvenida a la clínica. ¿Eres la nueva enfermera?',
+        'Buenos das! S, lo soy. Mi nombre es Carolina Ramrez. Mucho gusto!' => '¡Buenos días! Sí, lo soy. Mi nombre es Carolina Ramírez. ¡Mucho gusto!',
+        'Buenos das! Si, lo soy. Mi nombre es Carolina Ramrez. Mucho gusto!' => '¡Buenos días! Sí, lo soy. Mi nombre es Carolina Ramírez. ¡Mucho gusto!',
+        'Buenos dias! Si, lo soy. Mi nombre es Carolina Ramirez. Mucho gusto!' => '¡Buenos días! Sí, lo soy. Mi nombre es Carolina Ramírez. ¡Mucho gusto!',
+        'Igualmente, Carolina. Soy David Torres. Soy el enfermero encargado del turno de la maana.' => 'Igualmente, Carolina. Soy David Torres. Soy el enfermero encargado del turno de la mañana.',
+        'Igualmente, Carolina. Soy David Torres. Soy el enfermero encargado del turno de la manana.' => 'Igualmente, Carolina. Soy David Torres. Soy el enfermero encargado del turno de la mañana.',
+        'Excelente! Cul es tu apellido, David? Cmo se escribe?' => '¡Excelente! ¿Cuál es tu apellido, David? ¿Cómo se escribe?',
+        'Excelente! Cual es tu apellido, David? Como se escribe?' => '¡Excelente! ¿Cuál es tu apellido, David? ¿Cómo se escribe?',
+        'Mi apellido es Torres. T-O-R-R-E-S. Y tu apellido? Cmo se escribe Ramrez?' => 'Mi apellido es Torres. T-O-R-R-E-S. ¿Y tu apellido? ¿Cómo se escribe Ramírez?',
+        'Mi apellido es Torres. T-O-R-R-E-S. Y tu apellido? Como se escribe Ramirez?' => 'Mi apellido es Torres. T-O-R-R-E-S. ¿Y tu apellido? ¿Cómo se escribe Ramírez?',
+        'Es R-A-M-R-E-Z. Soy de Colombia. Cul es tu nacionalidad?' => 'Es R-A-M-Í-R-E-Z. Soy de Colombia. ¿Cuál es tu nacionalidad?',
+        'Es R-A-M-I-R-E-Z. Soy de Colombia. Cual es tu nacionalidad?' => 'Es R-A-M-Í-R-E-Z. Soy de Colombia. ¿Cuál es tu nacionalidad?',
+        'Soy mexicano. Soy de Guadalajara. Y cul es tu nmero de telfono para la lista de contactos de emergencia?' => 'Soy mexicano. Soy de Guadalajara. ¿Y cuál es tu número de teléfono para la lista de contactos de emergencia?',
+        'Soy mexicano. Soy de Guadalajara. Y cual es tu numero de telefono para la lista de contactos de emergencia?' => 'Soy mexicano. Soy de Guadalajara. ¿Y cuál es tu número de teléfono para la lista de contactos de emergencia?',
+        'Mi nmero de telfono es tres, uno, cero, cinco, cinco, cinco, dos, dos, siete, ocho. Y mi correo es carolina.ramirez@clinic.co' => 'Mi número de teléfono es tres, uno, cero, cinco, cinco, cinco, dos, dos, siete, ocho. Y mi correo es carolina.ramirez@clinic.co',
+        'Mi numero de telefono es tres, uno, cero, cinco, cinco, cinco, dos, dos, siete, ocho. Y mi correo es carolina.ramirez@clinic.co' => 'Mi número de teléfono es tres, uno, cero, cinco, cinco, cinco, dos, dos, siete, ocho. Y mi correo es carolina.ramirez@clinic.co',
+        'Perfecto, gracias! Buenas tardes, Carolina. Nos vemos en el pabelln.' => '¡Perfecto, gracias! Buenas tardes, Carolina. Nos vemos en el pabellón.',
+        'Perfecto, gracias! Buenas tardes, Carolina. Nos vemos en el pabellon.' => '¡Perfecto, gracias! Buenas tardes, Carolina. Nos vemos en el pabellón.',
+        'Buenas tardes, David. Hasta luego!' => 'Buenas tardes, David. ¡Hasta luego!',
+
         // Diálogos Módulo 2 - RAP 2
         'Qu le sucedi a Mr. Thomas ayer antes de llegar a urgencias?' => '¿Qué le sucedió a Mr. Thomas ayer antes de llegar a urgencias?',
         'Que le sucedio a Mr. Thomas ayer antes de llegar a urgencias?' => '¿Qué le sucedió a Mr. Thomas ayer antes de llegar a urgencias?',
@@ -109,7 +132,23 @@ function normalizarTextoEspanol(string $texto): string {
         'medicacin' => 'medicación',
         'Medicacin' => 'Medicación',
         'interaccin' => 'interacción',
-        'Interaccin' => 'Interacción'
+        'Interaccin' => 'Interacción',
+        'Ramrez' => 'Ramírez',
+        'Ramirez' => 'Ramírez',
+        'Buenos das' => 'Buenos días',
+        'Buenos dias' => 'Buenos días',
+        'pabelln' => 'pabellón',
+        'pabellon' => 'pabellón',
+        'nmero de telfono' => 'número de teléfono',
+        'numero de telefono' => 'número de teléfono',
+        'correo electrnico' => 'correo electrónico',
+        'correo electronico' => 'correo electrónico',
+        'Adis' => 'Adiós',
+        'Cmo ests?' => '¿Cómo estás?',
+        'Como estas?' => '¿Cómo estás?',
+        'T eres / Usted es' => 'Tú eres / Usted es',
+        'l es / l est' => 'Él es / Él está',
+        'Ella es / Ella est' => 'Ella es / Ella está'
     ];
 
     return strtr($texto, $mapaFrases);
