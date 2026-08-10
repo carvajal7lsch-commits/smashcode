@@ -599,6 +599,7 @@ class AdminController extends Controller {
                     (SELECT COUNT(p.id) FROM quiz q JOIN pregunta p ON p.quiz_id = q.id WHERE q.rap_id = r.id AND q.activo = 1) AS total_preguntas_quiz
              FROM rap r
              JOIN nivel n ON n.id = r.nivel_id
+             WHERE n.orden <= 4
              ORDER BY n.orden, r.orden'
         );
         $raps = $stmt->fetchAll();

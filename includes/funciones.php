@@ -23,6 +23,12 @@ if (!defined('PROYECTO_PATH')) {
  * @return string Cadena segura
  */
 function limpiar(string $valor): string {
+    if (strpos($valor, 'Mdulo') !== false) {
+        $valor = str_replace('Mdulo', 'Módulo', $valor);
+    }
+    if (strpos($valor, 'MDULO') !== false) {
+        $valor = str_replace('MDULO', 'MÓDULO', $valor);
+    }
     return htmlspecialchars(strip_tags(trim($valor)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
