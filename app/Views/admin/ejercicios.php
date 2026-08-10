@@ -155,6 +155,7 @@
         <select class="input-base" id="ej-tipo" name="tipo" required onchange="cambiarTipoEjercicio()">
           <option value="completar_frase">Completar Frase (Fill in blanks)</option>
           <option value="arrastrar_soltar">Arrastrar y Soltar (Matching)</option>
+          <option value="ordenar_dialogo">Ordenar Diálogo (Sequence)</option>
           <option value="escucha_escribe">Escucha y Escribe (Dictation)</option>
           <option value="role_play">Role Play (Diálogo)</option>
           <option value="seleccion_multiple">Selección Múltiple (Quiz)</option>
@@ -277,6 +278,8 @@
       helper.textContent = 'Para "Completar Frase", usa "___" (tres guiones bajos) en la posición donde va la respuesta en blanco.';
     } else if (tipo === 'arrastrar_soltar') {
       helper.textContent = 'Para "Arrastrar y Soltar" (Matching), escribe cada opción como "Inglés = Español" (Ej: Good morning = Buenos días).';
+    } else if (tipo === 'ordenar_dialogo') {
+      helper.textContent = 'Para "Ordenar Diálogo", ingresa en una sola opción todas las líneas en el orden cronológico correcto separadas por pleca "|" (Ej: Nurse A: Hello! | Nurse B: Hi, good morning!).';
     } else if (tipo === 'escucha_escribe') {
       helper.textContent = 'Para "Escucha y Escribe" (Dictado), marca la opción correcta con el texto exacto que se debe escribir.';
     } else {
