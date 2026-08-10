@@ -590,7 +590,7 @@ class AdminController extends Controller {
     public function raps(): void {
         $pdo = obtenerConexion();
         $stmt = $pdo->query(
-            'SELECT r.id, r.titulo, r.activo AS rap_activo, n.nombre AS nivel_nombre, n.orden AS nivel_orden,
+            'SELECT r.id, r.titulo, r.orden AS rap_orden, r.activo AS rap_activo, n.nombre AS nivel_nombre, n.orden AS nivel_orden,
                     (SELECT COUNT(*) FROM vocabulario v WHERE v.rap_id = r.id AND v.activo = 1) AS total_vocabulario,
                     (SELECT COUNT(*) FROM vocabulario v WHERE v.rap_id = r.id AND v.activo = 1 AND (v.transcripcion_ipa IS NOT NULL AND v.transcripcion_ipa <> "")) AS total_pronunciacion,
                     (SELECT COUNT(*) FROM ejercicio e WHERE e.rap_id = r.id AND e.activo = 1) AS total_ejercicios,

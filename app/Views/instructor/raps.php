@@ -126,16 +126,29 @@
       <!-- Contenedor Grid RAPs (Modo Lectura) -->
       <div class="grid-raps">
         <?php
-        $descRaps = [
-            1 => 'Getting to Know Other People (Fase Analisis)',
-            2 => 'Work Life Interaction - Parte 1 (Fase Planeacion)',
-            3 => 'Work Life Interaction - Parte 2 (Fase Planeacion)',
-            4 => 'Work Place Communication - Parte 1 (Fase Ejecucion)',
-            5 => 'Work Place Communication - Parte 2 (Fase Ejecucion)',
-            6 => 'Professional Practice (Fase Evaluacion)',
+        $titulosCanonicos = [
+            '1_1' => 'RAP 1: Presentaciones e Información Personal',
+            '2_1' => 'RAP 2: Historia del Paciente y Pasado Simple',
+            '2_2' => 'RAP 3: Entorno Hospitalario y Estado Actual',
+            '3_1' => 'RAP 4: Interacción con Visitantes y Presente Continuo',
+            '3_2' => 'RAP 5: Sugerencias de Mejora y Lista de Chequeo',
+            '4_1' => 'RAP 6: Práctica Profesional e Instrucciones de Alta',
+        ];
+        $modulosCanonicos = [
+            1 => 'Módulo 1: Getting to Know Other People',
+            2 => 'Módulo 2: Work Life Interaction',
+            3 => 'Módulo 3: Work Place Communication',
+            4 => 'Módulo 4: Professional Practice',
         ];
         ?>
         <?php foreach ($raps as $r): 
+          $nOrden = (int)($r['nivel_orden'] ?? 1);
+          $rOrden = (int)($r['rap_orden'] ?? 1);
+          $keyCanon = "{$nOrden}_{$rOrden}";
+          
+          $tituloCard = $titulosCanonicos[$keyCanon] ?? (strlen($r['titulo']) > 10 ? $r['titulo'] : "RAP {$rOrden}: {$r['titulo']}");
+          $moduloCard = $modulosCanonicos[$nOrden] ?? $r['nivel_nombre'];
+
           $cVocab = $r['total_vocabulario'] > 0;
           $cPron  = $r['total_vocabulario'] > 0 && ($r['total_pronunciacion'] == $r['total_vocabulario']);
           $cEjerc = $r['total_ejercicios'] > 0;
@@ -144,13 +157,13 @@
 
           $esCompleto = ($cVocab && $cPron && $cEjerc && $cDial && $cQuiz);
         ?>
-        <div id="fila-rap-<?= $r['id'] ?>" class="card-rap fila-rap <?= !$r['rap_activo'] ? 'inactiva' : '' ?>" data-nombre="<?= limpiar(mb_strtolower($r['titulo'])) ?>" data-nivel="<?= limpiar(mb_strtolower($r['nivel_nombre'])) ?>">
+        <div id="fila-rap-<?= $r['id'] ?>" class="card-rap fila-rap <?= !$r['rap_activo'] ? 'inactiva' : '' ?>" data-nombre="<?= limpiar(mb_strtolower($tituloCard)) ?>" data-nivel="<?= limpiar(mb_strtolower($moduloCard)) ?>">
           
           <div class="card-rap-header">
             <div>
-              <div style="font-weight:800; font-size:1.05rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($r['titulo']) ?></div>
+              <div style="font-weight:800; font-size:1.05rem; color:var(--texto-principal); letter-spacing:-0.3px; margin-bottom:4px;"><?= limpiar($tituloCard) ?></div>
               <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
-                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= limpiar($r['nivel_nombre']) ?>
+                <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= limpiar($moduloCard) ?>
               </div>
             </div>
             <div>
