@@ -124,10 +124,9 @@
           <i class="fas fa-right-to-bracket"></i> Ingresar
         </button>
         <div class="separador-o">o ingresa con</div>
-        <div class="grupo-botones-social">
-          <button type="button" class="btn btn-social"><i class="fab fa-google"></i> Google</button>
-          <button type="button" class="btn btn-social"><i class="fab fa-facebook-f"></i> Facebook</button>
-        </div>
+        <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">
+          <i class="fab fa-google"></i> Continuar con Google
+        </a>
       </form>
 
       <!-- FORM REGISTRO -->
@@ -183,10 +182,9 @@
           <i class="fas fa-user-plus"></i> Crear cuenta
         </button>
         <div class="separador-o">o regístrate con</div>
-        <div class="grupo-botones-social">
-          <button type="button" class="btn btn-social"><i class="fab fa-google"></i> Google</button>
-          <button type="button" class="btn btn-social"><i class="fab fa-facebook-f"></i> Facebook</button>
-        </div>
+        <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">
+          <i class="fab fa-google"></i> Continuar con Google
+        </a>
         <p class="auth-terminos-texto">
           Al registrarte aceptas nuestros <a href="#" class="auth-terminos-link">Términos de Servicio</a> y <a href="#" class="auth-terminos-link">Política de Privacidad</a>.
         </p>

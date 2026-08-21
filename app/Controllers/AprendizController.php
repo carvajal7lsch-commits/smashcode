@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\User;
 use App\Models\Progreso;
 use App\Models\GamificacionConfig;
+use App\Models\Programa;
 use PDO;
 
 class AprendizController extends Controller {
@@ -436,6 +437,15 @@ class AprendizController extends Controller {
             $todasInsignias   = $userModel->obtenerTodasInsignias();
 
             $programaId = $usuario['programa_id'] ?? null;
+
+            // Ficha y programa también pueblan el formulario de datos de formación (HU16),
+            // que necesitan las cuentas creadas con Google: nacen sin estos datos.
+            $fichaSena = $usuario['ficha_sena'] ?? '';
+
+            // Programas activos para el selector (mismo modelo que usa el registro)
+            $programaModel = new Programa();
+            $programas = $programaModel->obtenerTodos();
+
             $leaderboard = $userModel->obtenerLeaderboardSemanal($programaId);
             $heatmapActivo = $userModel->obtenerHeatmapActividad($uid);
 
@@ -448,7 +458,10 @@ class AprendizController extends Controller {
                 'insigniasGanadas' => $insigniasGanadas,
                 'todasInsignias' => $todasInsignias,
                 'leaderboard' => $leaderboard,
-                'heatmapActivo' => $heatmapActivo
+                'heatmapActivo' => $heatmapActivo,
+                'programas' => $programas,
+                'fichaSena' => $fichaSena,
+                'programaId' => $programaId
             ]);
         } else {
             $this->redirect('login');
@@ -505,6 +518,41 @@ class AprendizController extends Controller {
             $nuevoHash = password_hash($claveNueva, PASSWORD_BCRYPT, ['cost' => 12]);
             $userModel->actualizarContrasena($uid, $nuevoHash);
             $this->redirect('aprendiz/perfil?exito=clave');
+
+        } elseif ($accion === 'ficha') {
+            // HU16: datos de formación obligatorios para el aprendiz.
+            // Los usuarios creados con Google llegan aquí desde el callback (?completar=1).
+            $ficha       = trim(limpiar($_POST['ficha_sena'] ?? ''));
+            $programaId  = limpiar($_POST['programa_id'] ?? '');
+            $completando = limpiar($_POST['completar'] ?? '') === '1';
+            // Conservar el modo "completar" en los redirects de error para no perder el aviso
+            $sufijo      = $completando ? '&completar=1' : '';
+
+            if (empty($ficha)) {
+                $this->redirect('aprendiz/perfil?error=ficha' . $sufijo);
+                return;
+            }
+
+            // El programa debe existir y estar activo (mismo modelo que puebla el selector)
+            $programaModel = new Programa();
+            $programa = empty($programaId) ? null : $programaModel->obtenerPorId($programaId);
+            if (!$programa || empty($programa['activo'])) {
+                $this->redirect('aprendiz/perfil?error=programa' . $sufijo);
+                return;
+            }
+
+            if (!$userModel->actualizarFichaYPrograma($uid, $ficha, $programaId)) {
+                $this->redirect('aprendiz/perfil?error=ficha_guardar' . $sufijo);
+                return;
+            }
+
+            // Perfil ya completo: si venía del flujo de Google, seguir al dashboard
+            if ($completando) {
+                $this->redirect('');
+                return;
+            }
+            $this->redirect('aprendiz/perfil?exito=ficha');
+
         } else {
             $this->redirect('aprendiz/perfil');
         }
