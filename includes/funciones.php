@@ -215,6 +215,28 @@ function formatearXP(int $puntos): string {
 }
 
 /**
+ * Formatea segundos como tiempo de estudio legible (ej: 3725 → 1 h 2 min).
+ * Se usa en el panel de progreso del aprendiz (HU05).
+ * @param int $segundos
+ * @return string
+ */
+function formatearDuracion(int $segundos): string {
+    if ($segundos <= 0) {
+        return '0 min';
+    }
+
+    $horas   = intdiv($segundos, 3600);
+    $minutos = intdiv($segundos % 3600, 60);
+
+    if ($horas > 0) {
+        return $minutos > 0 ? $horas . ' h ' . $minutos . ' min' : $horas . ' h';
+    }
+
+    // Por debajo del minuto se muestran los segundos para no mostrar siempre "0 min"
+    return $minutos > 0 ? $minutos . ' min' : $segundos . ' s';
+}
+
+/**
  * Detecta si el hablante de un diálogo es masculino o femenino para síntesis de voz (TTS).
  * @param string $hablante Nombre o rol del hablante
  * @param int $ordenTurno Orden secuencial del turno

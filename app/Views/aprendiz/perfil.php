@@ -118,15 +118,85 @@
             <div class="stat-q-val" style="color:var(--azul);"><i class="fas <?= $rango['rango_icono'] ?>" style="font-size:1.2rem; margin-right:4px;"></i>Nivel <?= $rango['nivel'] ?></div>
             <div class="stat-q-lbl"><?= $rango['rango_nombre'] ?></div>
           </div>
+          <div class="stat-q">
+            <div class="stat-q-val" style="color:var(--morado);"><i class="fas fa-hourglass-half" style="font-size:1.2rem; margin-right:4px;"></i><?= formatearDuracion((int)($tiempoTotalSeg ?? 0)) ?></div>
+            <div class="stat-q-lbl">Tiempo Total Invertido</div>
+          </div>
         </div>
       </div>
 
       <!-- ── GRID DE INFORMACIÓN Y GAMIFICACIÓN ── -->
       <div class="config-grid">
 
+        <!-- Avance por Módulo y por RAP (HU05) -->
+        <div class="config-card" style="grid-column: span 2;">
+          <div class="config-card-titulo"><i class="fas fa-diagram-project" style="color:var(--verde);"></i>Avance por Módulo y RAP</div>
+
+          <?php if (empty($avanceModulos ?? [])): ?>
+            <p style="font-size:0.85rem; color:var(--gris-medio); font-weight:600;">
+              Todavía no hay módulos activos para mostrar.
+            </p>
+          <?php else: ?>
+            <?php foreach ($avanceModulos as $mod):
+              $pctMod = (float) $mod['porcentaje'];
+              $colorMod = $pctMod >= 100 ? 'var(--verde)' : ($pctMod > 0 ? 'var(--azul)' : 'var(--gris-medio)');
+            ?>
+              <div style="margin-bottom:18px;">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:6px;">
+                  <span style="font-weight:800; font-size:0.9rem;"><?= limpiar($mod['nombre']) ?></span>
+                  <span style="font-weight:900; font-size:0.9rem; color:<?= $colorMod ?>;">
+                    <?= number_format($pctMod, 0) ?>%
+                    <span style="font-weight:700; font-size:0.72rem; color:var(--gris-medio);">
+                      (<?= (int) $mod['raps_completados'] ?>/<?= (int) $mod['total_raps'] ?> RAPs<?= $mod['tiempo_seg'] > 0 ? ' · ' . formatearDuracion((int) $mod['tiempo_seg']) : '' ?>)
+                    </span>
+                  </span>
+                </div>
+
+                <div class="xp-barra" style="height:12px;">
+                  <div class="xp-fill" style="width: <?= min(100, $pctMod) ?>%; background: <?= $colorMod ?>;"></div>
+                </div>
+
+                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                  <?php foreach ($mod['raps'] as $rap):
+                    $pctRap = (float) $rap['porcentaje'];
+                    $colorRap = $rap['completado'] ? 'var(--verde)' : ($pctRap > 0 ? 'var(--naranja)' : 'var(--gris-claro)');
+                  ?>
+                    <div style="display:flex; align-items:center; gap:10px; font-size:0.78rem;">
+                      <i class="fas <?= $rap['completado'] ? 'fa-circle-check' : ($pctRap > 0 ? 'fa-circle-half-stroke' : 'fa-circle') ?>"
+                         style="color:<?= $colorRap ?>; font-size:0.85rem;"></i>
+                      <span style="flex:1; font-weight:600;"><?= limpiar($rap['titulo']) ?></span>
+                      <?php if ($rap['mejor_puntaje_quiz'] > 0): ?>
+                        <span style="font-weight:700; color:var(--morado);" title="Mejor puntaje de quiz">
+                          <?= number_format((float) $rap['mejor_puntaje_quiz'], 0) ?>% quiz
+                        </span>
+                      <?php endif; ?>
+                      <span style="font-weight:800; color:<?= $colorRap ?>; min-width:38px; text-align:right;">
+                        <?= number_format($pctRap, 0) ?>%
+                      </span>
+                    </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
+        </div>
+
         <!-- Leaderboard Semanal de Ficha (HU15) -->
         <div class="config-card">
-          <div class="config-card-titulo"><i class="fas fa-ranking-star" style="color:var(--azul);"></i>Leaderboard de Programa / Ficha</div>
+          <div class="config-card-titulo"><i class="fas fa-ranking-star" style="color:var(--azul);"></i>Leaderboard Semanal de Programa / Ficha</div>
+          <?php
+            // HU15: el marcador cuenta desde el lunes; el ranking se reinicia solo al cambiar de semana ISO
+            $miPosicion = 0;
+            foreach ($leaderboard as $i => $fila) {
+                if ($fila['id'] === $_SESSION['usuario_id']) { $miPosicion = $i + 1; break; }
+            }
+          ?>
+          <p style="font-size:0.75rem; color:var(--texto-tenue); margin-bottom:12px;">
+            Cuenta desde el lunes <?= date('d/m/Y', strtotime($inicioSemana ?? 'monday this week')) ?>.
+            <?php if ($miPosicion > 0): ?>
+              Vas en la posición <strong style="color:var(--verde);">#<?= $miPosicion ?></strong> de tu ficha.
+            <?php endif; ?>
+          </p>
           <?php if (empty($leaderboard)): ?>
             <p style="color:var(--texto-tenue); font-size:0.85rem; text-align:center; padding:20px;">Aún no hay actividad registrada en tu programa esta semana.</p>
           <?php else: ?>
@@ -148,7 +218,12 @@
                       <small style="font-size:0.72rem; color:var(--texto-tenue);">Nivel <?= (int)$uRank['nivel_perfil'] ?></small>
                     </div>
                   </div>
-                  <span style="font-weight:800; font-size:0.9rem; color:var(--naranja);"><i class="fas fa-bolt" style="font-size:0.75rem;"></i> <?= number_format($uRank['xp_puntos']) ?> XP</span>
+                  <span style="font-weight:800; font-size:0.9rem; color:var(--naranja); text-align:right;">
+                    <i class="fas fa-bolt" style="font-size:0.75rem;"></i> <?= number_format((int)($uRank['xp_semana'] ?? 0)) ?> XP
+                    <small style="display:block; font-size:0.68rem; font-weight:700; color:var(--texto-tenue);">
+                      esta semana · <?= number_format($uRank['xp_puntos']) ?> total
+                    </small>
+                  </span>
                 </div>
               <?php endforeach; ?>
             </div>
@@ -248,6 +323,109 @@
               </div>
             <?php endforeach; ?>
           </div>
+        </div>
+
+        <!-- Evolución de puntajes entre sesiones (HU15) -->
+        <div class="config-card" style="grid-column: span 2;">
+          <div class="config-card-titulo"><i class="fas fa-chart-line" style="color:var(--morado);"></i>Evolución de mis Puntajes</div>
+
+          <?php
+            // Del más antiguo al más reciente: el historial llega ordenado al revés
+            $serie = array_reverse($historialQuizzes ?? []);
+            // Con un solo intento no hay evolución que comparar todavía
+            $hayGrafica = count($serie) >= 2;
+          ?>
+
+          <?php if (!$hayGrafica): ?>
+            <p style="font-size:0.85rem; color:var(--gris-medio); font-weight:600;">
+              Presenta al menos dos quizzes para ver cómo evolucionan tus puntajes entre sesiones.
+            </p>
+          <?php else: ?>
+            <?php
+              // Lienzo en coordenadas fijas; el SVG escala solo con viewBox
+              $ancho = 640; $alto = 220;
+              $margenIzq = 38; $margenDer = 12; $margenSup = 14; $margenInf = 34;
+              $areaAncho = $ancho - $margenIzq - $margenDer;
+              $areaAlto  = $alto - $margenSup - $margenInf;
+              $n = count($serie);
+
+              $puntos = [];
+              foreach ($serie as $i => $intento) {
+                  $valor = (float) $intento['puntaje'];
+                  $x = $margenIzq + ($n === 1 ? $areaAncho / 2 : ($areaAncho * $i / ($n - 1)));
+                  $y = $margenSup + $areaAlto * (1 - min(100, max(0, $valor)) / 100);
+                  $puntos[] = ['x' => round($x, 1), 'y' => round($y, 1), 'valor' => $valor, 'intento' => $intento];
+              }
+
+              $polilinea = implode(' ', array_map(fn($p) => $p['x'] . ',' . $p['y'], $puntos));
+              $promedio  = array_sum(array_column($puntos, 'valor')) / $n;
+              $mejor     = max(array_column($puntos, 'valor'));
+              $ultimo    = end($puntos)['valor'];
+              $primero   = $puntos[0]['valor'];
+              $delta     = $ultimo - $primero;
+            ?>
+
+            <div style="display:flex; gap:18px; flex-wrap:wrap; margin-bottom:10px; font-size:0.78rem; font-weight:700;">
+              <span style="color:var(--gris-medio);">Sesiones: <strong style="color:var(--gris-texto);"><?= $n ?></strong></span>
+              <span style="color:var(--gris-medio);">Promedio: <strong style="color:var(--azul);"><?= number_format($promedio, 0) ?>%</strong></span>
+              <span style="color:var(--gris-medio);">Mejor: <strong style="color:var(--verde);"><?= number_format($mejor, 0) ?>%</strong></span>
+              <span style="color:var(--gris-medio);">
+                Desde la primera:
+                <strong style="color:<?= $delta >= 0 ? 'var(--verde)' : 'var(--rojo)' ?>;">
+                  <?= $delta >= 0 ? '+' : '' ?><?= number_format($delta, 0) ?> pts
+                </strong>
+              </span>
+            </div>
+
+            <div style="overflow-x:auto;">
+              <svg viewBox="0 0 <?= $ancho ?> <?= $alto ?>" width="100%" height="220" role="img"
+                   aria-label="Gráfica de la evolución de los puntajes de quiz entre sesiones">
+                <!-- Rejilla horizontal cada 25% -->
+                <?php foreach ([0, 25, 50, 75, 100] as $marca):
+                  $y = round($margenSup + $areaAlto * (1 - $marca / 100), 1);
+                ?>
+                  <line x1="<?= $margenIzq ?>" y1="<?= $y ?>" x2="<?= $ancho - $margenDer ?>" y2="<?= $y ?>"
+                        stroke="var(--gris-claro)" stroke-width="1" />
+                  <text x="<?= $margenIzq - 6 ?>" y="<?= $y + 4 ?>" text-anchor="end"
+                        font-size="10" font-weight="700" fill="var(--texto-tenue)"><?= $marca ?>%</text>
+                <?php endforeach; ?>
+
+                <!-- Puntaje mínimo para aprobar, tomado del quiz más reciente -->
+                <?php
+                  $minimoAprobar = (float) ($serie[$n - 1]['puntaje_minimo'] ?? 60);
+                  $yMinimo = round($margenSup + $areaAlto * (1 - min(100, max(0, $minimoAprobar)) / 100), 1);
+                ?>
+                <line x1="<?= $margenIzq ?>" y1="<?= $yMinimo ?>" x2="<?= $ancho - $margenDer ?>" y2="<?= $yMinimo ?>"
+                      stroke="var(--naranja)" stroke-width="1" stroke-dasharray="4 4" opacity="0.8" />
+
+                <polyline points="<?= $polilinea ?>" fill="none" stroke="var(--morado)" stroke-width="3"
+                          stroke-linejoin="round" stroke-linecap="round" />
+
+                <?php foreach ($puntos as $p):
+                  $aprobado = (int) $p['intento']['aprobado'] === 1;
+                ?>
+                  <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="5"
+                          fill="<?= $aprobado ? 'var(--verde)' : 'var(--rojo)' ?>"
+                          stroke="var(--fondo)" stroke-width="2">
+                    <title><?= limpiar($p['intento']['rap_titulo']) ?> — <?= number_format($p['valor'], 0) ?>% — <?= date('d/m/Y', strtotime($p['intento']['creado_en'])) ?></title>
+                  </circle>
+                <?php endforeach; ?>
+
+                <!-- Fechas del primer y del último intento -->
+                <text x="<?= $margenIzq ?>" y="<?= $alto - 10 ?>" font-size="10" font-weight="700" fill="var(--texto-tenue)">
+                  <?= date('d/m/y', strtotime($serie[0]['creado_en'])) ?>
+                </text>
+                <text x="<?= $ancho - $margenDer ?>" y="<?= $alto - 10 ?>" text-anchor="end"
+                      font-size="10" font-weight="700" fill="var(--texto-tenue)">
+                  <?= date('d/m/y', strtotime($serie[$n - 1]['creado_en'])) ?>
+                </text>
+              </svg>
+            </div>
+
+            <p style="font-size:0.72rem; color:var(--texto-tenue); margin-top:6px;">
+              Cada punto es un intento de quiz: verde si lo aprobaste, rojo si no. La línea naranja punteada es el mínimo para aprobar (<?= number_format($minimoAprobar, 0) ?>%).
+            </p>
+          <?php endif; ?>
         </div>
 
         <!-- Historial de Evaluaciones y Quizzes (HU05) -->

@@ -569,6 +569,9 @@
           </div>
         </div>
 
+        <!-- Avisos de ascenso de rango (HU15) y de modulo desbloqueado (HU05) -->
+        <div id="quiz-avisos" style="display:none; max-width:640px; margin:16px auto 0 auto;"></div>
+
         <!-- Resumen de cierre del RAP (HU07): fortalezas, mejoras y recomendaciones -->
         <div id="quiz-resumen" style="display:none; text-align:left; max-width:640px; margin:8px auto 0 auto;"></div>
 
@@ -604,6 +607,7 @@
   let matchedCount = 0;
 
   // 2. Exercises State
+  let inicioEjercicioMs = Date.now(); // HU05: mide el tiempo dedicado a cada ejercicio
   let currentExerciseIdx = 0;
   let exercisePoints = 0;
   let answersObj = {};
@@ -1234,6 +1238,7 @@
     datos.append('ejercicio_id', ejercicioId);
     datos.append('es_correcto', ans.isCorrect ? 1 : 0);
     datos.append('respuesta', ans.text || '');
+    datos.append('tiempo_respuesta_ms', Math.max(0, Date.now() - inicioEjercicioMs));
     if (ans.opcionId) datos.append('opcion_id', ans.opcionId);
 
     fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-ejercicio', {
@@ -1258,6 +1263,7 @@
       let nextBox = document.getElementById('exercise-box-' + nextIdx);
       nextBox.style.display = 'block';
       nextBox.classList.add('active');
+      inicioEjercicioMs = Date.now();
       updateExerciseHeader();
     } else {
       // Completó todos los ejercicios del Momento 3!
@@ -1448,7 +1454,53 @@
       if (window.SonidosApp) SonidosApp.playIncorrect();
     }
 
+    pintarAvisos(data);
     pintarResumenRap(data.resumen);
+  }
+
+  // Avisos de logro: subida de rango de perfil (HU15) y modulo desbloqueado (HU05).
+  // El servidor solo los manda en el momento exacto en que ocurren, no en cada intento.
+  function pintarAvisos(data) {
+    const caja = document.getElementById('quiz-avisos');
+    if (!caja) return;
+
+    const avisos = [];
+
+    if (data.subio_nivel > 0) {
+      avisos.push({
+        icono: 'fa-arrow-up-right-dots',
+        color: 'var(--morado)',
+        titulo: '¡Subiste de rango!',
+        texto: 'Alcanzaste el Nivel ' + data.subio_nivel + ' de tu perfil clínico. Míralo en tu perfil.'
+      });
+    }
+
+    if (data.modulo_desbloqueado) {
+      avisos.push({
+        icono: 'fa-lock-open',
+        color: 'var(--verde)',
+        titulo: '¡Nuevo módulo desbloqueado!',
+        texto: 'Ya puedes entrar a ' + data.modulo_desbloqueado + ' desde tu mapa de aprendizaje.'
+      });
+    }
+
+    if (!avisos.length) {
+      caja.style.display = 'none';
+      return;
+    }
+
+    caja.innerHTML = avisos.map(a => `
+      <div style="display:flex; gap:12px; align-items:center; text-align:left; border:2px solid ${a.color};
+                  border-radius:16px; padding:14px 18px; margin-bottom:10px; background:var(--fondo);">
+        <i class="fas ${a.icono}" style="color:${a.color}; font-size:1.5rem;"></i>
+        <div>
+          <div style="font-weight:900; color:${a.color};">${a.titulo}</div>
+          <div style="font-weight:600; font-size:0.85rem;">${a.texto}</div>
+        </div>
+      </div>`).join('');
+    caja.style.display = 'block';
+
+    if (window.SonidosApp) SonidosApp.playVictory();
   }
 
   // Resumen de cierre del RAP (HU07). El servidor manda fortalezas, areas de

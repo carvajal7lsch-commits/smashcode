@@ -230,6 +230,16 @@ class AprendizController extends Controller {
             $tiempoMs > 0 ? $tiempoMs : null
         ]);
 
+        // HU05: el tiempo de cada ejercicio tambien suma al total invertido en el RAP
+        if ($tiempoMs > 0) {
+            $stmtRap = $pdo->prepare('SELECT rap_id FROM ejercicio WHERE id = ? LIMIT 1');
+            $stmtRap->execute([$ejercicioId]);
+            $rapDelEjercicio = (string) $stmtRap->fetchColumn();
+            if ($rapDelEjercicio !== '') {
+                (new Progreso())->sumarTiempo($uid, $rapDelEjercicio, (int) round($tiempoMs / 1000));
+            }
+        }
+
         echo json_encode([
             'exito'          => true,
             'es_correcto'    => (bool)$esCorrecto,
@@ -293,6 +303,8 @@ class AprendizController extends Controller {
                 'xp_ganados' => 0,
                 'insignia_ganada' => 'Vista Previa',
                 'detalles' => [],
+                'subio_nivel' => 0,
+                'modulo_desbloqueado' => null,
                 'resumen' => null
             ]);
             return;
@@ -362,13 +374,26 @@ class AprendizController extends Controller {
         // 5. Actualizar Progreso del RAP (mejor puntaje y completado)
         $progresoModel = new Progreso();
         $progresoModel->guardarMejorPuntaje($uid, $rapId, $puntaje);
+        // HU05: el tiempo del quiz cuenta como tiempo invertido en el RAP
+        $progresoModel->sumarTiempo($uid, $rapId, $duracionSeg);
 
         $xpGanados = 0;
         $insigniaGanada = null;
+        $subioNivelPerfil = 0;
+        $moduloDesbloqueado = null;
 
         if ($aprobado) {
+            // HU05: se mide el avance del modulo antes y despues para avisar solo
+            // en el momento exacto en que se cruza el umbral que abre el siguiente
+            $promedioModuloAntes = $this->obtenerPromedioModuloDelRap($pdo, $uid, $rapId);
+
             // Completado al 100% al aprobar
             $progresoModel->actualizarProgreso($uid, $rapId, 100.00, 1);
+
+            $promedioModuloDespues = $this->obtenerPromedioModuloDelRap($pdo, $uid, $rapId);
+            if ($promedioModuloAntes < 80.0 && $promedioModuloDespues >= 80.0) {
+                $moduloDesbloqueado = $this->obtenerNombreSiguienteModulo($pdo, $rapId);
+            }
 
             // Recompensas de Gamificación dinámicas
             $userModel = new User();
@@ -382,6 +407,8 @@ class AprendizController extends Controller {
                 $xpGanados += $xpQuizPerfecto;
             }
             $userModel->actualizarXP($uid, $xpGanados);
+            // HU15: actualizarXP() deja anotado si el aprendiz subio de rango
+            $subioNivelPerfil = $userModel->obtenerUltimoAscensoNivel();
 
             // Verificar e Insignias
             // 1. "Quiz Perfecto" si obtiene 100%
@@ -421,11 +448,53 @@ class AprendizController extends Controller {
             'xp_ganados' => $xpGanados,
             'insignia_ganada' => $insigniaGanada,
             'detalles' => $detalles,
+            'subio_nivel' => $subioNivelPerfil,
+            'modulo_desbloqueado' => $moduloDesbloqueado,
             'resumen' => $this->construirResumenRap($pdo, $uid, $rapId, $detalles, $correctas, $totalPreguntas, (bool)$aprobado)
         ]);
     }
 
 
+
+    /**
+     * Avance promedio del aprendiz en el módulo al que pertenece un RAP (HU05).
+     *
+     * Recorre todos los RAPs activos del módulo, contando en 0 los que aún no
+     * tienen fila de progreso: es el mismo cálculo que usa el mapa de
+     * aprendizaje para decidir qué módulo está desbloqueado.
+     */
+    private function obtenerPromedioModuloDelRap(\PDO $pdo, string $uid, string $rapId): float {
+        $stmt = $pdo->prepare(
+            'SELECT COALESCE(AVG(COALESCE(p.porcentaje, 0)), 0)
+             FROM rap r
+             LEFT JOIN progreso p ON p.rap_id = r.id AND p.usuario_id = ?
+             WHERE r.activo = 1
+               AND r.nivel_id = (SELECT nivel_id FROM rap WHERE id = ? LIMIT 1)'
+        );
+        $stmt->execute([$uid, $rapId]);
+        return (float) $stmt->fetchColumn();
+    }
+
+    /**
+     * Nombre del módulo siguiente al que contiene el RAP indicado, o null si
+     * este ya era el último módulo activo del curso (HU05).
+     */
+    private function obtenerNombreSiguienteModulo(\PDO $pdo, string $rapId): ?string {
+        $stmt = $pdo->prepare(
+            'SELECT n.nombre
+             FROM nivel n
+             WHERE n.activo = 1
+               AND n.orden > (SELECT n2.orden
+                              FROM rap r
+                              JOIN nivel n2 ON n2.id = r.nivel_id
+                              WHERE r.id = ? LIMIT 1)
+             ORDER BY n.orden
+             LIMIT 1'
+        );
+        $stmt->execute([$rapId]);
+        $nombre = $stmt->fetchColumn();
+        return $nombre !== false ? (string) $nombre : null;
+    }
 
     /**
      * Arma el resumen de cierre del RAP (HU07): puntaje, fortalezas, áreas de
@@ -656,6 +725,11 @@ class AprendizController extends Controller {
             $leaderboard = $userModel->obtenerLeaderboardSemanal($programaId);
             $heatmapActivo = $userModel->obtenerHeatmapActividad($uid);
 
+            // HU05: avance modulo a modulo / RAP a RAP y tiempo total de estudio
+            $progresoModel  = new Progreso();
+            $avanceModulos  = $progresoModel->obtenerAvancePorModulo($uid);
+            $tiempoTotalSeg = $progresoModel->obtenerTiempoTotal($uid);
+
             $this->render('aprendiz/perfil', [
                 'usuario' => $usuario,
                 'rangoClinico' => $rangoClinico,
@@ -668,7 +742,10 @@ class AprendizController extends Controller {
                 'heatmapActivo' => $heatmapActivo,
                 'programas' => $programas,
                 'fichaSena' => $fichaSena,
-                'programaId' => $programaId
+                'programaId' => $programaId,
+                'avanceModulos' => $avanceModulos,
+                'tiempoTotalSeg' => $tiempoTotalSeg,
+                'inicioSemana' => $userModel->obtenerInicioSemana()
             ]);
         } else {
             $this->redirect('login');

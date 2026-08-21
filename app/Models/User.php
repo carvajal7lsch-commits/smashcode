@@ -258,6 +258,13 @@ class User extends Model {
             $stmtUpdate = $pdo->prepare('UPDATE usuarios SET xp_puntos = ?, nivel_perfil = ? WHERE id = ?');
             $stmtUpdate->execute([$nuevoXp, $nuevoNivel, $id]);
 
+            // HU15: el mismo XP alimenta el marcador de la semana en curso
+            $this->sumarPuntajeSemanal($pdo, $id, $puntos);
+
+            // HU15: quien llama necesita saber si hubo ascenso para poder avisarlo
+            $nivelAnterior = (int)floor((int)$user['xp_puntos'] / $xpPorNivel) + 1;
+            $this->ultimoAscensoNivel = ($nuevoNivel > $nivelAnterior) ? $nuevoNivel : 0;
+
             $pdo->commit();
             return true;
         } catch (Exception $e) {
@@ -265,6 +272,42 @@ class User extends Model {
             error_log('[User Model] Error en actualizarXP: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * Nivel al que ascendió el usuario en la última llamada a actualizarXP(),
+     * o 0 si no hubo ascenso. Lo consulta el controlador para avisar en pantalla.
+     */
+    private int $ultimoAscensoNivel = 0;
+
+    /**
+     * Devuelve el nivel recién alcanzado (0 si el último actualizarXP() no subió de nivel).
+     */
+    public function obtenerUltimoAscensoNivel(): int {
+        return $this->ultimoAscensoNivel;
+    }
+
+    /**
+     * Acumula puntos en la fila de la semana en curso (HU15).
+     *
+     * La semana se calcula con el calendario ISO (date('o') y date('W')), que
+     * empieza en lunes: al cambiar de semana se crea una fila nueva y el
+     * ranking arranca de cero sin necesidad de ninguna tarea programada.
+     *
+     * Requiere la migración 2026_08_21_leaderboard_semanal.sql, que agrega la
+     * clave única (usuario_id, anio, numero_semana) sobre la que se hace upsert.
+     */
+    private function sumarPuntajeSemanal(PDO $pdo, string $usuarioId, int $puntos): void {
+        if ($puntos === 0) {
+            return;
+        }
+
+        $stmt = $pdo->prepare(
+            'INSERT INTO puntaje_semanal (id, usuario_id, numero_semana, anio, puntaje_total)
+             VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE puntaje_total = puntaje_total + VALUES(puntaje_total)'
+        );
+        $stmt->execute([generarUUID(), $usuarioId, (int)date('W'), (int)date('o'), $puntos]);
     }
 
     /**
@@ -357,6 +400,7 @@ class User extends Model {
         $pdo = self::obtenerConexion();
         $stmt = $pdo->prepare(
             'SELECT i.id, i.puntaje, i.aprobado, i.numero_intento, i.duracion_seg, i.creado_en, 
+                    q.puntaje_minimo,
                     r.titulo AS rap_titulo, n.nombre AS modulo_nombre, n.orden AS modulo_orden
              FROM intento_quiz i
              JOIN quiz q ON q.id = i.quiz_id
@@ -410,20 +454,40 @@ class User extends Model {
     }
 
     /**
-     * Obtiene el ranking de usuarios del mismo programa para el leaderboard.
+     * Ranking de la SEMANA EN CURSO entre los aprendices del mismo programa (HU15).
+     *
+     * Antes esta consulta ordenaba por xp_puntos acumulado, así que el
+     * "leaderboard semanal" en realidad era un histórico que nunca se
+     * reiniciaba. Ahora lee puntaje_semanal, cuya fila se crea por semana
+     * ISO: al llegar el lunes cambia la clave y el marcador arranca en cero.
+     *
+     * Se usa LEFT JOIN a propósito para que los compañeros de ficha que aún
+     * no han sumado esta semana sigan apareciendo con 0 y el aprendiz vea a
+     * todo su grupo, no solo a quienes ya practicaron.
      */
     public function obtenerLeaderboardSemanal(?string $programaId): array {
         if (!$programaId) return [];
         $pdo = self::obtenerConexion();
         $stmt = $pdo->prepare(
-            'SELECT id, nombre_completo, xp_puntos, nivel_perfil
-             FROM usuarios
-             WHERE programa_id = ? AND rol = "aprendiz" AND eliminado = 0 AND activo = 1
-             ORDER BY xp_puntos DESC
+            'SELECT u.id, u.nombre_completo, u.xp_puntos, u.nivel_perfil,
+                    COALESCE(ps.puntaje_total, 0) AS xp_semana
+             FROM usuarios u
+             LEFT JOIN puntaje_semanal ps
+                    ON ps.usuario_id = u.id AND ps.anio = ? AND ps.numero_semana = ?
+             WHERE u.programa_id = ? AND u.rol = "aprendiz" AND u.eliminado = 0 AND u.activo = 1
+             ORDER BY xp_semana DESC, u.xp_puntos DESC
              LIMIT 15'
         );
-        $stmt->execute([$programaId]);
+        $stmt->execute([(int)date('o'), (int)date('W'), $programaId]);
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Fecha del lunes en que arrancó la semana en curso, para poder decirle al
+     * aprendiz desde cuándo cuenta el marcador (HU15).
+     */
+    public function obtenerInicioSemana(): string {
+        return date('Y-m-d', strtotime('monday this week'));
     }
 
     /**
