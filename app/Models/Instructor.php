@@ -198,6 +198,53 @@ class Instructor extends Model {
     }
 
     /**
+     * Avance de cada aprendiz en cada módulo, con el detalle RAP por RAP (HU06/HU23).
+     *
+     * Devuelve una matriz indexada por usuario y por orden de módulo, para que
+     * la tabla de aprendices resuelva cada celda sin lanzar una consulta por
+     * fila. El CROSS JOIN contra nivel es intencional: garantiza que todo
+     * aprendiz tenga una celda por cada módulo, incluso los que no ha tocado,
+     * que es justo lo que el instructor necesita ver.
+     */
+    public function obtenerAvancePorModuloDeAprendices(): array {
+        $pdo = self::obtenerConexion();
+
+        // El detalle por RAP de un módulo supera los 1024 bytes por defecto
+        $pdo->exec('SET SESSION group_concat_max_len = 8192');
+
+        $stmt = $pdo->query(
+            "SELECT u.id AS usuario_id,
+                    n.orden AS modulo_orden,
+                    ROUND(AVG(COALESCE(p.porcentaje, 0)), 0) AS avance,
+                    SUM(CASE WHEN p.completado = 1 THEN 1 ELSE 0 END) AS raps_completados,
+                    COUNT(r.id) AS total_raps,
+                    GROUP_CONCAT(
+                        CONCAT(r.titulo, ': ', ROUND(COALESCE(p.porcentaje, 0), 0), '%')
+                        ORDER BY r.orden SEPARATOR ' | '
+                    ) AS detalle
+             FROM usuarios u
+             CROSS JOIN nivel n
+             JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
+             LEFT JOIN progreso p ON p.rap_id = r.id AND p.usuario_id = u.id
+             WHERE u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0 AND n.activo = 1
+             GROUP BY u.id, n.id
+             ORDER BY u.id, n.orden"
+        );
+
+        $matriz = [];
+        foreach ($stmt->fetchAll() as $fila) {
+            $matriz[$fila['usuario_id']][(int) $fila['modulo_orden']] = [
+                'avance'           => (float) $fila['avance'],
+                'raps_completados' => (int) $fila['raps_completados'],
+                'total_raps'       => (int) $fila['total_raps'],
+                'detalle'          => (string) $fila['detalle']
+            ];
+        }
+
+        return $matriz;
+    }
+
+    /**
      * Ejercicios con mayor tasa de error del grupo (HU06/HU23).
      * Solo entran ejercicios que alguien haya intentado; ordena por tasa de
      * error y desempata por número de fallos, para que un ejercicio con un

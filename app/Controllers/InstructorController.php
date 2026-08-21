@@ -58,9 +58,14 @@ class InstructorController extends Controller {
         // Obtenemos los aprendices filtrados
         $aprendices = $this->instructorModel->obtenerListadoAprendicesFiltrado($nivel_id, $rap_id, $estado);
 
+        // HU06/HU23: avance de cada aprendiz modulo a modulo, para no tener que
+        // ir filtrando de a un modulo para ver el detalle
+        $avanceModulos = $this->instructorModel->obtenerAvancePorModuloDeAprendices();
+
         $this->render('instructor/aprendices', [
             'nivelesConRaps' => $nivelesConRaps,
             'aprendices'     => $aprendices,
+            'avanceModulos'  => $avanceModulos,
             'filtroNivel'    => $nivel_id,
             'filtroRap'      => $rap_id,
             'filtroEstado'   => $estado

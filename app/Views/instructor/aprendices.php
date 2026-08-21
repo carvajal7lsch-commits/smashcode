@@ -11,6 +11,15 @@ $queryFiltros = http_build_query(array_filter([
     'estado'   => $filtroEstado
 ]));
 $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $queryFiltros : '');
+
+// Modulos activos para las columnas de avance (HU06/HU23).
+// $nivelesConRaps trae una fila por RAP, asi que se colapsa por orden de modulo.
+$avanceModulos = $avanceModulos ?? [];
+$modulos = [];
+foreach ($nivelesConRaps ?? [] as $n) {
+    $modulos[(int) $n['orden']] = $n['nombre'];
+}
+ksort($modulos);
 ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
@@ -156,6 +165,9 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
               <tr>
                 <th>Nombre</th>
                 <th>Correo</th>
+                <?php foreach ($modulos as $ordenMod => $nombreMod): ?>
+                  <th class="text-center" title="<?= limpiar($nombreMod) ?>">M<?= $ordenMod ?></th>
+                <?php endforeach; ?>
                 <th class="text-center">RAPs Iniciados</th>
                 <th class="text-center">RAPs Completados</th>
                 <th>Avance Promedio</th>
@@ -189,6 +201,20 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
               <tr>
                 <td><?= limpiar($a['nombre_completo']) ?></td>
                 <td><?= limpiar($a['correo']) ?></td>
+                <?php foreach ($modulos as $ordenMod => $nombreMod):
+                  $celda = $avanceModulos[$a['id']][$ordenMod] ?? null;
+                  $pctMod = $celda ? (float) $celda['avance'] : 0.0;
+                  // Mismo semaforo que la barra de avance general
+                  $colorMod = $pctMod >= 70 ? 'var(--verde)' : ($pctMod >= 40 ? 'var(--naranja)' : 'var(--gris-medio)');
+                  // El detalle RAP por RAP va en el tooltip para no multiplicar columnas
+                  $tituloCelda = $celda
+                      ? $nombreMod . ' — ' . str_replace(' | ', ' · ', $celda['detalle'])
+                      : $nombreMod;
+                ?>
+                  <td class="text-center" title="<?= limpiar($tituloCelda) ?>">
+                    <span style="font-weight:800; color:<?= $colorMod ?>;"><?= number_format($pctMod, 0) ?>%</span>
+                  </td>
+                <?php endforeach; ?>
                 <td class="text-center"><?= $a['raps_iniciados'] ?></td>
                 <td class="text-center"><?= $a['raps_completados'] ?></td>
                 <td>
