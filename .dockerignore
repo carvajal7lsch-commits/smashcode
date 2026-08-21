@@ -1,0 +1,21 @@
+# Nunca hornear secretos ni artefactos locales dentro de la imagen.
+# Sin este archivo, COPY . /var/www/html/ mete el .env con el Client Secret,
+# el JWT_SECRET y las credenciales SMTP; y ademas ese .env horneado gana sobre
+# las variables de entorno del contenedor, porque credenciales.php lee $_ENV
+# antes que getenv().
+.env
+.env.*
+!.env.example
+
+# El contenedor corre su propio composer install
+vendor/
+
+# Historial y configuracion local que no aporta nada a la imagen
+.git
+.gitignore
+.gitattributes
+.vscode/
+.claude/
+*.log
+Thumbs.db
+Desktop.ini

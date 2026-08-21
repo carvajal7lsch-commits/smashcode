@@ -23,3 +23,12 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Ajustar permisos
 RUN chown -R www-data:www-data /var/www/html
+
+# Entrypoint: aplica las migraciones pendientes y luego arranca Apache.
+# Se copia aparte del COPY general para que un cambio en el script no invalide
+# la cache de las capas anteriores.
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]

@@ -1,0 +1,4 @@
+# Los scripts de shell SIEMPRE con LF: en Windows core.autocrlf=true los
+# convertiria a CRLF al hacer checkout y el contenedor fallaria al arrancar
+# con "no such file or directory" en el shebang.
+*.sh text eol=lf
