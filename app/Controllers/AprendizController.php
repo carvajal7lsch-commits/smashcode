@@ -172,6 +172,107 @@ class AprendizController extends Controller {
         echo json_encode(['exito' => true, 'porcentaje' => $porcentaje]);
     }
 
+    /**
+     * Registra el intento de un ejercicio del Momento 3 (HU07).
+     *
+     * Hasta ahora los ejercicios se validaban solo en el navegador y no dejaban
+     * rastro: la tabla intento_ejercicio quedaba siempre vacía, así que ni el
+     * heatmap de actividad (HU05/HU15) ni el informe de ejercicios con mayor
+     * tasa de error del instructor (HU06/HU23) tenían de dónde leer.
+     */
+    public function guardarIntentoEjercicio(): void {
+        header('Content-Type: application/json');
+        $uid = $_SESSION['usuario_id'];
+
+        $ejercicioId = limpiar($_POST['ejercicio_id'] ?? '');
+        $opcionId    = limpiar($_POST['opcion_id'] ?? '');
+        $respuesta   = mb_substr(trim((string)($_POST['respuesta'] ?? '')), 0, 500);
+        $tiempoMs    = (int)($_POST['tiempo_respuesta_ms'] ?? 0);
+        $esCorrectoCliente = ((int)($_POST['es_correcto'] ?? 0) === 1) ? 1 : 0;
+
+        if (empty($ejercicioId)) {
+            echo json_encode(['exito' => false, 'error' => 'Ejercicio no provisto']);
+            return;
+        }
+
+        // Admin e instructor recorren el RAP en modo vista previa: no ensucian las métricas
+        if (in_array(obtenerRolSesion(), ['admin', 'instructor'])) {
+            echo json_encode(['exito' => true, 'preview' => true]);
+            return;
+        }
+
+        $pdo = obtenerConexion();
+
+        $stmtEj = $pdo->prepare('SELECT id FROM ejercicio WHERE id = ? AND activo = 1 LIMIT 1');
+        $stmtEj->execute([$ejercicioId]);
+        if (!$stmtEj->fetchColumn()) {
+            echo json_encode(['exito' => false, 'error' => 'Ejercicio inexistente o inactivo']);
+            return;
+        }
+
+        $esCorrecto = $this->resolverAciertoEjercicio($pdo, $ejercicioId, $opcionId, $respuesta, $esCorrectoCliente);
+
+        $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM intento_ejercicio WHERE usuario_id = ? AND ejercicio_id = ?');
+        $stmtCount->execute([$uid, $ejercicioId]);
+        $numeroIntento = (int)$stmtCount->fetchColumn() + 1;
+
+        $stmtIns = $pdo->prepare(
+            'INSERT INTO intento_ejercicio (id, ejercicio_id, usuario_id, respuesta_elegida, es_correcto, numero_intento, tiempo_respuesta_ms)
+             VALUES (?, ?, ?, ?, ?, ?, ?)'
+        );
+        $stmtIns->execute([
+            generarUUID(),
+            $ejercicioId,
+            $uid,
+            $respuesta !== '' ? $respuesta : null,
+            $esCorrecto,
+            $numeroIntento,
+            $tiempoMs > 0 ? $tiempoMs : null
+        ]);
+
+        echo json_encode([
+            'exito'          => true,
+            'es_correcto'    => (bool)$esCorrecto,
+            'numero_intento' => $numeroIntento
+        ]);
+    }
+
+    /**
+     * Decide si un intento de ejercicio fue correcto sin fiarse del navegador
+     * cuando la base de datos permite comprobarlo.
+     *
+     * - Si llega el id de la opción elegida, manda `es_correcta` de esa fila.
+     * - Si no, y el ejercicio tiene una única opción correcta, se compara el
+     *   texto (pasado por normalizarTextoEspanol(), que es la misma forma en
+     *   que la vista lo pintó, para que las tildes no generen falsos fallos).
+     * - Los tipos compuestos (emparejar, ordenar diálogo, role play) no tienen
+     *   una única respuesta almacenada: ahí se conserva el resultado del cliente.
+     */
+    private function resolverAciertoEjercicio(\PDO $pdo, string $ejercicioId, string $opcionId, string $respuesta, int $esCorrectoCliente): int {
+        if ($opcionId !== '') {
+            $stmt = $pdo->prepare('SELECT es_correcta FROM ejercicio_opcion WHERE id = ? AND ejercicio_id = ? LIMIT 1');
+            $stmt->execute([$opcionId, $ejercicioId]);
+            $fila = $stmt->fetch();
+            if ($fila !== false) {
+                return ((int)$fila['es_correcta'] === 1) ? 1 : 0;
+            }
+        }
+
+        if ($respuesta !== '') {
+            $stmt = $pdo->prepare('SELECT texto FROM ejercicio_opcion WHERE ejercicio_id = ? AND es_correcta = 1');
+            $stmt->execute([$ejercicioId]);
+            $correctas = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            if (count($correctas) === 1) {
+                $esperada = mb_strtolower(trim(normalizarTextoEspanol((string)$correctas[0])));
+                $recibida = mb_strtolower(trim(normalizarTextoEspanol($respuesta)));
+                return ($esperada === $recibida) ? 1 : 0;
+            }
+        }
+
+        return $esCorrectoCliente;
+    }
+
     public function guardarIntentoQuiz(): void {
         header('Content-Type: application/json');
         $uid = $_SESSION['usuario_id'];
@@ -191,7 +292,8 @@ class AprendizController extends Controller {
                 'aprobado' => true,
                 'xp_ganados' => 0,
                 'insignia_ganada' => 'Vista Previa',
-                'detalles' => []
+                'detalles' => [],
+                'resumen' => null
             ]);
             return;
         }
@@ -209,7 +311,7 @@ class AprendizController extends Controller {
         }
 
         // 2. Obtener Preguntas del Quiz
-        $stmtPreg = $pdo->prepare('SELECT id, respuesta_correcta, retroalimentacion FROM pregunta WHERE quiz_id = ?');
+        $stmtPreg = $pdo->prepare('SELECT id, texto, respuesta_correcta, retroalimentacion FROM pregunta WHERE quiz_id = ?');
         $stmtPreg->execute([$quiz['id']]);
         $preguntas = $stmtPreg->fetchAll();
         $totalPreguntas = count($preguntas);
@@ -233,7 +335,8 @@ class AprendizController extends Controller {
                 'elegida' => $elegida,
                 'correcta' => $preg['respuesta_correcta'],
                 'es_correcto' => $esCorrecto,
-                'retroalimentacion' => $preg['retroalimentacion']
+                'retroalimentacion' => $preg['retroalimentacion'],
+                'texto' => $preg['texto']
             ];
         }
 
@@ -317,11 +420,115 @@ class AprendizController extends Controller {
             'aprobado' => (bool)$aprobado,
             'xp_ganados' => $xpGanados,
             'insignia_ganada' => $insigniaGanada,
-            'detalles' => $detalles
+            'detalles' => $detalles,
+            'resumen' => $this->construirResumenRap($pdo, $uid, $rapId, $detalles, $correctas, $totalPreguntas, (bool)$aprobado)
         ]);
     }
 
 
+
+    /**
+     * Arma el resumen de cierre del RAP (HU07): puntaje, fortalezas, áreas de
+     * mejora y recomendaciones de actividades.
+     *
+     * Las fortalezas y las mejoras salen de las preguntas del quiz recién
+     * presentado; las recomendaciones se derivan del estado real del aprendiz
+     * en este RAP (ejercicios fallados y vocabulario marcado como difícil),
+     * no de frases genéricas.
+     */
+    private function construirResumenRap(\PDO $pdo, string $uid, string $rapId, array $detalles, int $correctas, int $totalPreguntas, bool $aprobado): array {
+        $fortalezas = [];
+        $mejoras    = [];
+
+        foreach ($detalles as $det) {
+            $enunciado = trim((string)($det['texto'] ?? ''));
+            if ($enunciado === '') {
+                continue;
+            }
+
+            if ((int)$det['es_correcto'] === 1) {
+                $fortalezas[] = $enunciado;
+            } else {
+                $mejoras[] = [
+                    'pregunta'          => $enunciado,
+                    'tu_respuesta'      => $det['elegida'] !== '' ? $det['elegida'] : '(sin responder)',
+                    'correcta'          => $det['correcta'],
+                    'retroalimentacion' => $det['retroalimentacion'] ?? ''
+                ];
+            }
+        }
+
+        // Ejercicios del Momento 3 de este RAP que el aprendiz aún no ha acertado nunca
+        $stmtEj = $pdo->prepare(
+            'SELECT e.enunciado
+             FROM ejercicio e
+             JOIN intento_ejercicio ie ON ie.ejercicio_id = e.id AND ie.usuario_id = ?
+             WHERE e.rap_id = ? AND e.activo = 1
+             GROUP BY e.id
+             HAVING MAX(ie.es_correcto) = 0
+             ORDER BY COUNT(ie.id) DESC
+             LIMIT 3'
+        );
+        $stmtEj->execute([$uid, $rapId]);
+        $ejerciciosFallados = $stmtEj->fetchAll(PDO::FETCH_COLUMN);
+
+        // Vocabulario que el propio aprendiz marcó como difícil en este RAP (HU02)
+        $stmtVoc = $pdo->prepare(
+            'SELECT v.termino_en
+             FROM vocabulario_marcado vm
+             JOIN vocabulario v ON v.id = vm.vocabulario_id
+             WHERE vm.usuario_id = ? AND v.rap_id = ?
+             LIMIT 5'
+        );
+        $stmtVoc->execute([$uid, $rapId]);
+        $vocabularioDificil = $stmtVoc->fetchAll(PDO::FETCH_COLUMN);
+
+        $recomendaciones = [];
+
+        if (!empty($mejoras)) {
+            $recomendaciones[] = [
+                'icono' => 'fa-rotate-left',
+                'texto' => 'Repasa el Momento 1 (vocabulario) antes de volver a presentar el quiz: fallaste '
+                           . count($mejoras) . ' de ' . $totalPreguntas . ' preguntas.'
+            ];
+        }
+
+        if (!empty($ejerciciosFallados)) {
+            $recomendaciones[] = [
+                'icono' => 'fa-dumbbell',
+                'texto' => 'Vuelve al Momento 3 y repite estos ejercicios: '
+                           . implode(' · ', array_map(fn($e) => mb_strimwidth($e, 0, 60, '…'), $ejerciciosFallados))
+            ];
+        }
+
+        if (!empty($vocabularioDificil)) {
+            $recomendaciones[] = [
+                'icono' => 'fa-bookmark',
+                'texto' => 'Practica la pronunciación del vocabulario que marcaste como difícil: '
+                           . implode(', ', $vocabularioDificil)
+            ];
+        }
+
+        if (!$aprobado) {
+            $recomendaciones[] = [
+                'icono' => 'fa-arrows-rotate',
+                'texto' => 'Puedes repetir este RAP las veces que necesites: siempre se conserva tu mejor puntaje.'
+            ];
+        } elseif (empty($recomendaciones)) {
+            $recomendaciones[] = [
+                'icono' => 'fa-forward',
+                'texto' => '¡Dominaste este RAP! Continúa con el siguiente en tu mapa de aprendizaje.'
+            ];
+        }
+
+        return [
+            'correctas'       => $correctas,
+            'total'           => $totalPreguntas,
+            'fortalezas'      => array_slice($fortalezas, 0, 4),
+            'mejoras'         => array_slice($mejoras, 0, 4),
+            'recomendaciones' => $recomendaciones
+        ];
+    }
 
     public function vocabulario(): void {
         $pdo = obtenerConexion();

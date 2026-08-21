@@ -569,6 +569,9 @@
           </div>
         </div>
 
+        <!-- Resumen de cierre del RAP (HU07): fortalezas, mejoras y recomendaciones -->
+        <div id="quiz-resumen" style="display:none; text-align:left; max-width:640px; margin:8px auto 0 auto;"></div>
+
         <button class="btn-verde" style="margin:24px auto 0 auto; display:block;" onclick="window.location='<?= PROYECTO_PATH ?>/'">
           Volver al Mapa de Aprendizaje
         </button>
@@ -997,7 +1000,8 @@
     answersObj[exIdx] = {
       isCorrect: isCorrect,
       retro: retroText,
-      text: node.querySelector('span:last-child').textContent
+      text: node.querySelector('span:last-child').textContent,
+      opcionId: opcId
     };
     validateExercise(exIdx);
   }
@@ -1205,6 +1209,9 @@
       if (window.SonidosApp) SonidosApp.playIncorrect();
     }
 
+    // Dejar rastro del intento en la base de datos (HU07)
+    registrarIntentoEjercicio(box.dataset.id, ans);
+
     // Mostrar continuar
     document.getElementById('btn-next-exercise-' + exIdx).style.display = 'inline-block';
     
@@ -1216,6 +1223,23 @@
     if (inp) inp.disabled = true;
 
     updateExerciseHeader();
+  }
+
+  // Envia el intento del ejercicio sin bloquear la interfaz: el aprendiz ya vio
+  // su retroalimentacion y no debe esperar a la red para continuar.
+  function registrarIntentoEjercicio(ejercicioId, ans) {
+    if (!ejercicioId || !ans) return;
+
+    let datos = new FormData();
+    datos.append('ejercicio_id', ejercicioId);
+    datos.append('es_correcto', ans.isCorrect ? 1 : 0);
+    datos.append('respuesta', ans.text || '');
+    if (ans.opcionId) datos.append('opcion_id', ans.opcionId);
+
+    fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-ejercicio', {
+      method: 'POST',
+      body: datos
+    }).catch(() => { /* un fallo de red no debe cortar la leccion */ });
   }
 
   function nextExercise(exIdx) {
@@ -1423,6 +1447,67 @@
       badgeBox.textContent = 'Ninguna';
       if (window.SonidosApp) SonidosApp.playIncorrect();
     }
+
+    pintarResumenRap(data.resumen);
+  }
+
+  // Resumen de cierre del RAP (HU07). El servidor manda fortalezas, areas de
+  // mejora y recomendaciones ya calculadas con el estado real del aprendiz.
+  function pintarResumenRap(resumen) {
+    const caja = document.getElementById('quiz-resumen');
+    if (!caja) return;
+
+    // En vista previa (admin/instructor) el servidor manda resumen = null
+    if (!resumen) {
+      caja.style.display = 'none';
+      return;
+    }
+
+    const esc = (t) => String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    const bloque = (titulo, icono, color, cuerpo) => `
+      <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:16px; padding:16px 20px; margin-top:12px;">
+        <div style="font-size:0.72rem; font-weight:900; color:${color}; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:10px;">
+          <i class="fas ${icono}"></i> ${titulo}
+        </div>
+        ${cuerpo}
+      </div>`;
+
+    let html = `<div style="text-align:center; font-weight:800; color:var(--gris-medio); font-size:0.85rem; margin-top:8px;">
+        Acertaste ${resumen.correctas} de ${resumen.total} preguntas
+      </div>`;
+
+    if (resumen.fortalezas && resumen.fortalezas.length) {
+      html += bloque('Lo que dominas', 'fa-circle-check', 'var(--verde)',
+        '<ul style="margin:0; padding-left:18px; list-style:disc;">' +
+        resumen.fortalezas.map(f => `<li style="font-size:0.85rem; font-weight:600; margin-bottom:4px;">${esc(f)}</li>`).join('') +
+        '</ul>');
+    }
+
+    if (resumen.mejoras && resumen.mejoras.length) {
+      html += bloque('Para reforzar', 'fa-triangle-exclamation', 'var(--naranja)',
+        resumen.mejoras.map(m => `
+          <div style="font-size:0.85rem; margin-bottom:12px;">
+            <div style="font-weight:700;">${esc(m.pregunta)}</div>
+            <div style="font-weight:600; color:var(--rojo);">Tu respuesta: ${esc(m.tu_respuesta)}</div>
+            <div style="font-weight:600; color:var(--verde);">Correcta: ${esc(m.correcta)}</div>
+            ${m.retroalimentacion ? `<div style="font-weight:600; opacity:0.8; margin-top:2px;">${esc(m.retroalimentacion)}</div>` : ''}
+          </div>`).join(''));
+    }
+
+    if (resumen.recomendaciones && resumen.recomendaciones.length) {
+      html += bloque('Qué hacer ahora', 'fa-lightbulb', 'var(--azul)',
+        resumen.recomendaciones.map(r => `
+          <div style="font-size:0.85rem; font-weight:600; margin-bottom:8px; display:flex; gap:8px; align-items:flex-start;">
+            <i class="fas ${esc(r.icono)}" style="color:var(--azul); margin-top:3px;"></i>
+            <span>${esc(r.texto)}</span>
+          </div>`).join(''));
+    }
+
+    caja.innerHTML = html;
+    caja.style.display = 'block';
   }
 
   // --- CONFETTI ANIMATION (PURE JS/CANVAS) ---
