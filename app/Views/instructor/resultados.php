@@ -3,8 +3,10 @@
 $filtroNivel  = $filtroNivel ?? '';
 $filtroRap    = $filtroRap ?? '';
 $filtroEstado = $filtroEstado ?? '';
+$resultados      = $resultados ?? [];
+$ejerciciosError = $ejerciciosError ?? [];
 
-// El CSV de resultados respeta los filtros que el instructor tenga puestos (HU23)
+// Los filtros activos viajan al CSV para que el archivo traiga lo mismo que la pantalla
 $queryFiltros = http_build_query(array_filter([
     'nivel_id' => $filtroNivel,
     'rap_id'   => $filtroRap,
@@ -17,7 +19,7 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mis Aprendices — Instructor SmashCode</title>
+  <title>Resultados de Quizzes — Instructor SmashCode</title>
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/dashboard.css?v=<?= time() ?>">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/cruds.css?v=<?= time() ?>">
@@ -55,8 +57,8 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
     </div>
     <ul class="nav-lateral">
       <li><a href="<?= PROYECTO_PATH ?>/instructor" class="nav-enlace"><i class="fas fa-gauge-high nav-icono"></i><span>Dashboard</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/aprendices" class="nav-enlace activo" aria-current="page"><i class="fas fa-users nav-icono"></i><span>Mis Aprendices</span></a></li>
-      <li><a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="nav-enlace"><i class="fas fa-clipboard-list nav-icono"></i><span>Resultados Quiz</span></a></li>
+      <li><a href="<?= PROYECTO_PATH ?>/instructor/aprendices" class="nav-enlace"><i class="fas fa-users nav-icono"></i><span>Mis Aprendices</span></a></li>
+      <li><a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="nav-enlace activo" aria-current="page"><i class="fas fa-clipboard-list nav-icono"></i><span>Resultados Quiz</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/niveles" class="nav-enlace"><i class="fas fa-layer-group nav-icono"></i><span>Niveles</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/raps" class="nav-enlace"><i class="fas fa-file-lines nav-icono"></i><span>RAPs</span></a></li>
       <li><a href="<?= PROYECTO_PATH ?>/instructor/exportar" class="nav-enlace"><i class="fas fa-file-csv nav-icono"></i><span>Exportar CSV</span></a></li>
@@ -80,15 +82,15 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
     <div class="dashboard-page-content">
       <div class="dashboard-welcome-header">
         <div>
-          <h1 class="dashboard-welcome-title">Filtro de Aprendices</h1>
-          <p class="dashboard-welcome-subtitle">Consulta el progreso detallado aplicando filtros.</p>
+          <h1 class="dashboard-welcome-title">Resultados de Quizzes</h1>
+          <p class="dashboard-welcome-subtitle">Consulta el desempeño del grupo, detecta los ejercicios más difíciles y exporta el reporte.</p>
         </div>
       </div>
 
-      <!-- Filtros -->
+      <!-- Filtros (mismos criterios que el panel de aprendices) -->
       <div class="tarjeta" style="margin-bottom: 24px;">
-        <form method="GET" action="<?= PROYECTO_PATH ?>/instructor/aprendices" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
-          
+        <form method="GET" action="<?= PROYECTO_PATH ?>/instructor/resultados" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
+
           <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
             <label style="font-weight:600; color:var(--texto-principal);">Nivel:</label>
             <select name="nivel_id" class="input-premium select-premium">
@@ -119,88 +121,134 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
             <label style="font-weight:600; color:var(--texto-principal);">Estado:</label>
             <select name="estado" class="input-premium select-premium">
               <option value="">Todos los Estados</option>
-              <option value="completado" <?= $filtroEstado == 'completado' ? 'selected' : '' ?>>Completado</option>
-              <option value="en_progreso" <?= $filtroEstado == 'en_progreso' ? 'selected' : '' ?>>En Progreso</option>
-              <option value="sin_iniciar" <?= $filtroEstado == 'sin_iniciar' ? 'selected' : '' ?>>Sin Iniciar</option>
+              <option value="completado" <?= $filtroEstado == 'completado' ? 'selected' : '' ?>>Aprobado</option>
+              <option value="en_progreso" <?= $filtroEstado == 'en_progreso' ? 'selected' : '' ?>>No aprobado</option>
             </select>
           </div>
 
           <div class="form-grupo" style="display:flex; gap:8px;">
             <button type="submit" class="btn btn-primario"><i class="fas fa-search"></i> Filtrar</button>
-            <a href="<?= PROYECTO_PATH ?>/instructor/aprendices" class="btn btn-secundario"><i class="fas fa-eraser"></i></a>
+            <a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="btn btn-secundario"><i class="fas fa-eraser"></i></a>
           </div>
 
         </form>
       </div>
 
-      <!-- Tabla de aprendices filtrados -->
-      <div class="tarjeta">
+      <!-- Ejercicios con mayor tasa de error del grupo -->
+      <div class="tarjeta" style="margin-bottom: 24px;">
         <div class="lista-aprendices-header">
           <span class="lista-aprendices-titulo">
-            <i class="fas fa-list-ul"></i>
-            Resultados (<?= count($aprendices) ?>)
+            <i class="fas fa-triangle-exclamation"></i>
+            Ejercicios con mayor tasa de error
           </span>
-          <a href="<?= $enlaceCsv ?>" class="btn btn-primario btn-exportar-csv">
-            <i class="fas fa-download"></i> Exportar Todo a CSV
-          </a>
         </div>
 
-        <?php if (empty($aprendices)): ?>
+        <?php if (empty($ejerciciosError)): ?>
           <p class="mensaje-vacio-tabla">
-            No hay aprendices que coincidan con los filtros.
+            Todavía no hay intentos de ejercicios fallidos con estos filtros.
           </p>
         <?php else: ?>
         <div class="tabla-container-scroll">
-          <table class="tabla-aprendices tabla-premium" id="tabla-aprendices" style="width:100%;">
+          <table class="tabla-aprendices tabla-premium" style="width:100%;">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Correo</th>
-                <th class="text-center">RAPs Iniciados</th>
-                <th class="text-center">RAPs Completados</th>
-                <th>Avance Promedio</th>
-                <th>XP</th>
+                <th>Ejercicio</th>
+                <th>Módulo / RAP</th>
+                <th class="text-center">Aprendices</th>
+                <th class="text-center">Fallos / Intentos</th>
+                <th>Tasa de error</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($ejerciciosError as $e):
+                $tasa = (float) $e['tasa_error'];
+                // Se reutiliza la escala de color de la barra de avance, pero invertida:
+                // aquí un porcentaje alto es una señal de alarma, no de logro.
+                $nivelClase = $tasa >= 60 ? 'nivel-bajo' : ($tasa >= 30 ? 'nivel-medio' : 'nivel-alto');
+              ?>
+              <tr>
+                <td>
+                  <?= limpiar(mb_strimwidth($e['enunciado'], 0, 90, '…')) ?>
+                  <div style="font-size:0.72rem; opacity:0.7; margin-top:2px;"><?= limpiar(str_replace('_', ' ', $e['tipo'])) ?></div>
+                </td>
+                <td>Módulo <?= (int) $e['modulo_orden'] ?> · <?= limpiar($e['rap_titulo']) ?></td>
+                <td class="text-center"><?= (int) $e['aprendices_afectados'] ?></td>
+                <td class="text-center"><?= (int) $e['total_fallos'] ?> / <?= (int) $e['total_intentos'] ?></td>
+                <td>
+                  <div class="progreso-mini">
+                    <div class="barra">
+                      <div class="relleno <?= $nivelClase ?>" style="width:<?= min(100, $tasa) ?>%"></div>
+                    </div>
+                    <span class="progreso-mini-porcentaje"><?= number_format($tasa, 0) ?>%</span>
+                  </div>
+                </td>
+              </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+        <?php endif; ?>
+      </div>
+
+      <!-- Tabla de intentos de quiz -->
+      <div class="tarjeta">
+        <div class="lista-aprendices-header">
+          <span class="lista-aprendices-titulo">
+            <i class="fas fa-clipboard-list"></i>
+            Intentos de quiz (<?= count($resultados) ?>)
+          </span>
+          <a href="<?= $enlaceCsv ?>" class="btn btn-primario btn-exportar-csv">
+            <i class="fas fa-download"></i> Exportar a CSV
+          </a>
+        </div>
+
+        <?php if (empty($resultados)): ?>
+          <p class="mensaje-vacio-tabla">
+            No hay intentos de quiz que coincidan con los filtros.
+          </p>
+        <?php else: ?>
+        <div class="tabla-container-scroll">
+          <table class="tabla-aprendices tabla-premium" style="width:100%;">
+            <thead>
+              <tr>
+                <th>Aprendiz</th>
+                <th>Módulo / RAP</th>
+                <th class="text-center">Intento</th>
+                <th>Puntaje</th>
+                <th class="text-center">Duración</th>
+                <th>Fecha</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
-              <?php foreach ($aprendices as $a):
-                $avance = (float) $a['avance_promedio'];
-                $nivelClase = $avance >= 70 ? 'nivel-alto' : ($avance >= 40 ? 'nivel-medio' : 'nivel-bajo');
-                
-                // Si filtramos por un estado, la lógica del chip puede adaptarse, 
-                // pero por defecto mostramos el estado en base a avance.
-                $chipTexto = 'En riesgo';
-                $chipClase = 'chip-riesgo';
-                
-                if ($avance == 100) {
-                    $chipTexto = 'Completado';
-                    $chipClase = 'chip-activo';
-                } elseif ($avance >= 40) {
-                    $chipTexto = 'En progreso';
-                    $chipClase = 'chip-activo';
-                }
-                
-                if ($filtroEstado === 'sin_iniciar' || $a['raps_iniciados'] == 0) {
-                    $chipTexto = 'Sin iniciar';
-                    $chipClase = 'chip-riesgo';
-                }
+              <?php foreach ($resultados as $r):
+                $puntaje    = (float) $r['puntaje'];
+                $nivelClase = $puntaje >= 70 ? 'nivel-alto' : ($puntaje >= 40 ? 'nivel-medio' : 'nivel-bajo');
+                $segundos   = (int) ($r['duracion_seg'] ?? 0);
+                $aprobado   = ((int) $r['aprobado'] === 1);
               ?>
               <tr>
-                <td><?= limpiar($a['nombre_completo']) ?></td>
-                <td><?= limpiar($a['correo']) ?></td>
-                <td class="text-center"><?= $a['raps_iniciados'] ?></td>
-                <td class="text-center"><?= $a['raps_completados'] ?></td>
+                <td>
+                  <?= limpiar($r['nombre_completo']) ?>
+                  <div style="font-size:0.72rem; opacity:0.7; margin-top:2px;"><?= limpiar($r['correo']) ?></div>
+                </td>
+                <td>Módulo <?= (int) $r['modulo_orden'] ?> · <?= limpiar($r['rap_titulo']) ?></td>
+                <td class="text-center"><?= (int) $r['numero_intento'] ?></td>
                 <td>
                   <div class="progreso-mini">
                     <div class="barra">
-                      <div class="relleno <?= $nivelClase ?>" style="width:<?= min(100, $avance) ?>%"></div>
+                      <div class="relleno <?= $nivelClase ?>" style="width:<?= min(100, $puntaje) ?>%"></div>
                     </div>
-                    <span class="progreso-mini-porcentaje"><?= number_format($avance,0) ?>%</span>
+                    <span class="progreso-mini-porcentaje"><?= number_format($puntaje, 0) ?>%</span>
                   </div>
                 </td>
-                <td><?= formatearXP((int)$a['xp_puntos']) ?></td>
-                <td><span class="chip-estado <?= $chipClase ?>"><?= $chipTexto ?></span></td>
+                <td class="text-center"><?= sprintf('%02d:%02d', intdiv($segundos, 60), $segundos % 60) ?></td>
+                <td><?= date('d/m/Y H:i', strtotime($r['creado_en'])) ?></td>
+                <td>
+                  <span class="chip-estado <?= $aprobado ? 'chip-activo' : 'chip-riesgo' ?>">
+                    <?= $aprobado ? 'Aprobado' : 'No aprobado' ?>
+                  </span>
+                </td>
               </tr>
               <?php endforeach; ?>
             </tbody>

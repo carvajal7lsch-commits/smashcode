@@ -106,6 +106,10 @@ $app->get('/instructor/niveles',             'InstructorController@niveles');
 // --- Módulo de Aprendices (HU23) — Instructor ---
 $app->get('/instructor/aprendices',          'InstructorController@aprendices');
 
+// --- Resultados de Quizzes y Exportación CSV (HU06 / HU23) — Instructor ---
+$app->get('/instructor/resultados',           'InstructorController@resultados');
+$app->get('/instructor/exportar',             'InstructorController@exportar');
+
 // --- Gestión de Usuarios (HU04) ---
 $app->get('/admin/usuarios', 'AdminController@usuarios');
 $app->get('/admin/usuarios/crear', 'AdminController@crearUsuario');

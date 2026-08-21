@@ -108,4 +108,97 @@ class InstructorController extends Controller {
 
         $this->render('instructor/raps', compact('raps', 'exito', 'error'));
     }
+    /* ========================================================
+     * HU06 / HU23 — Resultados de quizzes y exportación CSV
+     * ======================================================== */
+
+    /**
+     * Muestra los resultados de quizzes del grupo y los ejercicios que más
+     * se fallan, con los mismos filtros de nivel/RAP/estado del panel de
+     * aprendices. Es una vista de solo lectura: el instructor no edita
+     * contenido ni cuentas desde aquí.
+     */
+    public function resultados(): void {
+        $nivel_id = limpiar($_GET['nivel_id'] ?? '');
+        $rap_id   = limpiar($_GET['rap_id'] ?? '');
+        $estado   = limpiar($_GET['estado'] ?? '');
+
+        $nivelesConRaps  = $this->nivelModel->obtenerNivelesConRaps();
+        $resultados      = $this->instructorModel->obtenerResultadosQuiz($nivel_id, $rap_id, $estado);
+        $ejerciciosError = $this->instructorModel->obtenerEjerciciosConMasErrores($nivel_id, $rap_id);
+
+        $this->render('instructor/resultados', [
+            'nivelesConRaps'  => $nivelesConRaps,
+            'resultados'      => $resultados,
+            'ejerciciosError' => $ejerciciosError,
+            'filtroNivel'     => $nivel_id,
+            'filtroRap'       => $rap_id,
+            'filtroEstado'    => $estado
+        ]);
+    }
+
+    /**
+     * Descarga el reporte CSV de resultados de quizzes (HU06/HU23).
+     * Respeta los filtros activos, así que el archivo contiene exactamente
+     * las mismas filas que el instructor tiene en pantalla.
+     */
+    public function exportar(): void {
+        $nivel_id = limpiar($_GET['nivel_id'] ?? '');
+        $rap_id   = limpiar($_GET['rap_id'] ?? '');
+        $estado   = limpiar($_GET['estado'] ?? '');
+
+        $resultados = $this->instructorModel->obtenerResultadosQuiz($nivel_id, $rap_id, $estado);
+
+        $nombreArchivo = 'resultados_quizzes_' . date('Y-m-d_His') . '.csv';
+
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $nombreArchivo . '"');
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+
+        $salida = fopen('php://output', 'w');
+
+        // BOM UTF-8: sin esto Excel en Windows abre las tildes como caracteres sueltos
+        fwrite($salida, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+        fputcsv($salida, [
+            'ID Aprendiz',
+            'Nombre',
+            'Correo',
+            'Ficha SENA',
+            'Modulo',
+            'Quiz',
+            'Puntaje',
+            'Puntaje minimo',
+            'Aprobado',
+            'Fecha',
+            'Duracion (mm:ss)',
+            'Numero de intento',
+            'Detalle de respuestas'
+        ], ';');
+
+        foreach ($resultados as $r) {
+            $segundos = (int) ($r['duracion_seg'] ?? 0);
+            $duracion = sprintf('%02d:%02d', intdiv($segundos, 60), $segundos % 60);
+
+            fputcsv($salida, [
+                $r['aprendiz_id'],
+                $r['nombre_completo'],
+                $r['correo'],
+                $r['ficha_sena'] ?? '',
+                $r['modulo_nombre'],
+                'Quiz ' . $r['rap_titulo'],
+                number_format((float) $r['puntaje'], 2, '.', ''),
+                number_format((float) $r['puntaje_minimo'], 2, '.', ''),
+                ((int) $r['aprobado'] === 1) ? 'Si' : 'No',
+                $r['creado_en'],
+                $duracion,
+                $r['numero_intento'],
+                $r['detalle_respuestas'] ?? ''
+            ], ';');
+        }
+
+        fclose($salida);
+        exit;
+    }
 }
