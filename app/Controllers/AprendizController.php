@@ -752,6 +752,51 @@ class AprendizController extends Controller {
         }
     }
 
+    /**
+     * Marcador semanal en JSON para que el perfil lo refresque sin recargar (HU15).
+     *
+     * Reutiliza la misma consulta que pinta la vista al cargar la página, para
+     * que el ranking en vivo y el renderizado inicial no puedan divergir.
+     */
+    public function leaderboard(): void {
+        header('Content-Type: application/json');
+        $uid = $_SESSION['usuario_id'] ?? null;
+
+        if (!$uid) {
+            http_response_code(401);
+            echo json_encode(['exito' => false, 'error' => 'Sesión expirada']);
+            return;
+        }
+
+        $userModel  = new User();
+        $usuario    = $userModel->obtenerPorId($uid);
+        $programaId = $usuario['programa_id'] ?? null;
+
+        $ranking    = [];
+        $miPosicion = 0;
+
+        foreach ($userModel->obtenerLeaderboardSemanal($programaId) as $i => $fila) {
+            $soyYo = ($fila['id'] === $uid);
+            if ($soyYo) {
+                $miPosicion = $i + 1;
+            }
+            $ranking[] = [
+                'posicion'     => $i + 1,
+                'nombre'       => $fila['nombre_completo'],
+                'nivel_perfil' => (int) $fila['nivel_perfil'],
+                'xp_semana'    => (int) ($fila['xp_semana'] ?? 0),
+                'xp_puntos'    => (int) $fila['xp_puntos'],
+                'soy_yo'       => $soyYo
+            ];
+        }
+
+        echo json_encode([
+            'exito'       => true,
+            'mi_posicion' => $miPosicion,
+            'ranking'     => $ranking
+        ]);
+    }
+
     public function actualizarPerfil(): void {
         if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
             $this->redirect('aprendiz/perfil?error=csrf');

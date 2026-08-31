@@ -33,6 +33,7 @@ $app->post('/aprendiz/rap/guardar-quiz', 'AprendizController@guardarIntentoQuiz'
 $app->get('/aprendiz/vocabulario', 'AprendizController@vocabulario');
 $app->get('/aprendiz/glosario', 'AprendizController@glosario');
 $app->get('/aprendiz/perfil', 'AprendizController@perfil');
+$app->get('/aprendiz/leaderboard', 'AprendizController@leaderboard');
 $app->post('/aprendiz/perfil/actualizar', 'AprendizController@actualizarPerfil');
 
 // --- Autenticación y Registro ---

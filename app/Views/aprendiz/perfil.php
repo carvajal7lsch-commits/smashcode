@@ -193,15 +193,13 @@
           ?>
           <p style="font-size:0.75rem; color:var(--texto-tenue); margin-bottom:12px;">
             Cuenta desde el lunes <?= date('d/m/Y', strtotime($inicioSemana ?? 'monday this week')) ?>.
-            <?php if ($miPosicion > 0): ?>
-              Vas en la posición <strong style="color:var(--verde);">#<?= $miPosicion ?></strong> de tu ficha.
-            <?php endif; ?>
+            <span id="leaderboard-mi-posicion"><?php if ($miPosicion > 0): ?>Vas en la posición <strong style="color:var(--verde);">#<?= $miPosicion ?></strong> de tu ficha.<?php endif; ?></span>
           </p>
+          <div id="leaderboard-lista" style="display:flex; flex-direction:column; gap:8px;">
           <?php if (empty($leaderboard)): ?>
             <p style="color:var(--texto-tenue); font-size:0.85rem; text-align:center; padding:20px;">Aún no hay actividad registrada en tu programa esta semana.</p>
           <?php else: ?>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-              <?php foreach ($leaderboard as $pos => $uRank): 
+            <?php foreach ($leaderboard as $pos => $uRank):
                 $isMe = ($uRank['id'] === $_SESSION['usuario_id']);
                 $medalla = '';
                 if ($pos === 0) $medalla = '🥇';
@@ -226,8 +224,8 @@
                   </span>
                 </div>
               <?php endforeach; ?>
-            </div>
           <?php endif; ?>
+          </div>
         </div>
 
         <!-- Heatmap de Actividad (HU05 / HU15) -->
@@ -784,6 +782,115 @@
       }
     }
   });
+
+  /* ============================================================
+     HU15 — Leaderboard semanal en tiempo real
+     Relee el marcador cada 20 s y repinta la lista sin recargar la
+     página, para que el aprendiz vea moverse el ranking mientras sus
+     compañeros practican. Solo repinta cuando los datos cambiaron:
+     así no parpadea ni pierde el scroll en cada sondeo.
+     ============================================================ */
+  (function () {
+    const INTERVALO_MS = 20000;
+    const lista = document.getElementById('leaderboard-lista');
+    const cajaPosicion = document.getElementById('leaderboard-mi-posicion');
+    if (!lista) return;
+
+    let firmaActual = null;
+    let timer = null;
+
+    function escapar(txt) {
+      const d = document.createElement('div');
+      d.textContent = txt;
+      return d.innerHTML;
+    }
+
+    function medallaDe(posicion) {
+      if (posicion === 1) return '🥇';
+      if (posicion === 2) return '🥈';
+      if (posicion === 3) return '🥉';
+      return '#' + posicion;
+    }
+
+    function filaHtml(u) {
+      const borde = u.soy_yo ? 'var(--verde)' : 'var(--gris-claro)';
+      const fondo = u.soy_yo ? 'rgba(88,204,2,0.1)' : 'var(--fondo)';
+      const peso  = u.soy_yo ? '800' : '700';
+      const yo    = u.soy_yo ? ' <small style="color:var(--verde); font-weight:800;">(Tú)</small>' : '';
+
+      return `
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:12px; border:2px solid ${borde}; background:${fondo}; transition:all 0.2s;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="font-weight:900; width:24px; text-align:center; font-size:0.95rem; color:var(--gris-medio);">${medallaDe(u.posicion)}</span>
+            <div>
+              <span style="font-weight:${peso}; font-size:0.88rem; color:var(--gris-texto); display:block;">${escapar(u.nombre)}${yo}</span>
+              <small style="font-size:0.72rem; color:var(--texto-tenue);">Nivel ${u.nivel_perfil}</small>
+            </div>
+          </div>
+          <span style="font-weight:800; font-size:0.9rem; color:var(--naranja); text-align:right;">
+            <i class="fas fa-bolt" style="font-size:0.75rem;"></i> ${u.xp_semana.toLocaleString('en-US')} XP
+            <small style="display:block; font-size:0.68rem; font-weight:700; color:var(--texto-tenue);">
+              esta semana · ${u.xp_puntos.toLocaleString('en-US')} total
+            </small>
+          </span>
+        </div>`;
+    }
+
+    function pintar(data) {
+      if (!data.ranking.length) {
+        lista.innerHTML = '<p style="color:var(--texto-tenue); font-size:0.85rem; text-align:center; padding:20px;">Aún no hay actividad registrada en tu programa esta semana.</p>';
+      } else {
+        lista.innerHTML = data.ranking.map(filaHtml).join('');
+      }
+
+      if (cajaPosicion) {
+        cajaPosicion.innerHTML = data.mi_posicion > 0
+          ? 'Vas en la posición <strong style="color:var(--verde);">#' + data.mi_posicion + '</strong> de tu ficha.'
+          : '';
+      }
+    }
+
+    async function refrescar() {
+      try {
+        const res = await fetch('<?= PROYECTO_PATH ?>/aprendiz/leaderboard', {
+          headers: { 'Accept': 'application/json' }
+        });
+
+        // Si la sesión caducó, el servidor responde el login en HTML:
+        // el parseo falla y dejamos de sondear en vez de insistir en vano.
+        const data = await res.json();
+        if (!data.exito) throw new Error(data.error || 'respuesta sin datos');
+
+        const firma = JSON.stringify(data.ranking) + '|' + data.mi_posicion;
+        if (firma !== firmaActual) {
+          firmaActual = firma;
+          pintar(data);
+        }
+      } catch (e) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function arrancar() {
+      if (timer) return;
+      timer = setInterval(refrescar, INTERVALO_MS);
+    }
+
+    // Con la pestaña en segundo plano no tiene sentido sondear; al volver
+    // se refresca de inmediato para no mostrar un marcador viejo.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearInterval(timer);
+        timer = null;
+      } else {
+        refrescar();
+        arrancar();
+      }
+    });
+
+    arrancar();
+  })();
 </script>
 </body>
 </html>
