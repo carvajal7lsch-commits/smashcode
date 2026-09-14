@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\Instructor;
 use App\Models\Nivel;
+use App\Models\User;
 
 /**
  * InstructorController.php
@@ -15,6 +16,10 @@ class InstructorController extends Controller {
     private Instructor $instructorModel;
     private Nivel $nivelModel;
 
+    /** Programa del instructor: define quiénes son "sus" aprendices (HU23). */
+    private ?string $programaId = null;
+    private ?string $programaNombre = null;
+
     public function __construct() {
         parent::__construct();
         $this->instructorModel = new Instructor();
@@ -25,51 +30,83 @@ class InstructorController extends Controller {
         if (!estaAutenticado() || obtenerRolSesion() !== 'instructor') {
             $this->redirect('login');
         }
+
+        // HU23: "mis aprendices" son los del programa que el administrador le
+        // asignó al instructor (HU09/HU17). Se lee en cada petición y no de la
+        // sesión, para que un cambio de programa se vea sin volver a iniciar sesión.
+        $instructor = (new User())->obtenerPorId($_SESSION['usuario_id']);
+        $this->programaId     = !empty($instructor['programa_id']) ? $instructor['programa_id'] : null;
+        $this->programaNombre = $instructor['programa_nombre'] ?? null;
+    }
+
+    /**
+     * Lee los filtros de la URL y descarta lo que no tenga la forma esperada:
+     * los ids deben ser UUID y el estado, uno de los permitidos en esa pantalla.
+     * Un valor inválido se trata como "sin filtro" en lugar de romper la consulta.
+     */
+    private function leerFiltros(array $estadosPermitidos): array {
+        $esUuid = static fn($valor): bool => is_string($valor)
+            && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $valor) === 1;
+
+        $nivel  = $_GET['nivel_id'] ?? '';
+        $rap    = $_GET['rap_id'] ?? '';
+        $estado = $_GET['estado'] ?? '';
+
+        return [
+            $esUuid($nivel) ? $nivel : '',
+            $esUuid($rap) ? $rap : '',
+            in_array($estado, $estadosPermitidos, true) ? $estado : ''
+        ];
+    }
+
+    /**
+     * Datos que las vistas usan para decirle al instructor a quién está viendo.
+     */
+    private function datosAlcance(): array {
+        return [
+            'programaNombre' => $this->programaNombre,
+            'sinPrograma'    => $this->programaId === null
+        ];
     }
 
     /**
      * Muestra el dashboard del instructor con el listado y progreso de sus alumnos.
      */
     public function index(): void {
-        $totalAprendices = $this->instructorModel->obtenerTotalAprendices();
-        $completaronAlgo = $this->instructorModel->obtenerCompletaronAlgo();
-        $promedioQuiz    = $this->instructorModel->obtenerPromedioQuiz();
-        $aprendices      = $this->instructorModel->obtenerListadoAprendices();
-
         $this->render('instructor/dashboard', [
-            'totalAprendices' => $totalAprendices,
-            'completaronAlgo' => $completaronAlgo,
-            'promedioQuiz'    => $promedioQuiz,
-            'aprendices'      => $aprendices
-        ]);
+            'totalAprendices' => $this->instructorModel->obtenerTotalAprendices($this->programaId),
+            'completaronAlgo' => $this->instructorModel->obtenerCompletaronAlgo($this->programaId),
+            'promedioQuiz'    => $this->instructorModel->obtenerPromedioQuiz($this->programaId),
+            'aprendices'      => $this->instructorModel->obtenerListadoAprendices($this->programaId)
+        ] + $this->datosAlcance());
     }
 
     /**
      * Muestra el panel "Mis Aprendices" con opciones de filtrado (HU23).
      */
     public function aprendices(): void {
-        $nivel_id = $_GET['nivel_id'] ?? '';
-        $rap_id   = $_GET['rap_id'] ?? '';
-        $estado   = $_GET['estado'] ?? '';
+        [$nivel_id, $rap_id, $estado] = $this->leerFiltros(Instructor::ESTADOS_APRENDIZ);
 
         // Obtenemos niveles y raps para los dropdowns
         $nivelesConRaps = $this->nivelModel->obtenerNivelesConRaps();
-        
-        // Obtenemos los aprendices filtrados
-        $aprendices = $this->instructorModel->obtenerListadoAprendicesFiltrado($nivel_id, $rap_id, $estado);
 
-        // HU06/HU23: avance de cada aprendiz modulo a modulo, para no tener que
-        // ir filtrando de a un modulo para ver el detalle
-        $avanceModulos = $this->instructorModel->obtenerAvancePorModuloDeAprendices();
+        // Obtenemos los aprendices filtrados
+        $aprendices = $this->instructorModel->obtenerListadoAprendicesFiltrado($nivel_id, $rap_id, $estado, $this->programaId);
+
+        // HU06/HU23: avance de cada aprendiz modulo a modulo y RAP a RAP, para
+        // resolver las columnas de la tabla sin una consulta por fila
+        $avanceModulos = $this->instructorModel->obtenerAvancePorModuloDeAprendices($this->programaId);
+        $avanceRaps    = $this->instructorModel->obtenerAvancePorRapDeAprendices($this->programaId);
 
         $this->render('instructor/aprendices', [
             'nivelesConRaps' => $nivelesConRaps,
             'aprendices'     => $aprendices,
             'avanceModulos'  => $avanceModulos,
+            'avanceRaps'     => $avanceRaps,
             'filtroNivel'    => $nivel_id,
             'filtroRap'      => $rap_id,
             'filtroEstado'   => $estado
-        ]);
+        ] + $this->datosAlcance());
     }
 
     /* ========================================================
@@ -105,7 +142,7 @@ class InstructorController extends Controller {
              FROM rap r
              JOIN nivel n ON n.id = r.nivel_id
              WHERE n.orden <= 4
-             ORDER BY n.orden, r.orden'
+             ORDER BY n.orden, r.orden, r.activo DESC, r.titulo'
         );
         $raps = $stmt->fetchAll();
         $exito = limpiar($_GET['exito'] ?? '');
@@ -124,13 +161,11 @@ class InstructorController extends Controller {
      * contenido ni cuentas desde aquí.
      */
     public function resultados(): void {
-        $nivel_id = limpiar($_GET['nivel_id'] ?? '');
-        $rap_id   = limpiar($_GET['rap_id'] ?? '');
-        $estado   = limpiar($_GET['estado'] ?? '');
+        [$nivel_id, $rap_id, $estado] = $this->leerFiltros(Instructor::ESTADOS_RESULTADO);
 
         $nivelesConRaps  = $this->nivelModel->obtenerNivelesConRaps();
-        $resultados      = $this->instructorModel->obtenerResultadosQuiz($nivel_id, $rap_id, $estado);
-        $ejerciciosError = $this->instructorModel->obtenerEjerciciosConMasErrores($nivel_id, $rap_id);
+        $resultados      = $this->instructorModel->obtenerResultadosQuiz($nivel_id, $rap_id, $estado, $this->programaId);
+        $ejerciciosError = $this->instructorModel->obtenerEjerciciosConMasErrores($nivel_id, $rap_id, 10, $this->programaId);
 
         $this->render('instructor/resultados', [
             'nivelesConRaps'  => $nivelesConRaps,
@@ -139,7 +174,22 @@ class InstructorController extends Controller {
             'filtroNivel'     => $nivel_id,
             'filtroRap'       => $rap_id,
             'filtroEstado'    => $estado
-        ]);
+        ] + $this->datosAlcance());
+    }
+
+    /**
+     * Neutraliza el texto que Excel interpretaría como fórmula (inyección CSV).
+     * Nombres y respuestas los escriben los aprendices: un nombre como
+     * "=HYPERLINK(...)" se ejecutaría al abrir el reporte en el equipo del instructor.
+     */
+    private function celdaCsv($valor): string {
+        $texto = (string) $valor;
+
+        if ($texto !== '' && strpbrk($texto[0], "=+-@\t\r") !== false) {
+            return "'" . $texto;
+        }
+
+        return $texto;
     }
 
     /**
@@ -148,11 +198,9 @@ class InstructorController extends Controller {
      * las mismas filas que el instructor tiene en pantalla.
      */
     public function exportar(): void {
-        $nivel_id = limpiar($_GET['nivel_id'] ?? '');
-        $rap_id   = limpiar($_GET['rap_id'] ?? '');
-        $estado   = limpiar($_GET['estado'] ?? '');
+        [$nivel_id, $rap_id, $estado] = $this->leerFiltros(Instructor::ESTADOS_RESULTADO);
 
-        $resultados = $this->instructorModel->obtenerResultadosQuiz($nivel_id, $rap_id, $estado);
+        $resultados = $this->instructorModel->obtenerResultadosQuiz($nivel_id, $rap_id, $estado, $this->programaId);
 
         $nombreArchivo = 'resultados_quizzes_' . date('Y-m-d_His') . '.csv';
 
@@ -187,19 +235,19 @@ class InstructorController extends Controller {
             $duracion = sprintf('%02d:%02d', intdiv($segundos, 60), $segundos % 60);
 
             fputcsv($salida, [
-                $r['aprendiz_id'],
-                $r['nombre_completo'],
-                $r['correo'],
-                $r['ficha_sena'] ?? '',
-                $r['modulo_nombre'],
-                'Quiz ' . $r['rap_titulo'],
+                $this->celdaCsv($r['aprendiz_id']),
+                $this->celdaCsv($r['nombre_completo']),
+                $this->celdaCsv($r['correo']),
+                $this->celdaCsv($r['ficha_sena'] ?? ''),
+                $this->celdaCsv($r['modulo_nombre']),
+                $this->celdaCsv('Quiz ' . $r['rap_titulo']),
                 number_format((float) $r['puntaje'], 2, '.', ''),
                 number_format((float) $r['puntaje_minimo'], 2, '.', ''),
                 ((int) $r['aprobado'] === 1) ? 'Si' : 'No',
                 $r['creado_en'],
                 $duracion,
                 $r['numero_intento'],
-                $r['detalle_respuestas'] ?? ''
+                $this->celdaCsv($r['detalle_respuestas'] ?? '')
             ], ';');
         }
 

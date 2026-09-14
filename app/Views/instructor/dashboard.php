@@ -114,6 +114,8 @@
       <h1 class="pagina-titulo">Panel del Instructor</h1>
       <p class="pagina-subtitulo">Seguimiento de aprendices — <?= limpiar($_SESSION['nombre']) ?></p>
 
+      <?php require __DIR__ . '/partials/alcance.php'; ?>
+
       <!-- KPIs -->
       <div class="grid-estadisticas">
         <div class="tarjeta tarjeta-stat">

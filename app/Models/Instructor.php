@@ -6,113 +6,150 @@ use App\Core\Model;
 /**
  * Instructor.php
  * Modelo de negocio para la gestión y seguimiento del desempeño de los Aprendices por parte del Instructor.
+ *
+ * Alcance de "mis aprendices" (HU23): los métodos de consulta reciben un
+ * $programaId opcional como último parámetro. Con un programa solo cuentan los
+ * aprendices de ese programa de formación; con null —instructor sin programa
+ * asignado— se ve a todos, que era el comportamiento anterior. Ir al final y
+ * ser opcional mantiene compatibles las llamadas que ya existían.
  */
 class Instructor extends Model {
+
+    /** Estados del filtro de aprendices (HU23). */
+    public const ESTADOS_APRENDIZ = ['completado', 'en_progreso', 'sin_iniciar'];
+
+    /** Estados del filtro de resultados de quiz: aprobado o no aprobado. */
+    public const ESTADOS_RESULTADO = ['completado', 'en_progreso'];
+
+    /**
+     * Fragmento SQL que limita la consulta a los aprendices de un programa.
+     * Sin programa devuelve cadena vacía y no filtra nada.
+     */
+    private function condicionPrograma(?string $programaId, string $aliasUsuario, array &$params): string {
+        if ($programaId === null || $programaId === '') {
+            return '';
+        }
+
+        $params['programa_id'] = $programaId;
+        return " AND {$aliasUsuario}.programa_id = :programa_id";
+    }
 
     /**
      * Obtiene el número total de aprendices activos.
      */
-    public function obtenerTotalAprendices(): int {
+    public function obtenerTotalAprendices(?string $programaId = null): int {
         $pdo = self::obtenerConexion();
-        return (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'aprendiz' AND activo = 1")->fetchColumn();
+        $params = [];
+        $sql = "SELECT COUNT(*)
+                FROM usuarios u
+                WHERE u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
     }
 
     /**
      * Obtiene el número de aprendices que han completado al menos un RAP.
      */
-    public function obtenerCompletaronAlgo(): int {
+    public function obtenerCompletaronAlgo(?string $programaId = null): int {
         $pdo = self::obtenerConexion();
-        return (int) $pdo->query("SELECT COUNT(DISTINCT usuario_id) FROM progreso WHERE completado = 1")->fetchColumn();
+        $params = [];
+        $sql = "SELECT COUNT(DISTINCT p.usuario_id)
+                FROM progreso p
+                JOIN usuarios u ON u.id = p.usuario_id
+                JOIN rap r ON r.id = p.rap_id AND r.activo = 1
+                WHERE p.completado = 1
+                  AND u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
     }
 
     /**
      * Obtiene el promedio de puntaje en todos los quizzes intentados.
      */
-    public function obtenerPromedioQuiz(): float {
+    public function obtenerPromedioQuiz(?string $programaId = null): float {
         $pdo = self::obtenerConexion();
-        return (float) $pdo->query("SELECT COALESCE(AVG(puntaje), 0) FROM intento_quiz")->fetchColumn();
+        $params = [];
+        $sql = "SELECT COALESCE(AVG(i.puntaje), 0)
+                FROM intento_quiz i
+                JOIN usuarios u ON u.id = i.usuario_id
+                WHERE u.rol = 'aprendiz' AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return (float) $stmt->fetchColumn();
     }
 
     /**
      * Obtiene el listado completo de aprendices activos con sus estadísticas de progreso y XP.
+     * Es el listado filtrado sin filtros, para que el dashboard y "Mis Aprendices"
+     * calculen el avance exactamente de la misma forma.
      */
-    public function obtenerListadoAprendices(): array {
-        $pdo = self::obtenerConexion();
-        $stmt = $pdo->query(
-            "SELECT u.id, u.nombre_completo, u.correo, u.xp_puntos,
-                    COUNT(p.id) AS raps_iniciados,
-                    COALESCE(SUM(p.completado), 0) AS raps_completados,
-                    COALESCE(AVG(p.porcentaje), 0) AS avance_promedio
-             FROM usuarios u
-             LEFT JOIN progreso p ON p.usuario_id = u.id
-             WHERE u.rol = 'aprendiz' AND u.activo = 1
-             GROUP BY u.id
-             ORDER BY avance_promedio DESC"
-        );
-        return $stmt->fetchAll();
+    public function obtenerListadoAprendices(?string $programaId = null): array {
+        return $this->obtenerListadoAprendicesFiltrado('', '', '', $programaId);
     }
 
     /**
      * Obtiene el listado de aprendices con filtros por Nivel, RAP y Estado (HU23).
+     *
+     * Cada aprendiz se cruza con todos los RAPs activos del alcance elegido
+     * —el curso completo, un módulo o un RAP—, no solo con los que ya abrió.
+     * Así quien no ha empezado sigue apareciendo como "sin iniciar", y el avance
+     * promedio cuenta en 0% los RAPs sin tocar, igual que el panel del aprendiz
+     * (HU05). Cruzar solo contra su progreso escondía del filtro por nivel o RAP
+     * a quien no había empezado, y mostraba 100% a quien terminó un único RAP.
+     *
+     * El estado se evalúa sobre ese mismo alcance:
+     *  - completado:  terminó todos los RAPs del alcance
+     *  - en_progreso: tiene actividad en alguno pero no los terminó todos
+     *  - sin_iniciar: no tiene actividad en ninguno
      */
-    public function obtenerListadoAprendicesFiltrado($nivel_id = '', $rap_id = '', $estado = ''): array {
+    public function obtenerListadoAprendicesFiltrado($nivel_id = '', $rap_id = '', $estado = '', ?string $programaId = null): array {
         $pdo = self::obtenerConexion();
-        
-        $sql = "SELECT u.id, u.nombre_completo, u.correo, u.xp_puntos,
-                       COUNT(p.id) AS raps_iniciados,
-                       COALESCE(SUM(p.completado), 0) AS raps_completados,
-                       COALESCE(AVG(p.porcentaje), 0) AS avance_promedio
-                FROM usuarios u
-                LEFT JOIN progreso p ON p.usuario_id = u.id
-                LEFT JOIN rap r ON p.rap_id = r.id
-                WHERE u.rol = 'aprendiz' AND u.activo = 1";
-        
         $params = [];
-        
-        // Filtro por Nivel
+
+        $sql = "SELECT u.id, u.nombre_completo, u.correo, u.xp_puntos,
+                       COUNT(r.id) AS total_raps,
+                       COUNT(p.id) AS raps_iniciados,
+                       SUM(CASE WHEN p.completado = 1 THEN 1 ELSE 0 END) AS raps_completados,
+                       AVG(COALESCE(p.porcentaje, 0)) AS avance_promedio
+                FROM usuarios u
+                JOIN rap r ON r.activo = 1
+                JOIN nivel n ON n.id = r.nivel_id AND n.activo = 1
+                LEFT JOIN progreso p ON p.rap_id = r.id AND p.usuario_id = u.id
+                WHERE u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
+
         if (!empty($nivel_id)) {
-            $sql .= " AND r.nivel_id = :nivel_id";
+            $sql .= " AND n.id = :nivel_id";
             $params['nivel_id'] = $nivel_id;
         }
-        
-        // Filtro por RAP
+
         if (!empty($rap_id)) {
-            $sql .= " AND p.rap_id = :rap_id";
+            $sql .= " AND r.id = :rap_id";
             $params['rap_id'] = $rap_id;
         }
 
-        // Filtro por Estado (completado, en_progreso, sin_iniciar)
-        if (!empty($estado)) {
-            if ($estado === 'completado') {
-                $sql .= " AND p.completado = 1";
-            } elseif ($estado === 'en_progreso') {
-                $sql .= " AND p.porcentaje > 0 AND p.completado = 0";
-            } elseif ($estado === 'sin_iniciar') {
-                // Si buscan sin iniciar pero pasaron un RAP, significa que no existe registro en progreso para ese RAP.
-                if (!empty($rap_id)) {
-                    // Quitamos la condicion del AND normal y cambiamos la logica.
-                    // Esto es complejo si lo unimos directamente. 
-                    // Es mejor reescribir la query para 'sin_iniciar' si hay un RAP específico:
-                    $sql = "SELECT u.id, u.nombre_completo, u.correo, u.xp_puntos,
-                                   0 AS raps_iniciados, 0 AS raps_completados, 0 AS avance_promedio
-                            FROM usuarios u
-                            WHERE u.rol = 'aprendiz' AND u.activo = 1
-                            AND NOT EXISTS (
-                                SELECT 1 FROM progreso p2 
-                                WHERE p2.usuario_id = u.id AND p2.rap_id = :rap_id
-                            )";
-                } else {
-                    // Sin iniciar general (0 progreso total)
-                    $sql .= " AND p.id IS NULL";
-                }
-            }
+        $sql .= " GROUP BY u.id, u.nombre_completo, u.correo, u.xp_puntos";
+
+        // El estado se filtra sobre los totales ya agrupados, así que no cambia los
+        // parámetros de la consulta: combinar nivel, RAP y estado siempre es válido.
+        if ($estado === 'completado') {
+            $sql .= " HAVING raps_completados = total_raps";
+        } elseif ($estado === 'en_progreso') {
+            $sql .= " HAVING raps_iniciados > 0 AND raps_completados < total_raps";
+        } elseif ($estado === 'sin_iniciar') {
+            $sql .= " HAVING raps_iniciados = 0";
         }
-        
-        // Si no se sobreescribió la query por el caso 'sin_iniciar' especifico
-        if (strpos($sql, 'GROUP BY') === false) {
-            $sql .= " GROUP BY u.id ORDER BY avance_promedio DESC";
-        }
-        
+
+        $sql .= " ORDER BY avance_promedio DESC, u.nombre_completo ASC";
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();
@@ -132,12 +169,14 @@ class Instructor extends Model {
      * 'en_progreso' = presentado sin aprobar. 'sin_iniciar' no aplica aquí
      * (un aprendiz sin intentos no tiene filas que mostrar).
      */
-    public function obtenerResultadosQuiz(string $nivelId = '', string $rapId = '', string $estado = ''): array {
+    public function obtenerResultadosQuiz(string $nivelId = '', string $rapId = '', string $estado = '', ?string $programaId = null): array {
         $pdo = self::obtenerConexion();
 
         // El detalle de respuestas de un quiz largo supera los 1024 bytes que
         // GROUP_CONCAT trae por defecto y se cortaría a mitad de frase.
         $pdo->exec('SET SESSION group_concat_max_len = 100000');
+
+        $params = [];
 
         $sql = "SELECT i.id AS intento_id,
                        u.id AS aprendiz_id,
@@ -167,9 +206,8 @@ class Instructor extends Model {
                 JOIN quiz q ON q.id = i.quiz_id
                 JOIN rap r ON r.id = q.rap_id
                 JOIN nivel n ON n.id = r.nivel_id
-                WHERE u.rol = 'aprendiz' AND u.eliminado = 0";
-
-        $params = [];
+                WHERE u.rol = 'aprendiz' AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
 
         if (!empty($nivelId)) {
             $sql .= " AND n.id = :nivel_id";
@@ -206,30 +244,33 @@ class Instructor extends Model {
      * aprendiz tenga una celda por cada módulo, incluso los que no ha tocado,
      * que es justo lo que el instructor necesita ver.
      */
-    public function obtenerAvancePorModuloDeAprendices(): array {
+    public function obtenerAvancePorModuloDeAprendices(?string $programaId = null): array {
         $pdo = self::obtenerConexion();
 
         // El detalle por RAP de un módulo supera los 1024 bytes por defecto
         $pdo->exec('SET SESSION group_concat_max_len = 8192');
 
-        $stmt = $pdo->query(
-            "SELECT u.id AS usuario_id,
-                    n.orden AS modulo_orden,
-                    ROUND(AVG(COALESCE(p.porcentaje, 0)), 0) AS avance,
-                    SUM(CASE WHEN p.completado = 1 THEN 1 ELSE 0 END) AS raps_completados,
-                    COUNT(r.id) AS total_raps,
-                    GROUP_CONCAT(
-                        CONCAT(r.titulo, ': ', ROUND(COALESCE(p.porcentaje, 0), 0), '%')
-                        ORDER BY r.orden SEPARATOR ' | '
-                    ) AS detalle
-             FROM usuarios u
-             CROSS JOIN nivel n
-             JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
-             LEFT JOIN progreso p ON p.rap_id = r.id AND p.usuario_id = u.id
-             WHERE u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0 AND n.activo = 1
-             GROUP BY u.id, n.id
-             ORDER BY u.id, n.orden"
-        );
+        $params = [];
+        $sql = "SELECT u.id AS usuario_id,
+                       n.orden AS modulo_orden,
+                       ROUND(AVG(COALESCE(p.porcentaje, 0)), 0) AS avance,
+                       SUM(CASE WHEN p.completado = 1 THEN 1 ELSE 0 END) AS raps_completados,
+                       COUNT(r.id) AS total_raps,
+                       GROUP_CONCAT(
+                           CONCAT(r.titulo, ': ', ROUND(COALESCE(p.porcentaje, 0), 0), '%')
+                           ORDER BY r.orden SEPARATOR ' | '
+                       ) AS detalle
+                FROM usuarios u
+                CROSS JOIN nivel n
+                JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
+                LEFT JOIN progreso p ON p.rap_id = r.id AND p.usuario_id = u.id
+                WHERE u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0 AND n.activo = 1"
+             . $this->condicionPrograma($programaId, 'u', $params)
+             . " GROUP BY u.id, n.id
+                 ORDER BY u.id, n.orden";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
 
         $matriz = [];
         foreach ($stmt->fetchAll() as $fila) {
@@ -245,13 +286,46 @@ class Instructor extends Model {
     }
 
     /**
+     * Avance de cada aprendiz en cada RAP activo (HU23: "% de avance por RAP").
+     *
+     * Solo devuelve los RAPs con actividad; la vista toma como 0% los que no
+     * aparecen. Se indexa por usuario y por id de RAP para que, al filtrar por
+     * un módulo, la tabla muestre una columna por cada RAP de ese módulo.
+     */
+    public function obtenerAvancePorRapDeAprendices(?string $programaId = null): array {
+        $pdo = self::obtenerConexion();
+        $params = [];
+
+        $sql = "SELECT p.usuario_id, p.rap_id, p.porcentaje, p.completado
+                FROM progreso p
+                JOIN usuarios u ON u.id = p.usuario_id
+                JOIN rap r ON r.id = p.rap_id AND r.activo = 1
+                WHERE u.rol = 'aprendiz' AND u.activo = 1 AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $matriz = [];
+        foreach ($stmt->fetchAll() as $fila) {
+            $matriz[$fila['usuario_id']][$fila['rap_id']] = [
+                'porcentaje' => (float) $fila['porcentaje'],
+                'completado' => (int) $fila['completado'] === 1
+            ];
+        }
+
+        return $matriz;
+    }
+
+    /**
      * Ejercicios con mayor tasa de error del grupo (HU06/HU23).
      * Solo entran ejercicios que alguien haya intentado; ordena por tasa de
      * error y desempata por número de fallos, para que un ejercicio con un
      * único intento fallido no desplace a uno que falla el curso entero.
      */
-    public function obtenerEjerciciosConMasErrores(string $nivelId = '', string $rapId = '', int $limite = 10): array {
+    public function obtenerEjerciciosConMasErrores(string $nivelId = '', string $rapId = '', int $limite = 10, ?string $programaId = null): array {
         $pdo = self::obtenerConexion();
+        $params = [];
 
         $sql = "SELECT e.id,
                        e.enunciado,
@@ -269,9 +343,8 @@ class Instructor extends Model {
                 JOIN rap r ON r.id = e.rap_id
                 JOIN nivel n ON n.id = r.nivel_id
                 JOIN usuarios u ON u.id = ie.usuario_id
-                WHERE u.rol = 'aprendiz' AND u.eliminado = 0";
-
-        $params = [];
+                WHERE u.rol = 'aprendiz' AND u.eliminado = 0"
+             . $this->condicionPrograma($programaId, 'u', $params);
 
         if (!empty($nivelId)) {
             $sql .= " AND n.id = :nivel_id";

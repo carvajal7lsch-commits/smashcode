@@ -156,6 +156,13 @@
           $cQuiz  = $r['tiene_quiz'] > 0 && $r['total_preguntas_quiz'] > 0;
 
           $esCompleto = ($cVocab && $cPron && $cEjerc && $cDial && $cQuiz);
+
+          // Más de una fila de `rap` en el mismo módulo y posición: con el título
+          // canónico se verían idénticas, así que se marcan y se muestra el real.
+          // Causa y datos: php database/diagnostico_raps.php
+          $esDuplicado = count(array_filter($raps, fn($otro) =>
+              (int) $otro['nivel_orden'] === $nOrden && (int) $otro['rap_orden'] === $rOrden
+          )) > 1;
         ?>
         <div id="fila-rap-<?= $r['id'] ?>" class="card-rap fila-rap <?= !$r['rap_activo'] ? 'inactiva' : '' ?>" data-nombre="<?= limpiar(mb_strtolower($tituloCard)) ?>" data-nivel="<?= limpiar(mb_strtolower($moduloCard)) ?>">
           
@@ -165,8 +172,16 @@
               <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; line-height:1.4;">
                 <i class="fas fa-graduation-cap" style="margin-right:4px;"></i><?= limpiar($moduloCard) ?>
               </div>
+              <?php if ($esDuplicado): ?>
+                <div class="rap-duplicado-detalle" title="Título e identificador reales en la base de datos">
+                  <i class="fas fa-database"></i> <?= limpiar($r['titulo']) ?> · ID <?= limpiar(substr($r['id'], 0, 8)) ?>
+                </div>
+              <?php endif; ?>
             </div>
-            <div>
+            <div class="card-rap-badges">
+              <?php if ($esDuplicado): ?>
+                <span class="badge-duplicado" title="Hay más de un RAP en este módulo y posición">Duplicado</span>
+              <?php endif; ?>
               <?php if ($esCompleto): ?>
                 <span class="badge-completitud si" style="padding:4px 8px; font-size:0.7rem;">Completo</span>
               <?php else: ?>

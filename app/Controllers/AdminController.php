@@ -601,7 +601,7 @@ class AdminController extends Controller {
              FROM rap r
              JOIN nivel n ON n.id = r.nivel_id
              WHERE n.orden <= 4
-             ORDER BY n.orden, r.orden'
+             ORDER BY n.orden, r.orden, r.activo DESC, r.titulo'
         );
         $raps = $stmt->fetchAll();
         $totalUsuarios = $this->adminModel->obtenerTotalUsuarios();

@@ -13,6 +13,12 @@ $queryFiltros = http_build_query(array_filter([
     'estado'   => $filtroEstado
 ]));
 $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $queryFiltros : '');
+
+$accionFiltros  = PROYECTO_PATH . '/instructor/resultados';
+$opcionesEstado = [
+    'completado'  => 'Aprobado',
+    'en_progreso' => 'No aprobado'
+];
 ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
@@ -87,52 +93,10 @@ $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $qu
         </div>
       </div>
 
+      <?php require __DIR__ . '/partials/alcance.php'; ?>
+
       <!-- Filtros (mismos criterios que el panel de aprendices) -->
-      <div class="tarjeta" style="margin-bottom: 24px;">
-        <form method="GET" action="<?= PROYECTO_PATH ?>/instructor/resultados" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
-
-          <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
-            <label style="font-weight:600; color:var(--texto-principal);">Nivel:</label>
-            <select name="nivel_id" class="input-premium select-premium">
-              <option value="">Todos los Niveles</option>
-              <?php foreach ($nivelesConRaps as $n): ?>
-                <option value="<?= $n['id'] ?>" <?= $filtroNivel == $n['id'] ? 'selected' : '' ?>>
-                  <?= limpiar($n['nombre']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
-            <label style="font-weight:600; color:var(--texto-principal);">RAP:</label>
-            <select name="rap_id" class="input-premium select-premium">
-              <option value="">Todos los RAPs</option>
-              <?php foreach ($nivelesConRaps as $n): ?>
-                <?php if (!empty($n['rap_id'])): ?>
-                  <option value="<?= $n['rap_id'] ?>" <?= $filtroRap == $n['rap_id'] ? 'selected' : '' ?>>
-                    RAP <?= $n['orden'] ?>: <?= limpiar($n['rap_titulo']) ?>
-                  </option>
-                <?php endif; ?>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
-            <label style="font-weight:600; color:var(--texto-principal);">Estado:</label>
-            <select name="estado" class="input-premium select-premium">
-              <option value="">Todos los Estados</option>
-              <option value="completado" <?= $filtroEstado == 'completado' ? 'selected' : '' ?>>Aprobado</option>
-              <option value="en_progreso" <?= $filtroEstado == 'en_progreso' ? 'selected' : '' ?>>No aprobado</option>
-            </select>
-          </div>
-
-          <div class="form-grupo" style="display:flex; gap:8px;">
-            <button type="submit" class="btn btn-primario"><i class="fas fa-search"></i> Filtrar</button>
-            <a href="<?= PROYECTO_PATH ?>/instructor/resultados" class="btn btn-secundario"><i class="fas fa-eraser"></i></a>
-          </div>
-
-        </form>
-      </div>
+      <?php require __DIR__ . '/partials/filtros.php'; ?>
 
       <!-- Ejercicios con mayor tasa de error del grupo -->
       <div class="tarjeta" style="margin-bottom: 24px;">

@@ -3,23 +3,52 @@
 $filtroNivel  = $filtroNivel ?? '';
 $filtroRap    = $filtroRap ?? '';
 $filtroEstado = $filtroEstado ?? '';
+$avanceModulos = $avanceModulos ?? [];
+$avanceRaps    = $avanceRaps ?? [];
 
-// El CSV de resultados respeta los filtros que el instructor tenga puestos (HU23)
+// El CSV exporta intentos de quiz, así que solo hereda el alcance (nivel y RAP).
+// El estado de esta pantalla habla del avance del aprendiz, no de aprobar un quiz:
+// pasarlo tal cual dejaba el archivo vacío al filtrar por "sin iniciar".
 $queryFiltros = http_build_query(array_filter([
     'nivel_id' => $filtroNivel,
-    'rap_id'   => $filtroRap,
-    'estado'   => $filtroEstado
+    'rap_id'   => $filtroRap
 ]));
 $enlaceCsv = PROYECTO_PATH . '/instructor/exportar' . ($queryFiltros ? '?' . $queryFiltros : '');
 
-// Modulos activos para las columnas de avance (HU06/HU23).
-// $nivelesConRaps trae una fila por RAP, asi que se colapsa por orden de modulo.
-$avanceModulos = $avanceModulos ?? [];
-$modulos = [];
+// Columnas de avance (HU23: "% de avance por nivel y por RAP").
+// Sin filtro de alcance hay una columna por módulo, con el detalle de sus RAPs en
+// el tooltip. Al filtrar por módulo o RAP hay una columna por cada RAP del alcance,
+// porque en ese momento el instructor ya está mirando RAP a RAP.
+$modulos     = [];
+$columnasRap = [];
 foreach ($nivelesConRaps ?? [] as $n) {
     $modulos[(int) $n['orden']] = $n['nombre'];
+
+    $enAlcance = $filtroRap !== ''
+        ? $n['rap_id'] === $filtroRap
+        : ($filtroNivel !== '' && $n['id'] === $filtroNivel);
+
+    if ($enAlcance) {
+        $columnasRap[$n['rap_id']] = [
+            'titulo' => $n['rap_titulo'],
+            'corto'  => preg_match('/^RAP\s*\d+/i', $n['rap_titulo'], $m) ? $m[0] : 'RAP'
+        ];
+    }
 }
 ksort($modulos);
+$verPorRap = ($filtroNivel !== '' || $filtroRap !== '');
+$hayFiltros = ($filtroNivel !== '' || $filtroRap !== '' || $filtroEstado !== '');
+
+$accionFiltros  = PROYECTO_PATH . '/instructor/aprendices';
+$opcionesEstado = [
+    'completado'  => 'Completado',
+    'en_progreso' => 'En Progreso',
+    'sin_iniciar' => 'Sin Iniciar'
+];
+
+// Mismo semáforo para barras y celdas de avance
+$colorAvance = static fn(float $pct): string =>
+    $pct >= 70 ? 'var(--verde)' : ($pct >= 40 ? 'var(--naranja)' : 'var(--gris-medio)');
 ?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
@@ -89,58 +118,14 @@ ksort($modulos);
     <div class="dashboard-page-content">
       <div class="dashboard-welcome-header">
         <div>
-          <h1 class="dashboard-welcome-title">Filtro de Aprendices</h1>
-          <p class="dashboard-welcome-subtitle">Consulta el progreso detallado aplicando filtros.</p>
+          <h1 class="dashboard-welcome-title">Mis Aprendices</h1>
+          <p class="dashboard-welcome-subtitle">Consulta el avance de cada aprendiz por módulo y por RAP, y filtra por estado.</p>
         </div>
       </div>
 
-      <!-- Filtros -->
-      <div class="tarjeta" style="margin-bottom: 24px;">
-        <form method="GET" action="<?= PROYECTO_PATH ?>/instructor/aprendices" style="display:flex; gap:16px; align-items:flex-end; flex-wrap:wrap;">
-          
-          <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
-            <label style="font-weight:600; color:var(--texto-principal);">Nivel:</label>
-            <select name="nivel_id" class="input-premium select-premium">
-              <option value="">Todos los Niveles</option>
-              <?php foreach ($nivelesConRaps as $n): ?>
-                <option value="<?= $n['id'] ?>" <?= $filtroNivel == $n['id'] ? 'selected' : '' ?>>
-                  <?= limpiar($n['nombre']) ?>
-                </option>
-              <?php endforeach; ?>
-            </select>
-          </div>
+      <?php require __DIR__ . '/partials/alcance.php'; ?>
 
-          <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
-            <label style="font-weight:600; color:var(--texto-principal);">RAP:</label>
-            <select name="rap_id" class="input-premium select-premium">
-              <option value="">Todos los RAPs</option>
-              <?php foreach ($nivelesConRaps as $n): ?>
-                <?php if (!empty($n['rap_id'])): ?>
-                  <option value="<?= $n['rap_id'] ?>" <?= $filtroRap == $n['rap_id'] ? 'selected' : '' ?>>
-                    RAP <?= $n['orden'] ?>: <?= limpiar($n['rap_titulo']) ?>
-                  </option>
-                <?php endif; ?>
-              <?php endforeach; ?>
-            </select>
-          </div>
-
-          <div class="form-grupo" style="flex:1; min-width:200px; display:flex; flex-direction:column; gap:8px;">
-            <label style="font-weight:600; color:var(--texto-principal);">Estado:</label>
-            <select name="estado" class="input-premium select-premium">
-              <option value="">Todos los Estados</option>
-              <option value="completado" <?= $filtroEstado == 'completado' ? 'selected' : '' ?>>Completado</option>
-              <option value="en_progreso" <?= $filtroEstado == 'en_progreso' ? 'selected' : '' ?>>En Progreso</option>
-              <option value="sin_iniciar" <?= $filtroEstado == 'sin_iniciar' ? 'selected' : '' ?>>Sin Iniciar</option>
-            </select>
-          </div>
-
-          <div class="form-grupo" style="display:flex; gap:8px;">
-            <button type="submit" class="btn btn-primario"><i class="fas fa-search"></i> Filtrar</button>
-            <a href="<?= PROYECTO_PATH ?>/instructor/aprendices" class="btn btn-secundario"><i class="fas fa-eraser"></i></a>
-          </div>
-
-        </form>
-      </div>
+      <?php require __DIR__ . '/partials/filtros.php'; ?>
 
       <!-- Tabla de aprendices filtrados -->
       <div class="tarjeta">
@@ -149,14 +134,14 @@ ksort($modulos);
             <i class="fas fa-list-ul"></i>
             Resultados (<?= count($aprendices) ?>)
           </span>
-          <a href="<?= $enlaceCsv ?>" class="btn btn-primario btn-exportar-csv">
-            <i class="fas fa-download"></i> Exportar Todo a CSV
+          <a href="<?= $enlaceCsv ?>" class="btn btn-primario btn-exportar-csv" title="Descarga los intentos de quiz del módulo o RAP filtrado">
+            <i class="fas fa-download"></i> Exportar resultados de quiz (CSV)
           </a>
         </div>
 
         <?php if (empty($aprendices)): ?>
           <p class="mensaje-vacio-tabla">
-            No hay aprendices que coincidan con los filtros.
+            <?= $hayFiltros ? 'No hay aprendices que coincidan con los filtros.' : 'Todavía no hay aprendices para mostrar.' ?>
           </p>
         <?php else: ?>
         <div class="tabla-container-scroll">
@@ -165,67 +150,82 @@ ksort($modulos);
               <tr>
                 <th>Nombre</th>
                 <th>Correo</th>
-                <?php foreach ($modulos as $ordenMod => $nombreMod): ?>
-                  <th class="text-center" title="<?= limpiar($nombreMod) ?>">M<?= $ordenMod ?></th>
-                <?php endforeach; ?>
+                <?php if ($verPorRap): ?>
+                  <?php foreach ($columnasRap as $columna): ?>
+                    <th class="text-center" title="<?= limpiar($columna['titulo']) ?>"><?= limpiar($columna['corto']) ?></th>
+                  <?php endforeach; ?>
+                <?php else: ?>
+                  <?php foreach ($modulos as $ordenMod => $nombreMod): ?>
+                    <th class="text-center" title="<?= limpiar($nombreMod) ?>">M<?= $ordenMod ?></th>
+                  <?php endforeach; ?>
+                <?php endif; ?>
                 <th class="text-center">RAPs Iniciados</th>
                 <th class="text-center">RAPs Completados</th>
-                <th>Avance Promedio</th>
+                <th title="Promedio sobre todos los RAPs del alcance filtrado; los que no ha empezado cuentan como 0%">Avance Promedio</th>
                 <th>XP</th>
                 <th>Estado</th>
               </tr>
             </thead>
             <tbody>
               <?php foreach ($aprendices as $a):
-                $avance = (float) $a['avance_promedio'];
-                $nivelClase = $avance >= 70 ? 'nivel-alto' : ($avance >= 40 ? 'nivel-medio' : 'nivel-bajo');
-                
-                // Si filtramos por un estado, la lógica del chip puede adaptarse, 
-                // pero por defecto mostramos el estado en base a avance.
-                $chipTexto = 'En riesgo';
-                $chipClase = 'chip-riesgo';
-                
-                if ($avance == 100) {
+                $avance      = (float) $a['avance_promedio'];
+                $nivelClase  = $avance >= 70 ? 'nivel-alto' : ($avance >= 40 ? 'nivel-medio' : 'nivel-bajo');
+                $totalRaps   = (int) $a['total_raps'];
+                $iniciados   = (int) $a['raps_iniciados'];
+                $completados = (int) $a['raps_completados'];
+
+                // El chip usa la misma regla que el filtro de estado del modelo
+                if ($totalRaps > 0 && $completados === $totalRaps) {
                     $chipTexto = 'Completado';
                     $chipClase = 'chip-activo';
-                } elseif ($avance >= 40) {
-                    $chipTexto = 'En progreso';
-                    $chipClase = 'chip-activo';
-                }
-                
-                if ($filtroEstado === 'sin_iniciar' || $a['raps_iniciados'] == 0) {
+                } elseif ($iniciados === 0) {
                     $chipTexto = 'Sin iniciar';
                     $chipClase = 'chip-riesgo';
+                } else {
+                    $chipTexto = 'En progreso';
+                    $chipClase = 'chip-activo';
                 }
               ?>
               <tr>
                 <td><?= limpiar($a['nombre_completo']) ?></td>
                 <td><?= limpiar($a['correo']) ?></td>
-                <?php foreach ($modulos as $ordenMod => $nombreMod):
-                  $celda = $avanceModulos[$a['id']][$ordenMod] ?? null;
-                  $pctMod = $celda ? (float) $celda['avance'] : 0.0;
-                  // Mismo semaforo que la barra de avance general
-                  $colorMod = $pctMod >= 70 ? 'var(--verde)' : ($pctMod >= 40 ? 'var(--naranja)' : 'var(--gris-medio)');
-                  // El detalle RAP por RAP va en el tooltip para no multiplicar columnas
-                  $tituloCelda = $celda
-                      ? $nombreMod . ' — ' . str_replace(' | ', ' · ', $celda['detalle'])
-                      : $nombreMod;
-                ?>
-                  <td class="text-center" title="<?= limpiar($tituloCelda) ?>">
-                    <span style="font-weight:800; color:<?= $colorMod ?>;"><?= number_format($pctMod, 0) ?>%</span>
-                  </td>
-                <?php endforeach; ?>
-                <td class="text-center"><?= $a['raps_iniciados'] ?></td>
-                <td class="text-center"><?= $a['raps_completados'] ?></td>
+                <?php if ($verPorRap): ?>
+                  <?php foreach ($columnasRap as $idRap => $columna):
+                    $celdaRap = $avanceRaps[$a['id']][$idRap] ?? null;
+                    $pctRap   = $celdaRap ? $celdaRap['porcentaje'] : 0.0;
+                  ?>
+                    <td class="text-center" title="<?= limpiar($columna['titulo']) ?>">
+                      <span style="font-weight:800; color:<?= $colorAvance($pctRap) ?>;"><?= number_format($pctRap, 0) ?>%</span>
+                      <?php if ($celdaRap && $celdaRap['completado']): ?>
+                        <i class="fas fa-circle-check" style="color:var(--verde); margin-left:4px;" title="RAP completado"></i>
+                      <?php endif; ?>
+                    </td>
+                  <?php endforeach; ?>
+                <?php else: ?>
+                  <?php foreach ($modulos as $ordenMod => $nombreMod):
+                    $celda  = $avanceModulos[$a['id']][$ordenMod] ?? null;
+                    $pctMod = $celda ? (float) $celda['avance'] : 0.0;
+                    // El detalle RAP por RAP va en el tooltip para no multiplicar columnas
+                    $tituloCelda = $celda
+                        ? $nombreMod . ' — ' . str_replace(' | ', ' · ', $celda['detalle'])
+                        : $nombreMod;
+                  ?>
+                    <td class="text-center" title="<?= limpiar($tituloCelda) ?>">
+                      <span style="font-weight:800; color:<?= $colorAvance($pctMod) ?>;"><?= number_format($pctMod, 0) ?>%</span>
+                    </td>
+                  <?php endforeach; ?>
+                <?php endif; ?>
+                <td class="text-center"><?= $iniciados ?></td>
+                <td class="text-center"><?= $completados ?> / <?= $totalRaps ?></td>
                 <td>
                   <div class="progreso-mini">
                     <div class="barra">
                       <div class="relleno <?= $nivelClase ?>" style="width:<?= min(100, $avance) ?>%"></div>
                     </div>
-                    <span class="progreso-mini-porcentaje"><?= number_format($avance,0) ?>%</span>
+                    <span class="progreso-mini-porcentaje"><?= number_format($avance, 0) ?>%</span>
                   </div>
                 </td>
-                <td><?= formatearXP((int)$a['xp_puntos']) ?></td>
+                <td><?= formatearXP((int) $a['xp_puntos']) ?></td>
                 <td><span class="chip-estado <?= $chipClase ?>"><?= $chipTexto ?></span></td>
               </tr>
               <?php endforeach; ?>

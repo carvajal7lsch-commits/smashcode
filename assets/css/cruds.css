@@ -1049,3 +1049,55 @@ input:checked + .slider:before { transform: translateX(20px); }
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================
+ * RAPs duplicados en la misma posición de módulo
+ * Diagnóstico: php database/diagnostico_raps.php
+ * ========================================================== */
+.card-rap-badges {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+.badge-duplicado {
+  background: rgba(245, 158, 11, 0.15);
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.rap-duplicado-detalle {
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #D97706;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  word-break: break-word;
+}
+
+/* ==========================================================
+ * Instructor: alcance de "mis aprendices" (HU23)
+ * ========================================================== */
+.alerta-advertencia {
+  background: rgba(245, 158, 11, 0.12);
+  color: #D97706;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+.alcance-programa {
+  margin: -4px 0 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--texto-tenue);
+}
+.alcance-programa i {
+  margin-right: 6px;
+}
+.alcance-programa strong {
+  color: var(--texto-principal);
+}
