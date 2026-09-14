@@ -90,20 +90,16 @@ class AprendizController extends Controller {
             $ej['opciones'] = $stmtOpc->fetchAll();
         }
 
-        // Obtener Quizzes y Preguntas unificados
-        $stmtQuiz = $pdo->prepare("SELECT * FROM quiz WHERE rap_id IN ($inRaps) AND activo = 1");
-        $stmtQuiz->execute($allRapIds);
-        $quizzes = $stmtQuiz->fetchAll();
+        // Obtener Quizzes y Preguntas unificados. El quiz de cierre reúne las preguntas
+        // de todos los RAPs del módulo; el del RAP abierto va primero porque es donde
+        // guardarIntentoQuiz() registra el intento.
+        $quizzes = $this->obtenerQuizzesDelModulo($pdo, $allRapIds, $rapId);
 
         $quiz = !empty($quizzes) ? $quizzes[0] : null;
         $preguntas = [];
 
         if (!empty($quizzes)) {
-            $quizIds = array_column($quizzes, 'id');
-            $inQuiz = implode(',', array_fill(0, count($quizIds), '?'));
-            $stmtPreg = $pdo->prepare("SELECT id, texto, opciones, respuesta_correcta, retroalimentacion FROM pregunta WHERE quiz_id IN ($inQuiz)");
-            $stmtPreg->execute($quizIds);
-            $preguntas = $stmtPreg->fetchAll();
+            $preguntas = $this->obtenerPreguntasDeQuizzes($pdo, array_column($quizzes, 'id'));
             foreach ($preguntas as &$preg) {
                 $preg['opciones'] = json_decode($preg['opciones'], true);
             }
@@ -119,7 +115,28 @@ class AprendizController extends Controller {
             $progreso = $stmtProg->fetch() ?: ['porcentaje' => 0.00, 'completado' => 0, 'mejor_puntaje_quiz' => 0.00];
         }
 
-        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview'));
+        // Ejercicios del módulo ya respondidos, para retomar el Momento 3 donde quedó
+        // el aprendiz. Solo mientras no lo haya terminado: quien ya pasó del 75% está
+        // repitiendo el RAP (HU14) y empieza la práctica de cero.
+        $ejerciciosRespondidos = [];
+        if (!$esPreview && !empty($ejercicios) && (float) $progreso['porcentaje'] < 75 && !(int) $progreso['completado']) {
+            $idsEjercicios = array_column($ejercicios, 'id');
+            $inEjercicios  = implode(',', array_fill(0, count($idsEjercicios), '?'));
+            $stmtResp = $pdo->prepare(
+                "SELECT ejercicio_id, es_correcto
+                 FROM intento_ejercicio
+                 WHERE usuario_id = ? AND ejercicio_id IN ($inEjercicios)
+                 ORDER BY creado_en, numero_intento"
+            );
+            $stmtResp->execute([$uid, ...$idsEjercicios]);
+
+            // Queda el último intento de cada ejercicio
+            foreach ($stmtResp->fetchAll() as $intento) {
+                $ejerciciosRespondidos[$intento['ejercicio_id']] = (int) $intento['es_correcto'] === 1;
+            }
+        }
+
+        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos'));
     }
 
     public function toggleVocabMarcado(): void {
@@ -164,10 +181,15 @@ class AprendizController extends Controller {
             return;
         }
 
+        // Desde el navegador solo se avanza hasta el 75% (Momento 3 terminado):
+        // el 100% y el completado los pone únicamente la aprobación del quiz.
+        $porcentaje = max(0.0, min(75.0, $porcentaje));
+
+        // El avance es del módulo, no solo del RAP abierto (ver obtenerRapsDelModulo)
         $progresoModel = new Progreso();
-        // Progreso se considera completado si es 100%, pero el completado real de la lección
-        // se guarda al aprobar el Quiz. Guardamos el porcentaje alcanzado en esta sesión.
-        $progresoModel->actualizarProgreso($uid, $rapId, $porcentaje, 0);
+        foreach ($this->obtenerRapsDelModulo(obtenerConexion(), $rapId) as $idRap) {
+            $progresoModel->actualizarProgreso($uid, $idRap, $porcentaje, 0);
+        }
 
         echo json_encode(['exito' => true, 'porcentaje' => $porcentaje]);
     }
@@ -312,20 +334,21 @@ class AprendizController extends Controller {
 
         $pdo = obtenerConexion();
 
-        // 1. Obtener Quiz
-        $stmtQuiz = $pdo->prepare('SELECT * FROM quiz WHERE rap_id = ? AND activo = 1 LIMIT 1');
-        $stmtQuiz->execute([$rapId]);
-        $quiz = $stmtQuiz->fetch();
+        // 1. Obtener el quiz del módulo: se califican las mismas preguntas que la
+        //    página le mostró al aprendiz, las de todos los RAPs del módulo
+        $rapsModulo = $this->obtenerRapsDelModulo($pdo, $rapId);
+        $quizzes    = $this->obtenerQuizzesDelModulo($pdo, $rapsModulo, $rapId);
 
-        if (!$quiz) {
+        if (empty($quizzes)) {
             echo json_encode(['exito' => false, 'error' => 'Quiz no encontrado para este RAP']);
             return;
         }
 
+        // El intento queda registrado en el primero, que es el quiz del RAP abierto
+        $quiz = $quizzes[0];
+
         // 2. Obtener Preguntas del Quiz
-        $stmtPreg = $pdo->prepare('SELECT id, texto, respuesta_correcta, retroalimentacion FROM pregunta WHERE quiz_id = ?');
-        $stmtPreg->execute([$quiz['id']]);
-        $preguntas = $stmtPreg->fetchAll();
+        $preguntas = $this->obtenerPreguntasDeQuizzes($pdo, array_column($quizzes, 'id'));
         $totalPreguntas = count($preguntas);
 
         if ($totalPreguntas === 0) {
@@ -371,9 +394,11 @@ class AprendizController extends Controller {
             $stmtInsResp->execute([generarUUID(), $intentoId, $pregId, $det['elegida'], $det['es_correcto']]);
         }
 
-        // 5. Actualizar Progreso del RAP (mejor puntaje y completado)
+        // 5. Actualizar Progreso del módulo (mejor puntaje y completado)
         $progresoModel = new Progreso();
-        $progresoModel->guardarMejorPuntaje($uid, $rapId, $puntaje);
+        foreach ($rapsModulo as $idRap) {
+            $progresoModel->guardarMejorPuntaje($uid, $idRap, $puntaje);
+        }
         // HU05: el tiempo del quiz cuenta como tiempo invertido en el RAP
         $progresoModel->sumarTiempo($uid, $rapId, $duracionSeg);
 
@@ -387,8 +412,10 @@ class AprendizController extends Controller {
             // en el momento exacto en que se cruza el umbral que abre el siguiente
             $promedioModuloAntes = $this->obtenerPromedioModuloDelRap($pdo, $uid, $rapId);
 
-            // Completado al 100% al aprobar
-            $progresoModel->actualizarProgreso($uid, $rapId, 100.00, 1);
+            // Completado al 100% al aprobar, en todos los RAPs del módulo
+            foreach ($rapsModulo as $idRap) {
+                $progresoModel->actualizarProgreso($uid, $idRap, 100.00, 1);
+            }
 
             $promedioModuloDespues = $this->obtenerPromedioModuloDelRap($pdo, $uid, $rapId);
             if ($promedioModuloAntes < 80.0 && $promedioModuloDespues >= 80.0) {
@@ -455,6 +482,63 @@ class AprendizController extends Controller {
     }
 
 
+
+    /**
+     * RAPs activos del módulo al que pertenece $rapId, en orden.
+     *
+     * El mapa muestra un solo camino por módulo y la página del RAP une el
+     * contenido de todos sus RAPs, así que el avance y el quiz se registran en
+     * todos a la vez. Si solo avanzara el RAP abierto, un módulo de dos RAPs se
+     * quedaría en 50% y el siguiente no se desbloquearía nunca (umbral 80%).
+     */
+    private function obtenerRapsDelModulo(\PDO $pdo, string $rapId): array {
+        $stmt = $pdo->prepare(
+            'SELECT r.id
+             FROM rap r
+             WHERE r.activo = 1
+               AND r.nivel_id = (SELECT nivel_id FROM rap WHERE id = ? LIMIT 1)
+             ORDER BY r.orden, r.id'
+        );
+        $stmt->execute([$rapId]);
+        $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        return $ids ?: [$rapId];
+    }
+
+    /**
+     * Quizzes activos de los RAPs indicados: el del RAP abierto primero y el resto
+     * en el orden de sus RAPs. La página y la calificación usan esta misma consulta,
+     * para que el aprendiz responda exactamente lo que después se califica.
+     */
+    private function obtenerQuizzesDelModulo(\PDO $pdo, array $rapIds, string $rapAbierto): array {
+        $in = implode(',', array_fill(0, count($rapIds), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT q.*
+             FROM quiz q
+             JOIN rap r ON r.id = q.rap_id
+             WHERE q.rap_id IN ($in) AND q.activo = 1
+             ORDER BY (q.rap_id = ?) DESC, r.orden"
+        );
+        $stmt->execute([...$rapIds, $rapAbierto]);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Preguntas de los quizzes indicados, agrupadas por quiz en ese mismo orden.
+     */
+    private function obtenerPreguntasDeQuizzes(\PDO $pdo, array $quizIds): array {
+        $in = implode(',', array_fill(0, count($quizIds), '?'));
+        $stmt = $pdo->prepare(
+            "SELECT id, quiz_id, texto, opciones, respuesta_correcta, retroalimentacion
+             FROM pregunta
+             WHERE quiz_id IN ($in)
+             ORDER BY FIELD(quiz_id, $in), id"
+        );
+        $stmt->execute([...$quizIds, ...$quizIds]);
+
+        return $stmt->fetchAll();
+    }
 
     /**
      * Avance promedio del aprendiz en el módulo al que pertenece un RAP (HU05).
@@ -527,29 +611,33 @@ class AprendizController extends Controller {
             }
         }
 
-        // Ejercicios del Momento 3 de este RAP que el aprendiz aún no ha acertado nunca
+        // La página del RAP muestra el contenido de todo el módulo; las recomendaciones también
+        $rapsModulo = $this->obtenerRapsDelModulo($pdo, $rapId);
+        $inRaps     = implode(',', array_fill(0, count($rapsModulo), '?'));
+
+        // Ejercicios del Momento 3 de este módulo que el aprendiz aún no ha acertado nunca
         $stmtEj = $pdo->prepare(
-            'SELECT e.enunciado
+            "SELECT e.enunciado
              FROM ejercicio e
              JOIN intento_ejercicio ie ON ie.ejercicio_id = e.id AND ie.usuario_id = ?
-             WHERE e.rap_id = ? AND e.activo = 1
+             WHERE e.rap_id IN ($inRaps) AND e.activo = 1
              GROUP BY e.id
              HAVING MAX(ie.es_correcto) = 0
              ORDER BY COUNT(ie.id) DESC
-             LIMIT 3'
+             LIMIT 3"
         );
-        $stmtEj->execute([$uid, $rapId]);
+        $stmtEj->execute([$uid, ...$rapsModulo]);
         $ejerciciosFallados = $stmtEj->fetchAll(PDO::FETCH_COLUMN);
 
-        // Vocabulario que el propio aprendiz marcó como difícil en este RAP (HU02)
+        // Vocabulario que el propio aprendiz marcó como difícil en este módulo (HU02)
         $stmtVoc = $pdo->prepare(
-            'SELECT v.termino_en
+            "SELECT v.termino_en
              FROM vocabulario_marcado vm
              JOIN vocabulario v ON v.id = vm.vocabulario_id
-             WHERE vm.usuario_id = ? AND v.rap_id = ?
-             LIMIT 5'
+             WHERE vm.usuario_id = ? AND v.rap_id IN ($inRaps)
+             LIMIT 5"
         );
-        $stmtVoc->execute([$uid, $rapId]);
+        $stmtVoc->execute([$uid, ...$rapsModulo]);
         $vocabularioDificil = $stmtVoc->fetchAll(PDO::FETCH_COLUMN);
 
         $recomendaciones = [];

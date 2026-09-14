@@ -38,6 +38,7 @@ const MIGRACIONES = [
     '2026_08_10_crear_tabla_configuracion_gamificacion.sql',
     '2026_08_21_reubicar_raps_a_modulos.sql',
     '2026_08_21_leaderboard_semanal.sql',
+    '2026_09_14_progreso_por_modulo.sql',
 ];
 
 const INTENTOS_CONEXION = 30;

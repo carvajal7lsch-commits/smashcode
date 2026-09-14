@@ -592,6 +592,9 @@
   const marcados = <?= json_encode($marcados) ?>;
   const rapId = <?= json_encode($rap['id']) ?>;
   const totalEjercicios = <?= count($ejercicios) ?>;
+  // Ejercicios del módulo respondidos en sesiones anteriores (id => acertó), para
+  // retomar el Momento 3 donde quedó el aprendiz en lugar de empezar de cero
+  const ejerciciosRespondidos = <?= json_encode((object) ($ejerciciosRespondidos ?? [])) ?>;
   const totalQuizPreguntas = <?= count($preguntas) ?>;
   const quizMinPct = <?= (float)($quiz['puntaje_minimo'] ?? 60.00) ?>;
 
@@ -634,15 +637,30 @@
     activeTab = num;
   }
 
+  // Avance ya alcanzado en este RAP: la barra nunca retrocede, igual que en el servidor
+  let progresoActual = <?= (float) $progreso['porcentaje'] ?>;
+
+  function pintarProgreso(pct) {
+    progresoActual = Math.max(progresoActual, pct);
+    let fill = document.getElementById('header-progress-fill');
+    let txt = document.getElementById('header-progress-text');
+    if (fill) fill.style.width = progresoActual + '%';
+    if (txt) txt.textContent = Math.round(progresoActual) + '%';
+  }
+
+  // Guarda el avance y lo refleja en la barra del encabezado. Devuelve la
+  // petición para poder esperarla antes de salir de la página.
   function saveProgress(pct) {
+    pintarProgreso(pct);
+
     let formData = new FormData();
     formData.append('rap_id', rapId);
     formData.append('porcentaje', pct);
 
-    fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-progreso', {
+    return fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-progreso', {
       method: 'POST',
       body: formData
-    });
+    }).catch(() => { /* un fallo de red no debe cortar la lección */ });
   }
 
   // --- AUDIO / SPEECH SYNTHESIS CON DIFERENCIACIÓN CLARA HOMBRE / MUJER ---
@@ -781,6 +799,7 @@
         if (matchedCount === 3) {
           document.getElementById('warmup-success-msg').style.display = 'block';
           unlockMoment(2);
+          saveProgress(25);
         }
       } else {
         // MATCH incorrecto
@@ -953,36 +972,69 @@
 
   function unlockMoment3() {
     unlockMoment(3);
+    saveProgress(50);
     switchTab(3);
   }
 
   // --- MOMENTO 3: EJERCICIOS PRACTICOS PLAYER ---
+  function esRespondido(idx) {
+    let box = document.getElementById('exercise-box-' + idx);
+    return !!box && Object.prototype.hasOwnProperty.call(ejerciciosRespondidos, box.dataset.id);
+  }
+
+  // Primer ejercicio sin responder desde "desde", o totalEjercicios si no queda ninguno
+  function siguientePendiente(desde) {
+    let idx = desde;
+    while (idx < totalEjercicios && esRespondido(idx)) idx++;
+    return idx;
+  }
+
+  function mostrarEjercicio(idx) {
+    currentExerciseIdx = idx;
+    selectedColumnText = { en: '', es: '', enNode: null, esNode: null };
+    selectedOrderSeq = [];
+
+    let box = document.getElementById('exercise-box-' + idx);
+    box.style.display = 'block';
+    box.classList.add('active');
+    inicioEjercicioMs = Date.now();
+    updateExerciseHeader();
+  }
+
   function initExercises() {
     if (totalEjercicios === 0) return;
-    currentExerciseIdx = 0;
-    exercisePoints = 0;
     answersObj = {};
-    
+
     // Ocultar todos
     document.querySelectorAll('.exercise-box').forEach(b => {
       b.style.display = 'none';
       b.classList.remove('active');
     });
 
-    let firstBox = document.getElementById('exercise-box-0');
-    if (firstBox) {
-      firstBox.style.display = 'block';
-      firstBox.classList.add('active');
+    // Recuperar los puntos de lo ya respondido y seguir en el primer ejercicio pendiente
+    exercisePoints = 0;
+    for (let i = 0; i < totalEjercicios; i++) {
+      let box = document.getElementById('exercise-box-' + i);
+      if (esRespondido(i) && ejerciciosRespondidos[box.dataset.id]) exercisePoints += 10;
     }
-    
-    updateExerciseHeader();
+
+    let inicio = siguientePendiente(0);
+    if (inicio >= totalEjercicios) {
+      // Ya respondió todo en sesiones anteriores, pero el 75% no llegó a guardarse
+      currentExerciseIdx = totalEjercicios - 1;
+      updateExerciseHeader();
+      completarMomento3();
+      return;
+    }
+
+    mostrarEjercicio(inicio);
   }
 
   function updateExerciseHeader() {
     let ind = document.getElementById('exercise-number-indicator');
     let sc = document.getElementById('exercise-score-indicator');
     if (ind && sc) {
-      ind.textContent = `EJERCICIO ${currentExerciseIdx + 1} DE ${totalEjercicios}`;
+      ind.textContent = `EJERCICIO ${Math.min(currentExerciseIdx + 1, totalEjercicios)} DE ${totalEjercicios}`;
       sc.textContent = `Total: ${exercisePoints} / ${totalEjercicios * 10} Pts`;
     }
   }
@@ -1252,50 +1304,46 @@
     currentBox.style.display = 'none';
     currentBox.classList.remove('active');
 
-    let nextIdx = parseInt(exIdx) + 1;
-    
-    if (nextIdx < totalEjercicios) {
-      currentExerciseIdx = nextIdx;
-      // Reset selected column variables
-      selectedColumnText = { en: '', es: '', enNode: null, esNode: null };
-      selectedOrderSeq = [];
+    // Salta los que ya estaban respondidos de una sesión anterior
+    let nextIdx = siguientePendiente(parseInt(exIdx) + 1);
 
-      let nextBox = document.getElementById('exercise-box-' + nextIdx);
-      nextBox.style.display = 'block';
-      nextBox.classList.add('active');
-      inicioEjercicioMs = Date.now();
-      updateExerciseHeader();
+    if (nextIdx < totalEjercicios) {
+      mostrarEjercicio(nextIdx);
     } else {
       // Completó todos los ejercicios del Momento 3!
-      let userXpFormData = new FormData();
-      userXpFormData.append('rap_id', rapId);
-      userXpFormData.append('porcentaje', 75); // 75% progress
-      fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-progreso', {
-        method: 'POST',
-        body: userXpFormData
-      }).then(() => {
-        unlockMoment(4);
-        let carousel = document.getElementById('exercises-carousel');
-        let finishBox = document.createElement('div');
-        finishBox.className = 'card-moment';
-        finishBox.style.cssText = 'text-align:center; padding:32px 20px; animation:fadeInUp 0.3s ease;';
-        finishBox.innerHTML = `
-          <h3 style="color:var(--verde); font-size:1.5rem; font-weight:800; margin-bottom:12px;">
-            <i class="fas fa-check-circle" style="margin-right:8px;"></i>¡Momento 3 (Práctica) Completado!
-          </h3>
-          <p style="color:var(--texto-tenue); margin-bottom:24px;">Has realizado los ejercicios prácticos. El Momento 4 (Quiz) ya está desbloqueado.</p>
-          <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
-            <button class="btn btn-verde" onclick="finishMomentAndReturn(75)" style="padding:12px 24px; font-weight:800;">
-              <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
-            </button>
-            <button class="btn btn-morado" onclick="switchTab(4)" style="padding:12px 24px; font-weight:800;">
-              Comenzar Quiz <i class="fas fa-award" style="margin-left:8px;"></i>
-            </button>
-          </div>
-        `;
-        carousel.appendChild(finishBox);
-      });
+      completarMomento3();
     }
+  }
+
+  let momento3Completado = false;
+
+  function completarMomento3() {
+    // Se llama al terminar la práctica o al cargar si ya estaba toda respondida
+    if (momento3Completado) return;
+    momento3Completado = true;
+
+    saveProgress(75).then(() => {
+      unlockMoment(4);
+      let carousel = document.getElementById('exercises-carousel');
+      let finishBox = document.createElement('div');
+      finishBox.className = 'card-moment';
+      finishBox.style.cssText = 'text-align:center; padding:32px 20px; animation:fadeInUp 0.3s ease;';
+      finishBox.innerHTML = `
+        <h3 style="color:var(--verde); font-size:1.5rem; font-weight:800; margin-bottom:12px;">
+          <i class="fas fa-check-circle" style="margin-right:8px;"></i>¡Momento 3 (Práctica) Completado!
+        </h3>
+        <p style="color:var(--texto-tenue); margin-bottom:24px;">Has realizado los ejercicios prácticos. El Momento 4 (Quiz) ya está desbloqueado.</p>
+        <div style="display:flex; justify-content:center; gap:16px; flex-wrap:wrap; margin-top:20px;">
+          <button class="btn btn-verde" onclick="finishMomentAndReturn(75)" style="padding:12px 24px; font-weight:800;">
+            <i class="fas fa-map-marker-alt" style="margin-right:8px;"></i> Volver al Mapa
+          </button>
+          <button class="btn btn-morado" onclick="switchTab(4)" style="padding:12px 24px; font-weight:800;">
+            Comenzar Quiz <i class="fas fa-award" style="margin-left:8px;"></i>
+          </button>
+        </div>
+      `;
+      carousel.appendChild(finishBox);
+    });
   }
 
   // --- MOMENTO 4: QUIZ EVALUATION CLOSURE ---
@@ -1438,12 +1486,7 @@
       document.getElementById('session-xp').textContent = `${sessionXp} XP`;
       
       // Actualizar barra del encabezado al 100%
-      let fill = document.getElementById('header-progress-fill');
-      let txt = document.getElementById('header-progress-text');
-      if (fill && txt) {
-        fill.style.width = '100%';
-        txt.textContent = '100%';
-      }
+      pintarProgreso(100);
     } else {
       ring.style.borderColor = 'var(--rojo)';
       title.textContent = 'Sigue practicando';
@@ -1622,10 +1665,11 @@
   }
 
   function finishMomentAndReturn(pct) {
-    saveProgress(pct);
-    setTimeout(() => {
+    // Espera a que el avance quede guardado: con un tiempo fijo, una red lenta
+    // cortaba la petición al cambiar de página
+    saveProgress(pct).finally(() => {
       window.location.href = '<?= PROYECTO_PATH ?>/';
-    }, 300);
+    });
   }
 
   // --- AL CARGAR ---
