@@ -270,21 +270,20 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU16 | Registro público de aprendices | ✅ Completa | Si el correo de confirmación no sale, la cuenta igual queda activa y el aviso no lo promete |
 | HU17 | Programas de formación | ✅ Completa | — |
 | HU18 | Catálogos de áreas clínicas y categorías | ✅ Completa | Al editar una palabra se sigue mostrando el área o categoría desactivada que ya tenía asignada, para no perderla al guardar |
-| HU19 | Vocabulario médico por RAP | 🟡 Parcial | Falta el campo "traducción del ejemplo"; audio e imagen no se exigen al publicar |
+| HU19 | Vocabulario médico por RAP | ✅ Completa | Traducción del ejemplo y campos obligatorios al guardar. Audio e imagen quedan opcionales: sin audio suena la voz sintetizada |
 | HU20 | Crear ejercicios (admin) | ✅ Completa | Instrucciones, intentos y puntaje configurables, botón *Previsualizar* (abre la práctica en vista previa) y borrado lógico. El puntaje queda configurado, pero el XP de cada acierto sigue viniendo de la configuración de gamificación |
 | HU21 | Crear diálogos (admin) | ✅ Completa | Anotaciones pedagógicas, audio subido por turno (si no hay, suena la voz sintetizada) y borrado lógico de diálogos y turnos |
 | HU22 | Configurar quizzes (admin) | ✅ Completa | La publicación es por RAP (HU03): el panel marca *Incompleto* si el quiz no tiene preguntas y hay vista previa, pero no impide publicarlo |
 | HU23 | Progreso de aprendices y CSV | ✅ Completa | — |
 
-**Resumen:** 22 completas y 1 parcial, de 23 historias. Ninguna está sin empezar.
+**Resumen:** las 23 historias están completas.
 
 ## Pendientes para cerrar el proyecto
 
 Ordenados por impacto en los aprendices.
 
-1. **Criterios parciales** de HU19 (tabla anterior).
-2. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
-3. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
+1. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
+2. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
 ## Cómo trabajamos
 
@@ -297,6 +296,19 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU19 · Vocabulario:** el formulario del panel agrega la traducción del ejemplo y exige al guardar:
+  - término en inglés y español;
+  - categoría, área y dificultad;
+  - IPA, ejemplo y su traducción.
+
+  Audio e imagen quedan opcionales. Cambios en la vista del aprendiz y en el panel:
+  - la tarjeta del RAP y el glosario muestran la traducción del ejemplo y reproducen el audio subido de la palabra (si no hay, suena la voz sintetizada);
+  - editar una palabra ya no pierde dificultades antiguas como `A1`;
+  - el panel ya no falla con palabras sin IPA o sin ejemplo.
+
+  Migraciones:
+  - `2026_09_15_vocabulario_traduccion_ejemplo.sql` agrega la columna;
+  - `2026_09_15_vocabulario_traducciones_ejemplos.sql` completa la traducción de las 65 palabras existentes. Ubica cada palabra por su término y su ejemplo, y solo llena las vacías.
 - **HU21 · Diálogos:** el formulario del panel agrega anotaciones pedagógicas y audio por turno (MP3, OGG o WAV de hasta 2 MB).
   - **En la página del RAP:** si el turno tiene audio se reproduce el archivo; si no, o si falla, suena la voz sintetizada.
   - **Al editar:** los turnos conservan su id y los que se quitan quedan desactivados.

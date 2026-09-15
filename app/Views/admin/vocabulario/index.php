@@ -198,8 +198,9 @@
                             data-id="<?= $v['id'] ?>"
                             data-termino_en="<?= limpiar($v['termino_en']) ?>"
                             data-termino_es="<?= limpiar($v['termino_es']) ?>"
-                            data-transcripcion_ipa="<?= limpiar($v['transcripcion_ipa']) ?>"
-                            data-oracion_ejemplo="<?= limpiar($v['oracion_ejemplo']) ?>"
+                            data-transcripcion_ipa="<?= limpiar((string) ($v['transcripcion_ipa'] ?? '')) ?>"
+                            data-oracion_ejemplo="<?= limpiar((string) ($v['oracion_ejemplo'] ?? '')) ?>"
+                            data-traduccion_ejemplo="<?= limpiar((string) ($v['traduccion_ejemplo'] ?? '')) ?>"
                             data-categoria_id="<?= $v['categoria_id'] ?>"
                             data-area_clinica_id="<?= $v['area_clinica_id'] ?>"
                             data-nivel_dificultad="<?= $v['nivel_dificultad'] ?>"
@@ -260,13 +261,19 @@
             </div>
 
             <div class="grupo-input">
-              <label class="label-input" for="transcripcion_ipa">Transcripción IPA</label>
-              <input type="text" name="transcripcion_ipa" id="vocab-ipa" class="input-base" placeholder="Ej: kɑːrˈdiː.ə">
+              <label class="label-input" for="transcripcion_ipa">Transcripción IPA <span class="text-rojo">*</span></label>
+              <input type="text" name="transcripcion_ipa" id="vocab-ipa" class="input-base" placeholder="Ej: kɑːrˈdiː.ə" required>
+            </div>
+
+            <!-- HU19: el ejemplo y su traducción son obligatorios -->
+            <div class="grupo-input">
+              <label class="label-input" for="oracion_ejemplo">Oración de Ejemplo Clínico <span class="text-rojo">*</span></label>
+              <textarea name="oracion_ejemplo" id="vocab-oracion" class="input-base" rows="3" required></textarea>
             </div>
 
             <div class="grupo-input mb-0">
-              <label class="label-input" for="oracion_ejemplo">Oración de Ejemplo (Opcional)</label>
-              <textarea name="oracion_ejemplo" id="vocab-oracion" class="input-base" rows="3"></textarea>
+              <label class="label-input" for="traduccion_ejemplo">Traducción del Ejemplo <span class="text-rojo">*</span></label>
+              <textarea name="traduccion_ejemplo" id="vocab-traduccion-ejemplo" class="input-base" rows="2" maxlength="500" required></textarea>
             </div>
           </div>
 
@@ -309,8 +316,8 @@
 
             <div class="grid-2-col">
               <div class="grupo-input mb-0">
-                <label class="label-input" for="categoria_id">Categoría</label>
-                <select name="categoria_id" id="vocab-categoria" class="input-base">
+                <label class="label-input" for="categoria_id">Categoría <span class="text-rojo">*</span></label>
+                <select name="categoria_id" id="vocab-categoria" class="input-base" required>
                   <option value="">-- Ninguna --</option>
                   <?php foreach ($categorias as $cat): ?>
                     <option value="<?= $cat['id'] ?>"<?= empty($cat['activo']) ? ' data-activo="0" hidden disabled' : '' ?>><?= limpiar($cat['nombre']) ?><?= empty($cat['activo']) ? ' (desactivada)' : '' ?></option>
@@ -319,8 +326,8 @@
               </div>
 
               <div class="grupo-input mb-0">
-                <label class="label-input" for="area_clinica_id">Área Clínica</label>
-                <select name="area_clinica_id" id="vocab-area" class="input-base">
+                <label class="label-input" for="area_clinica_id">Área Clínica <span class="text-rojo">*</span></label>
+                <select name="area_clinica_id" id="vocab-area" class="input-base" required>
                   <option value="">-- Ninguna --</option>
                   <?php foreach ($areas as $area): ?>
                     <option value="<?= $area['id'] ?>"<?= empty($area['activo']) ? ' data-activo="0" hidden disabled' : '' ?>><?= limpiar($area['nombre']) ?><?= empty($area['activo']) ? ' (desactivada)' : '' ?></option>
@@ -330,8 +337,8 @@
             </div>
 
             <div class="grupo-input mb-0" style="margin-top: 16px;">
-              <label class="label-input" for="nivel_dificultad">Nivel de Dificultad</label>
-              <select name="nivel_dificultad" id="vocab-dificultad" class="input-base">
+              <label class="label-input" for="nivel_dificultad">Nivel de Dificultad <span class="text-rojo">*</span></label>
+              <select name="nivel_dificultad" id="vocab-dificultad" class="input-base" required>
                 <option value="basico">Básico</option>
                 <option value="intermedio" selected>Intermedio</option>
                 <option value="avanzado">Avanzado</option>
@@ -393,9 +400,18 @@
       document.getElementById('vocab-termino-es').value = btn.dataset.termino_es || '';
       document.getElementById('vocab-ipa').value = btn.dataset.transcripcion_ipa || '';
       document.getElementById('vocab-oracion').value = btn.dataset.oracion_ejemplo || '';
+      document.getElementById('vocab-traduccion-ejemplo').value = btn.dataset.traduccion_ejemplo || '';
       soloCatalogosActivos(document.getElementById('vocab-categoria'), btn.dataset.categoria_id || '');
       soloCatalogosActivos(document.getElementById('vocab-area'), btn.dataset.area_clinica_id || '');
-      document.getElementById('vocab-dificultad').value = btn.dataset.nivel_dificultad || 'intermedio';
+
+      // Los seeds guardan la dificultad como "A1": si el valor no está entre las
+      // opciones se agrega, para que editar la palabra no lo borre ni lo cambie
+      const selectDificultad = document.getElementById('vocab-dificultad');
+      const dificultad = btn.dataset.nivel_dificultad || 'intermedio';
+      if (![...selectDificultad.options].some(opcion => opcion.value === dificultad)) {
+        selectDificultad.add(new Option(dificultad + ' (valor actual)', dificultad));
+      }
+      selectDificultad.value = dificultad;
 
       const audioUrl = btn.dataset.audio_url;
       if (audioUrl) {

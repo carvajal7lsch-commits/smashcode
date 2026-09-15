@@ -41,8 +41,8 @@ class Vocabulario extends Model {
     public function crear(array $datos): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
-            'INSERT INTO vocabulario (id, rap_id, termino_en, termino_es, categoria_id, area_clinica_id, transcripcion_ipa, audio_url, imagen_url, oracion_ejemplo, nivel_dificultad, activo)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
+            'INSERT INTO vocabulario (id, rap_id, termino_en, termino_es, categoria_id, area_clinica_id, transcripcion_ipa, audio_url, imagen_url, oracion_ejemplo, traduccion_ejemplo, nivel_dificultad, activo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
         );
         return $stmt->execute([
             $datos['id'],
@@ -55,6 +55,7 @@ class Vocabulario extends Model {
             $datos['audio_url'] ?: null,
             $datos['imagen_url'] ?: null,
             $datos['oracion_ejemplo'] ?: null,
+            ($datos['traduccion_ejemplo'] ?? '') ?: null,
             $datos['nivel_dificultad'] ?: null
         ]);
     }
@@ -73,7 +74,8 @@ class Vocabulario extends Model {
                 transcripcion_ipa = ?, 
                 audio_url = ?, 
                 imagen_url = ?, 
-                oracion_ejemplo = ?, 
+                oracion_ejemplo = ?,
+                traduccion_ejemplo = ?,
                 nivel_dificultad = ?
              WHERE id = ?'
         );
@@ -86,6 +88,7 @@ class Vocabulario extends Model {
             $datos['audio_url'] ?: null,
             $datos['imagen_url'] ?: null,
             $datos['oracion_ejemplo'] ?: null,
+            ($datos['traduccion_ejemplo'] ?? '') ?: null,
             $datos['nivel_dificultad'] ?: null,
             $id
         ]);

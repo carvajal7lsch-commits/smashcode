@@ -177,6 +177,7 @@ CREATE TABLE IF NOT EXISTS vocabulario (
     audio_url        VARCHAR(255) NULL,
     imagen_url       VARCHAR(255) NULL,
     oracion_ejemplo  VARCHAR(500) NULL,
+    traduccion_ejemplo VARCHAR(500) NULL,       -- traducción del ejemplo (HU19)
     nivel_dificultad VARCHAR(50)  NULL,
     activo           TINYINT(1)   NOT NULL DEFAULT 1,
     PRIMARY KEY (id),

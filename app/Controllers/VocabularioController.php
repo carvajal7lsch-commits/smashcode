@@ -77,13 +77,15 @@ class VocabularioController extends Controller {
             'area_clinica_id'   => limpiar($_POST['area_clinica_id'] ?? ''),
             'transcripcion_ipa' => limpiar($_POST['transcripcion_ipa'] ?? ''),
             'oracion_ejemplo'   => limpiar($_POST['oracion_ejemplo'] ?? ''),
+            'traduccion_ejemplo' => limpiar($_POST['traduccion_ejemplo'] ?? ''),
             'nivel_dificultad'  => limpiar($_POST['nivel_dificultad'] ?? ''),
             'audio_url'         => null,
             'imagen_url'        => null
         ];
 
-        if (empty($datos['termino_en']) || empty($datos['termino_es'])) {
-            $this->redirect("admin/vocabulario?rap_id={$rapId}&error=" . urlencode('Los términos en inglés y español son obligatorios.'));
+        $faltantes = $this->camposFaltantes($datos);
+        if ($faltantes) {
+            $this->redirect("admin/vocabulario?rap_id={$rapId}&error=" . urlencode('Completa los campos obligatorios: ' . implode(', ', $faltantes) . '.'));
             return;
         }
 
@@ -117,10 +119,17 @@ class VocabularioController extends Controller {
             'area_clinica_id'   => limpiar($_POST['area_clinica_id'] ?? ''),
             'transcripcion_ipa' => limpiar($_POST['transcripcion_ipa'] ?? ''),
             'oracion_ejemplo'   => limpiar($_POST['oracion_ejemplo'] ?? ''),
+            'traduccion_ejemplo' => limpiar($_POST['traduccion_ejemplo'] ?? ''),
             'nivel_dificultad'  => limpiar($_POST['nivel_dificultad'] ?? ''),
             'audio_url'         => $_POST['audio_url_actual'] ?? null,
             'imagen_url'        => $_POST['imagen_url_actual'] ?? null
         ];
+
+        $faltantes = $this->camposFaltantes($datos);
+        if ($faltantes) {
+            $this->redirect("admin/vocabulario?rap_id={$rapId}&error=" . urlencode('Completa los campos obligatorios: ' . implode(', ', $faltantes) . '.'));
+            return;
+        }
 
         // Si suben un nuevo archivo, reemplazamos el existente
         if (isset($_FILES['audio']) && $_FILES['audio']['error'] === UPLOAD_ERR_OK) {
@@ -150,6 +159,31 @@ class VocabularioController extends Controller {
         }
 
         $this->redirect("admin/vocabulario?rap_id={$rapId}&exito=estado");
+    }
+
+    /**
+     * HU19: campos obligatorios de una entrada de vocabulario que llegaron vacíos.
+     * Audio e imagen son opcionales: sin audio suena la voz sintetizada.
+     */
+    private function camposFaltantes(array $datos): array {
+        $obligatorios = [
+            'termino_en'         => 'término en inglés',
+            'termino_es'         => 'traducción al español',
+            'categoria_id'       => 'categoría',
+            'area_clinica_id'    => 'área clínica',
+            'nivel_dificultad'   => 'nivel de dificultad',
+            'transcripcion_ipa'  => 'transcripción IPA',
+            'oracion_ejemplo'    => 'oración de ejemplo',
+            'traduccion_ejemplo' => 'traducción del ejemplo',
+        ];
+
+        $faltantes = [];
+        foreach ($obligatorios as $campo => $nombre) {
+            if (trim((string) ($datos[$campo] ?? '')) === '') {
+                $faltantes[] = $nombre;
+            }
+        }
+        return $faltantes;
     }
 
     /**

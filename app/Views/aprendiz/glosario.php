@@ -85,7 +85,7 @@
                   $isMarcado = in_array($v['id'], $marcados ?? []);
               ?>
                 <div class="vocab-card" id="card-<?= $v['id'] ?>">
-                    <button class="btn-play-audio" onclick="speakWord('<?= addslashes($v['termino_en']) ?>')" title="Escuchar pronunciación">
+                    <button class="btn-play-audio" onclick="reproducirPalabra(this)" data-texto="<?= htmlspecialchars($v['termino_en']) ?>"<?php if (!empty($v['audio_url'])): ?> data-audio="<?= htmlspecialchars(PROYECTO_PATH . $v['audio_url'], ENT_QUOTES) ?>"<?php endif; ?> title="Escuchar pronunciación">
                       <i class="fas fa-volume-up"></i>
                     </button>
                     
@@ -105,6 +105,10 @@
                         <?php if (!empty($v['oracion_ejemplo'])): ?>
                           <small style="color:var(--texto-secundario); font-style:italic;">"<?= htmlspecialchars($v['oracion_ejemplo']) ?>"</small>
                         <?php endif; ?>
+                        <?php if (!empty($v['traduccion_ejemplo'])): ?>
+                          <!-- HU19: traducción del ejemplo -->
+                          <small style="color:var(--texto-tenue);"><?= htmlspecialchars($v['traduccion_ejemplo']) ?></small>
+                        <?php endif; ?>
                       </div>
                     </div>
 
@@ -120,6 +124,26 @@
 </div>
 
 <script>
+  // HU19: si la palabra tiene audio subido se reproduce; si no, o si falla, la voz sintetizada
+  function reproducirPalabra(boton) {
+    let texto = boton.dataset.texto || '';
+    let src = boton.dataset.audio;
+    if (!src || typeof Audio === 'undefined') {
+      speakWord(texto);
+      return;
+    }
+    let audio = new Audio(src);
+    let yaUsoVoz = false;
+    let usarVozSintetizada = () => {
+      if (yaUsoVoz) return;
+      yaUsoVoz = true;
+      speakWord(texto);
+    };
+    audio.onerror = usarVozSintetizada;
+    let reproduccion = audio.play();
+    if (reproduccion && typeof reproduccion.catch === 'function') reproduccion.catch(usarVozSintetizada);
+  }
+
   function speakWord(text) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();

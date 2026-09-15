@@ -339,6 +339,8 @@
                 <!-- BACK -->
                 <div class="flashcard-back">
                   <div class="fc-translation" id="vocab-word-es">Traducción</div>
+                  <!-- HU19: traducción de la oración de ejemplo -->
+                  <div class="fc-example" id="vocab-word-ex-es" style="margin-top:12px;"></div>
                 </div>
               </div>
             </div>
@@ -1027,7 +1029,8 @@
     document.getElementById('vocab-word-ipa').textContent = item.transcripcion_ipa || '';
     document.getElementById('vocab-word-ex').textContent = item.oracion_ejemplo || '';
     document.getElementById('vocab-word-es').textContent = item.termino_es;
-    
+    document.getElementById('vocab-word-ex-es').textContent = item.traduccion_ejemplo || '';
+
     // Counter
     document.getElementById('vocab-counter').textContent = (vocabIndex + 1) + ' / ' + vocabulario.length;
 
@@ -1072,10 +1075,25 @@
     });
   }
 
+  // HU19: si la palabra tiene audio subido se reproduce; si no, o si falla, la voz sintetizada
   function speakVocab(event) {
     event.stopPropagation();
-    let word = vocabulario[vocabIndex].termino_en;
-    speakText(word, 'female');
+    let item = vocabulario[vocabIndex];
+    if (!item.audio_url || typeof Audio === 'undefined') {
+      speakText(item.termino_en, 'female');
+      return;
+    }
+
+    let audio = new Audio(<?= json_encode(PROYECTO_PATH) ?> + item.audio_url);
+    let yaUsoVoz = false;
+    let usarVozSintetizada = () => {
+      if (yaUsoVoz) return;
+      yaUsoVoz = true;
+      speakText(item.termino_en, 'female');
+    };
+    audio.onerror = usarVozSintetizada;
+    let reproduccion = audio.play();
+    if (reproduccion && typeof reproduccion.catch === 'function') reproduccion.catch(usarVozSintetizada);
   }
 
   function prevVocab() {
