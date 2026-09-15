@@ -110,6 +110,23 @@ Producción corre en **Dokploy** con **Autodeploy activado sobre la rama `main`*
 
 `smash_code.sql` crea las tablas con `CREATE TABLE IF NOT EXISTS`, así que **añadir una columna ahí no la crea en las bases que ya existen** (la local de cada uno y la del VPS). Todo cambio de esquema necesita también su migración. Así se perdió la columna `activo` de los catálogos (ver HU18).
 
+### Probar una migración de datos antes de desplegarla
+
+```bash
+php database/probar_migracion.php database/migraciones/<archivo>.sql
+```
+
+Ejecuta la migración dentro de una transacción, muestra cuántas filas cambiaría por columna (con ejemplos de antes y después) y la revierte. Solo acepta migraciones de `UPDATE` de una línea: una sentencia de estructura confirmaría la transacción. Para probarla en el VPS, súbela **sin agregarla todavía a `migrar.php`**, córrela desde *Open Terminal* y regístrala en un segundo push.
+
+### Tildes y caracteres especiales
+
+El contenido del VPS se cargó por un camino que **borró los caracteres no ASCII**: "Módulo" quedó "Mdulo", la IPA `/θərˈmɒmɪtər/` quedó `/rmmtr/` y se perdieron los `¡¿`, las rayas y los emojis. Algunas insignias quedaron además mal codificadas ("Estudiante Ã‰lite"). La base del VPS sí guarda tildes (MySQL 8, `utf8mb4`).
+
+La migración `2026_09_15_restaurar_tildes.sql` restauró 124 filas. Solo reemplaza un texto si coincide byte a byte con la forma dañada de un texto de los seeds, así que lo editado a mano no se toca. El archivo está en ASCII con los textos en hexadecimal.
+
+- **No pegues contenido con tildes en la terminal de Dokploy.** Súbelo como archivo (seed o migración) o créalo desde el panel de administración.
+- `normalizarTextoEspanol()` en `includes/funciones.php` parchaba el texto dañado al mostrarlo. Con la base restaurada ya no hace falta, pero sigue activa dentro de `limpiar()`. Retirarla es una decisión pendiente del equipo, porque también modifica lo que escriben los usuarios (un nombre "Ramirez" se guarda como "Ramírez").
+
 ### Seeds
 
 Los seeds **borran y recrean** el contenido de su RAP, incluidos los intentos de quiz asociados. Sirven para una base nueva o local. **No los ejecutes en producción**: se perdería el historial de los aprendices.
@@ -232,9 +249,9 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 
 Ordenados por impacto en los aprendices.
 
-1. **Corregir las tildes perdidas en la base del VPS.** Hoy se parchean palabra por palabra con `normalizarTextoEspanol()` en `includes/funciones.php`. Conviene hacerlo antes de cargar el RAP 6.
-2. **Cargar el contenido del RAP 6** (Módulo 4). No tiene seed; el guion completo está en `contenidos.md`. Incluye la Grammar Pill del Módulo 4.
-3. **Criterios parciales** de HU13, HU14, HU19, HU20, HU21 y HU22 (tabla anterior).
+1. **Cargar el contenido del RAP 6** (Módulo 4). No tiene seed; el guion completo está en `contenidos.md`. Incluye la Grammar Pill del Módulo 4.
+2. **Criterios parciales** de HU13, HU14, HU19, HU20, HU21 y HU22 (tabla anterior).
+3. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 4. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
 ## Cómo trabajamos
@@ -247,10 +264,13 @@ Ordenados por impacto en los aprendices.
 
 ## Cambios recientes
 
-**14 de septiembre de 2026**
+**15 de septiembre de 2026**
+- **Tildes del VPS:** la migración `2026_09_15_restaurar_tildes.sql` restaura las tildes, signos, emojis y la pronunciación IPA que se borraron al cargar el contenido (124 filas; las 49 IPA vuelven a leerse). Se probó antes en el VPS con el nuevo `database/probar_migracion.php`.
 - **HU18 · catálogos:** las áreas clínicas y categorías desactivadas ya no salen al crear vocabulario ni en los filtros del glosario. Las bases creadas antes no tenían la columna `activo` (por eso el panel de Catálogos escondía el botón de desactivar); la migración `2026_09_14_activo_en_catalogos.sql` la añade con todo activo.
 - **HU22 · quiz:** el temporizador usa el límite configurado por el administrador (antes siempre 5 minutos) y la bienvenida muestra el número real de preguntas.
 - **HU16 · registro:** el aprendiz recibe un correo de confirmación. Los correos ahora van en UTF-8 (las tildes llegaban dañadas, también en la recuperación de contraseña) y esperan como máximo 10 segundos al servidor de correo.
+
+**14 de septiembre de 2026**
 - **Progreso por módulo:** nadie podía pasar del Módulo 2, porque el avance se guardaba solo en el primer RAP de cada módulo y el siguiente exige 80%. Ahora el avance y la aprobación del quiz cuentan para todos los RAPs del módulo, el quiz califica todas las preguntas que muestra, cada momento guarda su avance al terminarlo y la práctica se retoma donde quedó. La migración `2026_09_14_progreso_por_modulo.sql` desatasca a quienes ya estaban bloqueados.
 - **Sesión expirada:** si la sesión caducaba, el avance, los ejercicios y el quiz se perdían sin aviso, porque las peticiones de la página recibían la página de login como respuesta. Ahora el servidor responde `401` a esas peticiones y el RAP muestra un aviso: lo pendiente se guarda al volver a iniciar sesión. En *Mi Vocabulario* y el *Glosario* la estrella avisa y lleva al login.
 - **RAPs duplicados:** la migración `2026_09_14_retirar_raps_duplicados.sql` retira las dos filas sobrantes del VPS, inactivas y sin actividad de aprendices, y añade una restricción única para que no vuelva a pasar.
