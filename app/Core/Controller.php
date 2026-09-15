@@ -51,4 +51,15 @@ abstract class Controller {
         header('Location: ' . $destino);
         exit;
     }
+
+    /**
+     * Indica si la petición la hizo el JavaScript de la página y espera JSON,
+     * en lugar de ser una navegación normal del navegador.
+     */
+    protected function esPeticionAjax(): bool {
+        $conXhr   = strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') === 0;
+        $pideJson = stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false;
+
+        return $conXhr || $pideJson;
+    }
 }

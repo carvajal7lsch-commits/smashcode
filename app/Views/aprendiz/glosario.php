@@ -143,10 +143,17 @@
 
     fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/marcar-vocabulario', {
       method: 'POST',
-      body: formData
+      body: formData,
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
     })
     .then(r => r.json())
     .then(d => {
+      if (d.sesion_expirada) {
+        // Aquí no hay avance que perder: basta con volver a iniciar sesión
+        alert(d.error);
+        window.location.href = '<?= PROYECTO_PATH ?>/login';
+        return;
+      }
       if (d.exito) {
         let icon = btnNode.querySelector('i');
         if (d.marcado) {

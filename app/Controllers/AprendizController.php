@@ -14,6 +14,19 @@ class AprendizController extends Controller {
         parent::__construct();
         iniciarSesion();
         if (!estaAutenticado() || !in_array(obtenerRolSesion(), ['aprendiz', 'admin', 'instructor'])) {
+            // Las peticiones en segundo plano (avance, ejercicios, quiz) no pueden seguir
+            // una redirección: el navegador tomaría la página de login como respuesta y
+            // el avance se perdería sin aviso. Un 401 le permite a la vista avisar.
+            if ($this->esPeticionAjax()) {
+                http_response_code(401);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'exito'           => false,
+                    'sesion_expirada' => true,
+                    'error'           => 'Tu sesión expiró. Vuelve a iniciar sesión para seguir guardando tu avance.'
+                ]);
+                exit;
+            }
             $this->redirect('login');
         }
     }

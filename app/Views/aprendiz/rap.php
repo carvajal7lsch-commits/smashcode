@@ -637,6 +637,67 @@
     activeTab = num;
   }
 
+  // --- COMUNICACIÓN CON EL SERVIDOR ---
+  // Todo lo que el RAP guarda pasa por aquí. Si la sesión caducó, el servidor responde
+  // 401: la petición queda en espera, se avisa al aprendiz y se reenvía cuando vuelve a
+  // iniciar sesión. Sin esto, el navegador tomaría la página de login como respuesta y
+  // el avance se perdería sin aviso.
+  let peticionesEnEspera = [];
+
+  function enviarAlServidor(ruta, datos) {
+    return new Promise((resolve, reject) => {
+      const intentar = () => fetch('<?= PROYECTO_PATH ?>' + ruta, {
+        method: 'POST',
+        body: datos,
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+      })
+      .then(res => {
+        if (res.status === 401) {
+          peticionesEnEspera.push(intentar);
+          avisarSesionExpirada();
+          return;
+        }
+        return res.json().then(resolve);
+      })
+      .catch(reject);
+
+      intentar();
+    });
+  }
+
+  function avisarSesionExpirada() {
+    let aviso = document.getElementById('aviso-sesion-expirada');
+    if (!aviso) {
+      aviso = document.createElement('div');
+      aviso.id = 'aviso-sesion-expirada';
+      aviso.setAttribute('role', 'alert');
+      aviso.style.cssText = 'position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:2000; width:min(560px, calc(100% - 32px)); background:var(--blanco); color:var(--gris-texto); border:2px solid var(--rojo); border-radius:16px; padding:18px 20px; box-shadow:0 12px 32px rgba(0,0,0,0.25); flex-direction:column; gap:14px;';
+      aviso.innerHTML = `
+        <div style="display:flex; gap:10px; align-items:flex-start;">
+          <i class="fas fa-lock" style="color:var(--rojo); margin-top:3px;"></i>
+          <div>
+            <strong>Tu sesión expiró por inactividad.</strong>
+            <div style="font-size:0.9rem; margin-top:4px; color:var(--texto-tenue);">Tu avance está en pausa: se guardará en cuanto vuelvas a iniciar sesión.</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
+          <a class="btn btn-azul" href="<?= PROYECTO_PATH ?>/login" target="_blank" rel="noopener" style="padding:10px 18px; font-weight:800;">Iniciar sesión en otra pestaña</a>
+          <button type="button" class="btn btn-verde" onclick="reintentarEnEspera()" style="padding:10px 18px; font-weight:800;">Ya inicié sesión: guardar</button>
+        </div>`;
+      document.body.appendChild(aviso);
+    }
+    aviso.style.display = 'flex';
+  }
+
+  function reintentarEnEspera() {
+    let pendientes = peticionesEnEspera;
+    peticionesEnEspera = [];
+    let aviso = document.getElementById('aviso-sesion-expirada');
+    if (aviso) aviso.style.display = 'none';
+    // Si la sesión sigue inactiva, cada petición vuelve a la espera y el aviso reaparece
+    pendientes.forEach(intentar => intentar());
+  }
+
   // Avance ya alcanzado en este RAP: la barra nunca retrocede, igual que en el servidor
   let progresoActual = <?= (float) $progreso['porcentaje'] ?>;
 
@@ -657,10 +718,8 @@
     formData.append('rap_id', rapId);
     formData.append('porcentaje', pct);
 
-    return fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-progreso', {
-      method: 'POST',
-      body: formData
-    }).catch(() => { /* un fallo de red no debe cortar la lección */ });
+    return enviarAlServidor('/aprendiz/rap/guardar-progreso', formData)
+      .catch(() => { /* un fallo de red no debe cortar la lección */ });
   }
 
   // --- AUDIO / SPEECH SYNTHESIS CON DIFERENCIACIÓN CLARA HOMBRE / MUJER ---
@@ -863,11 +922,7 @@
     let formData = new FormData();
     formData.append('vocabulario_id', item.id);
 
-    fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/marcar-vocabulario', {
-      method: 'POST',
-      body: formData
-    })
-    .then(r => r.json())
+    enviarAlServidor('/aprendiz/rap/marcar-vocabulario', formData)
     .then(d => {
       if (d.exito) {
         if (d.marcado) {
@@ -1293,10 +1348,8 @@
     datos.append('tiempo_respuesta_ms', Math.max(0, Date.now() - inicioEjercicioMs));
     if (ans.opcionId) datos.append('opcion_id', ans.opcionId);
 
-    fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-ejercicio', {
-      method: 'POST',
-      body: datos
-    }).catch(() => { /* un fallo de red no debe cortar la leccion */ });
+    enviarAlServidor('/aprendiz/rap/guardar-ejercicio', datos)
+      .catch(() => { /* un fallo de red no debe cortar la leccion */ });
   }
 
   function nextExercise(exIdx) {
@@ -1441,17 +1494,16 @@
       formData.append(`respuestas[${pId}]`, answersData[pId]);
     }
 
-    fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/guardar-quiz', {
-      method: 'POST',
-      body: formData
-    })
-    .then(r => r.json())
+    enviarAlServidor('/aprendiz/rap/guardar-quiz', formData)
     .then(data => {
       if (data.exito) {
         showQuizResults(data);
       } else {
         alert("Ocurrió un error al procesar el Quiz: " + data.error);
       }
+    })
+    .catch(() => {
+      alert("No se pudo enviar el quiz. Revisa tu conexión y vuelve a presentarlo.");
     });
   }
 
