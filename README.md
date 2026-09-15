@@ -114,7 +114,7 @@ Los seeds **borran y recrean** el contenido de su RAP, incluidos los intentos de
 
 ### RAPs duplicados en producción
 
-En la base del VPS hay RAPs repetidos: varias filas ocupando el mismo módulo y la misma posición. La base local está sana (6 RAPs, uno por posición).
+En la base del VPS quedaron RAPs repetidos: varias filas ocupando el mismo módulo y la misma posición. La base local está sana (6 RAPs, uno por posición).
 
 El diagnóstico del 14 de septiembre encontró dos filas sobrantes, las dos **inactivas y sin progreso ni intentos de quiz**:
 
@@ -122,6 +122,8 @@ El diagnóstico del 14 de septiembre encontró dos filas sobrantes, las dos **in
 |---|---|---|
 | Módulo 2 · 2 (RAP 3) | `dc9c7dea` | Copia con 5 ejercicios duplicados |
 | Módulo 3 · 2 (RAP 5) | `0da2ae35` | Es la fila original, vacía; la activa es la que creó el seed (`e3f72737`) |
+
+La migración `2026_09_14_retirar_raps_duplicados.sql` las retira junto con su contenido. Solo retira una fila si está inactiva, tiene una fila activa en su misma posición y ningún aprendiz depende de ella (sin progreso, intentos de ejercicio o de quiz, respuestas ni vocabulario marcado). Cuando ya no quedan posiciones repetidas, añade la restricción única `uk_rap_posicion (nivel_id, orden)`: desde entonces la base rechaza un segundo RAP en una posición ocupada.
 
 - **Causa:** la tabla `rap` no tiene restricción única por módulo y posición, y la migración que reubicó los 6 RAPs de los 6 niveles originales en 4 módulos movió filas a posiciones que los seeds ya habían ocupado.
 - **Por qué parecían copias exactas:** los paneles de RAPs muestran un título canónico según la posición, no el título guardado. Ahora cada tarjeta repetida lleva la etiqueta **Duplicado** junto con su título real y su identificador.
@@ -228,12 +230,11 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 
 Ordenados por impacto en los aprendices.
 
-1. **Limpiar los RAPs duplicados del VPS.** Ya están diagnosticados (ver [RAPs duplicados en producción](#raps-duplicados-en-producción)); falta la migración que retire las dos filas sobrantes y añada la restricción única.
-2. **Arreglos rápidos:** las áreas y categorías desactivadas siguen como opción al crear vocabulario (HU18), el temporizador del quiz está fijo en 5 minutos (HU22) y el registro no envía correo de confirmación (HU16).
-3. **Corregir las tildes perdidas en la base del VPS.** Hoy se parchean palabra por palabra con `normalizarTextoEspanol()` en `includes/funciones.php`. Conviene hacerlo antes de cargar el RAP 6.
-4. **Cargar el contenido del RAP 6** (Módulo 4). No tiene seed; el guion completo está en `contenidos.md`. Incluye la Grammar Pill del Módulo 4.
-5. **Criterios parciales** de HU13, HU14, HU16, HU18, HU19, HU20, HU21 y HU22 (tabla anterior).
-6. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
+1. **Arreglos rápidos:** las áreas y categorías desactivadas siguen como opción al crear vocabulario (HU18), el temporizador del quiz está fijo en 5 minutos (HU22) y el registro no envía correo de confirmación (HU16).
+2. **Corregir las tildes perdidas en la base del VPS.** Hoy se parchean palabra por palabra con `normalizarTextoEspanol()` en `includes/funciones.php`. Conviene hacerlo antes de cargar el RAP 6.
+3. **Cargar el contenido del RAP 6** (Módulo 4). No tiene seed; el guion completo está en `contenidos.md`. Incluye la Grammar Pill del Módulo 4.
+4. **Criterios parciales** de HU13, HU14, HU16, HU18, HU19, HU20, HU21 y HU22 (tabla anterior).
+5. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
 ## Cómo trabajamos
 
@@ -248,6 +249,7 @@ Ordenados por impacto en los aprendices.
 **14 de septiembre de 2026**
 - **Progreso por módulo:** nadie podía pasar del Módulo 2, porque el avance se guardaba solo en el primer RAP de cada módulo y el siguiente exige 80%. Ahora el avance y la aprobación del quiz cuentan para todos los RAPs del módulo, el quiz califica todas las preguntas que muestra, cada momento guarda su avance al terminarlo y la práctica se retoma donde quedó. La migración `2026_09_14_progreso_por_modulo.sql` desatasca a quienes ya estaban bloqueados.
 - **Sesión expirada:** si la sesión caducaba, el avance, los ejercicios y el quiz se perdían sin aviso, porque las peticiones de la página recibían la página de login como respuesta. Ahora el servidor responde `401` a esas peticiones y el RAP muestra un aviso: lo pendiente se guarda al volver a iniciar sesión. En *Mi Vocabulario* y el *Glosario* la estrella avisa y lleva al login.
+- **RAPs duplicados:** la migración `2026_09_14_retirar_raps_duplicados.sql` retira las dos filas sobrantes del VPS, inactivas y sin actividad de aprendices, y añade una restricción única para que no vuelva a pasar.
 - HU23 completa: el instructor ve solo a los aprendices de su programa; los filtros de nivel, RAP y estado se pueden combinar sin errores y ya no esconden a quien no ha empezado; avance por RAP visible al filtrar; selectores sin módulos repetidos; CSV protegido contra fórmulas.
 - Paneles de RAPs: aviso **Duplicado** con el título y el identificador reales, y la fila activa primero.
 - Nuevo `database/diagnostico_raps.php` para revisar la tabla `rap` sin modificarla.
