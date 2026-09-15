@@ -91,6 +91,8 @@ docker compose up -d --build
 
 El contenedor `web` ejecuta `docker-entrypoint.sh`, que corre `database/migrar.php` antes de arrancar Apache. Las migraciones son idempotentes, así que reiniciar el contenedor nunca duplica cambios. Las credenciales llegan como variables de entorno desde `docker-compose.yml`.
 
+Los audios e imágenes que se suben desde el panel se guardan en `assets/uploads/`, que en Docker es el volumen `uploads`. Sin ese volumen se perdían en cada despliegue. El entrypoint crea la carpeta y se la asigna a `www-data` antes de arrancar Apache. Localmente la carpeta está en `.gitignore`.
+
 ## Despliegue
 
 Producción corre en **Dokploy** con **Autodeploy activado sobre la rama `main`** del repositorio `carvajal7lsch-commits/smashcode`.
@@ -270,17 +272,17 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU18 | Catálogos de áreas clínicas y categorías | ✅ Completa | Al editar una palabra se sigue mostrando el área o categoría desactivada que ya tenía asignada, para no perderla al guardar |
 | HU19 | Vocabulario médico por RAP | 🟡 Parcial | Falta el campo "traducción del ejemplo"; audio e imagen no se exigen al publicar |
 | HU20 | Crear ejercicios (admin) | ✅ Completa | Instrucciones, intentos y puntaje configurables, botón *Previsualizar* (abre la práctica en vista previa) y borrado lógico. El puntaje queda configurado, pero el XP de cada acierto sigue viniendo de la configuración de gamificación |
-| HU21 | Crear diálogos (admin) | 🟡 Parcial | Faltan anotaciones pedagógicas y audio individual por turno |
+| HU21 | Crear diálogos (admin) | ✅ Completa | Anotaciones pedagógicas, audio subido por turno (si no hay, suena la voz sintetizada) y borrado lógico de diálogos y turnos |
 | HU22 | Configurar quizzes (admin) | ✅ Completa | La publicación es por RAP (HU03): el panel marca *Incompleto* si el quiz no tiene preguntas y hay vista previa, pero no impide publicarlo |
 | HU23 | Progreso de aprendices y CSV | ✅ Completa | — |
 
-**Resumen:** 21 completas y 2 parciales, de 23 historias. Ninguna está sin empezar.
+**Resumen:** 22 completas y 1 parcial, de 23 historias. Ninguna está sin empezar.
 
 ## Pendientes para cerrar el proyecto
 
 Ordenados por impacto en los aprendices.
 
-1. **Criterios parciales** de HU19 y HU21 (tabla anterior).
+1. **Criterios parciales** de HU19 (tabla anterior).
 2. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 3. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
@@ -295,6 +297,13 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU21 · Diálogos:** el formulario del panel agrega anotaciones pedagógicas y audio por turno (MP3, OGG o WAV de hasta 2 MB).
+  - **En la página del RAP:** si el turno tiene audio se reproduce el archivo; si no, o si falla, suena la voz sintetizada.
+  - **Al editar:** los turnos conservan su id y los que se quitan quedan desactivados.
+  - **Al eliminar un diálogo:** se desactiva.
+  - **Error corregido:** el panel de diálogos fallaba si un diálogo no tenía contexto.
+  - **Migración:** `2026_09_15_dialogos_anotaciones_y_turnos.sql`.
+  - **Volumen nuevo `uploads` en `docker-compose.yml`:** lo subido ya no se pierde al desplegar.
 - **HU20 · Ejercicios:** el formulario del panel agrega instrucciones (se muestran al aprendiz), máximo de intentos y puntaje, y el botón *Previsualizar*. Eliminar un ejercicio ahora lo desactiva. Se corrigen dos errores:
   - eliminar un ejercicio que algún aprendiz ya había respondido fallaba, porque sus intentos lo impedían;
   - una opción sin retroalimentación rompía la página del RAP para los aprendices.

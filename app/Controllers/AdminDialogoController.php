@@ -67,6 +67,9 @@ class AdminDialogoController extends Controller {
         $titulo = $_POST['titulo'] ?? '';
         $contexto = $_POST['contexto'] ?? '';
         $participantes = $_POST['participantes'] ?? '';
+        // HU21: anotaciones pedagógicas del escenario
+        $anotaciones = trim((string) ($_POST['anotaciones'] ?? ''));
+        $anotaciones = $anotaciones === '' ? null : mb_substr($anotaciones, 0, 1000);
 
         if (empty($rapId) || empty($titulo)) {
             http_response_code(400);
@@ -86,30 +89,66 @@ class AdminDialogoController extends Controller {
                     'rap_id' => $rapId,
                     'titulo' => $titulo,
                     'contexto' => $contexto,
-                    'participantes' => $participantes
+                    'participantes' => $participantes,
+                    'anotaciones' => $anotaciones
                 ]);
             } else {
                 $dialogoModel->actualizar($dialogoId, [
                     'titulo' => $titulo,
                     'contexto' => $contexto,
-                    'participantes' => $participantes
+                    'participantes' => $participantes,
+                    'anotaciones' => $anotaciones
                 ]);
-                $turnoModel->eliminarPorDialogo($dialogoId);
             }
 
-            // Guardar turnos
-            if (isset($_POST['turnos']) && is_array($_POST['turnos'])) {
-                foreach ($_POST['turnos'] as $idx => $t) {
-                    if (empty($t['hablante']) || empty($t['texto_en'])) continue;
+            // HU21: los turnos se actualizan por id, los nuevos se agregan y los que el
+            // admin quitó se desactivan. Antes se borraban todos y se volvían a crear.
+            $turnosActuales = [];
+            foreach ($turnoModel->obtenerPorDialogo($dialogoId) as $actual) {
+                $turnosActuales[$actual['id']] = $actual;
+            }
+            $idsEnviados = [];
+            $orden = 0;
 
-                    $turnoModel->crear([
-                        'dialogo_id' => $dialogoId,
-                        'orden_turno' => $idx + 1,
-                        'hablante' => $t['hablante'],
-                        'texto_en' => $t['texto_en'],
-                        'texto_es' => $t['texto_es'] ?? ''
-                    ]);
+            foreach ((isset($_POST['turnos']) && is_array($_POST['turnos'])) ? $_POST['turnos'] : [] as $idx => $t) {
+                if (empty($t['hablante']) || empty($t['texto_en'])) continue;
+                $orden++;
+
+                $turnoId = (string) ($t['id'] ?? '');
+                $existe  = $turnoId !== '' && isset($turnosActuales[$turnoId]);
+
+                // El audio se toma de la base (no del formulario): se conserva, se quita o se reemplaza
+                $audioUrl = $existe ? $turnosActuales[$turnoId]['audio_url'] : null;
+                if (!empty($t['quitar_audio'])) {
+                    $audioUrl = null;
                 }
+                $archivo = $this->archivoDeTurno($idx);
+                if ($archivo !== null) {
+                    $audioUrl = $this->subirAudioTurno($archivo);
+                    if ($audioUrl === null) {
+                        throw new \RuntimeException("El audio del turno {$orden} no es válido: usa MP3, OGG o WAV de hasta 2 MB.");
+                    }
+                }
+
+                $datosTurno = [
+                    'dialogo_id' => $dialogoId,
+                    'orden_turno' => $orden,
+                    'hablante' => $t['hablante'],
+                    'texto_en' => $t['texto_en'],
+                    'texto_es' => $t['texto_es'] ?? '',
+                    'audio_url' => $audioUrl
+                ];
+
+                if ($existe) {
+                    $turnoModel->actualizar($turnoId, $datosTurno);
+                    $idsEnviados[] = $turnoId;
+                } else {
+                    $idsEnviados[] = $turnoModel->crear($datosTurno);
+                }
+            }
+
+            foreach (array_diff(array_keys($turnosActuales), $idsEnviados) as $idQuitado) {
+                $turnoModel->desactivar($idQuitado);
             }
 
             $pdo->commit();
@@ -156,5 +195,71 @@ class AdminDialogoController extends Controller {
             http_response_code(500);
             echo json_encode(['error' => 'No se pudo eliminar el diálogo']);
         }
+    }
+
+    /**
+     * Archivo de audio enviado para el turno $idx (campo turnos[idx][audio]), o null si no se
+     * envió ninguno. Un archivo que no llegó bien (por ejemplo, demasiado grande) es un error.
+     */
+    private function archivoDeTurno($idx): ?array {
+        $archivos = $_FILES['turnos'] ?? null;
+        if (!is_array($archivos) || !isset($archivos['error'][$idx]['audio'])) {
+            return null;
+        }
+
+        $error = (int) $archivos['error'][$idx]['audio'];
+        if ($error === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+        if ($error !== UPLOAD_ERR_OK) {
+            throw new \RuntimeException('No se pudo recibir el audio de un turno: usa MP3, OGG o WAV de hasta 2 MB.');
+        }
+
+        return [
+            'name'     => (string) $archivos['name'][$idx]['audio'],
+            'tmp_name' => (string) $archivos['tmp_name'][$idx]['audio'],
+            'size'     => (int) $archivos['size'][$idx]['audio'],
+        ];
+    }
+
+    /**
+     * Guarda el audio de un turno en assets/uploads/audios (HU21) y devuelve su ruta pública,
+     * o null si no es MP3, OGG o WAV de hasta 2 MB. En Docker esa carpeta es un volumen,
+     * así que lo subido sobrevive a los despliegues.
+     */
+    private function subirAudioTurno(array $archivo): ?string {
+        $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
+        if (!in_array($extension, ['mp3', 'ogg', 'wav'], true) || $archivo['size'] <= 0 || $archivo['size'] > 2 * 1024 * 1024) {
+            return null;
+        }
+
+        // Además de la extensión, el contenido debe ser audio
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mime  = $finfo ? (string) finfo_file($finfo, $archivo['tmp_name']) : '';
+            if ($finfo) {
+                finfo_close($finfo);
+            }
+            if (!str_starts_with($mime, 'audio/') && !in_array($mime, ['application/ogg', 'video/ogg'], true)) {
+                return null;
+            }
+        }
+
+        $directorio = dirname(__DIR__, 2) . '/assets/uploads/audios/';
+        if (!is_dir($directorio) && !mkdir($directorio, 0775, true)) {
+            return null;
+        }
+
+        $nombre = generarUUID() . '.' . $extension;
+        return $this->moverArchivo($archivo['tmp_name'], $directorio . $nombre)
+            ? '/assets/uploads/audios/' . $nombre
+            : null;
+    }
+
+    /**
+     * Mueve el archivo recibido por HTTP. Aparte para poder probar la subida desde la terminal.
+     */
+    protected function moverArchivo(string $origen, string $destino): bool {
+        return is_uploaded_file($origen) && move_uploaded_file($origen, $destino);
     }
 }

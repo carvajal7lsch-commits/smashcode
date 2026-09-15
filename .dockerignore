@@ -7,6 +7,9 @@
 .env.*
 !.env.example
 
+# Lo subido desde un panel local no se hornea en la imagen; en Docker vive en un volumen
+assets/uploads/
+
 # El contenedor corre su propio composer install
 vendor/
 

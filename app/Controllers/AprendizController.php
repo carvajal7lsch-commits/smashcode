@@ -87,7 +87,8 @@ class AprendizController extends Controller {
         $dialogos = $stmtDia->fetchAll();
 
         foreach ($dialogos as &$d) {
-            $stmtTur = $pdo->prepare('SELECT * FROM turno_dialogo WHERE dialogo_id = ? ORDER BY orden_turno ASC');
+            // Solo turnos activos: los quitados desde el panel se conservan desactivados (HU21)
+            $stmtTur = $pdo->prepare('SELECT * FROM turno_dialogo WHERE dialogo_id = ? AND activo = 1 ORDER BY orden_turno ASC');
             $stmtTur->execute([$d['id']]);
             $d['turnos'] = $stmtTur->fetchAll();
         }

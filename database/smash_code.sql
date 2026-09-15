@@ -206,6 +206,7 @@ CREATE TABLE IF NOT EXISTS dialogo (
     titulo           VARCHAR(255) NOT NULL,
     contexto         VARCHAR(500) NULL,
     participantes    VARCHAR(255) NULL,
+    anotaciones      VARCHAR(1000) NULL,        -- notas pedagógicas (HU21)
     audio_completo_url VARCHAR(255) NULL,
     activo           TINYINT(1)   NOT NULL DEFAULT 1,
     PRIMARY KEY (id),
@@ -221,6 +222,7 @@ CREATE TABLE IF NOT EXISTS turno_dialogo (
     texto_en    VARCHAR(1000) NOT NULL,
     texto_es    VARCHAR(1000) NOT NULL,
     audio_url   VARCHAR(255)  NULL,
+    activo      TINYINT(1)    NOT NULL DEFAULT 1,  -- borrado lógico (HU21)
     PRIMARY KEY (id),
     CONSTRAINT fk_turno_dialogo FOREIGN KEY (dialogo_id) REFERENCES dialogo(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

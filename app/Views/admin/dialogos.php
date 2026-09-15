@@ -107,8 +107,13 @@
                 </td>
                 <td>
                   <div style="font-size:0.85rem; color:var(--texto-secundario);">
-                    <?= limpiar($d['contexto']) ?>
+                    <?= limpiar((string) ($d['contexto'] ?? '')) ?>
                   </div>
+                  <?php if (!empty($d['anotaciones'])): ?>
+                    <div style="font-size:0.78rem; color:var(--texto-secundario); margin-top:4px;" title="<?= limpiar($d['anotaciones']) ?>">
+                      <i class="fas fa-note-sticky"></i> Con anotaciones pedagógicas
+                    </div>
+                  <?php endif; ?>
                   <?php if ($d['participantes']): ?>
                     <span class="badge-area" style="margin-top:4px; display:inline-block;">
                       <i class="fas fa-users" style="font-size:0.65rem;"></i> <?= limpiar($d['participantes']) ?>
@@ -169,6 +174,13 @@
           <label class="label-input">Participantes (Personajes)</label>
           <input type="text" class="input-base" id="dial-participantes" name="participantes" placeholder="Ej: Nurse, Patient">
         </div>
+      </div>
+
+      <!-- HU21: anotaciones pedagógicas -->
+      <div class="grupo-input">
+        <label class="label-input">Anotaciones Pedagógicas</label>
+        <textarea class="input-base" id="dial-anotaciones" name="anotaciones" rows="2" maxlength="1000" placeholder="Ej: Refuerza el Present Continuous para describir lo que se hace en el momento."></textarea>
+        <small class="form-hint">Opcional. Notas del escenario para instructores y administradores.</small>
       </div>
 
       <!-- Turnos de Conversación (Chat Builder) -->
@@ -233,6 +245,7 @@
     document.getElementById('dial-titulo').value = d.titulo;
     document.getElementById('dial-contexto').value = d.contexto || '';
     document.getElementById('dial-participantes').value = d.participantes || '';
+    document.getElementById('dial-anotaciones').value = d.anotaciones || '';
     
     document.getElementById('contenedor-turnos').innerHTML = '';
     turnoIndex = 0;
@@ -253,17 +266,35 @@
     const hablante = data ? data.hablante : 'Nurse';
     const textoEn = data ? data.texto_en : '';
     const textoEs = data ? data.texto_es : '';
-    
+    const turnoId = data && data.id ? data.id : '';
+    const audioUrl = data && data.audio_url ? data.audio_url : '';
+    const escapar = (v) => String(v).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+
+    // HU21: audio individual por turno (si no hay, suena la voz sintetizada)
+    const audioActual = audioUrl ? `
+          <div style="display:flex; align-items:center; gap:8px; margin-top:6px; flex-wrap:wrap;">
+            <audio controls preload="none" src="<?= PROYECTO_PATH ?>${escapar(audioUrl)}" style="height:32px; max-width:100%;"></audio>
+            <label style="font-size:0.75rem; font-weight:700; color:var(--rojo); display:flex; align-items:center; gap:4px; cursor:pointer;">
+              <input type="checkbox" name="turnos[${idx}][quitar_audio]" value="1"> Quitar audio
+            </label>
+          </div>` : '';
+
     const html = `
       <div class="turno-row" id="turno-row-${idx}">
+        <input type="hidden" name="turnos[${idx}][id]" value="${escapar(turnoId)}">
         <div style="width:140px; flex-shrink:0;">
           <label style="font-size:0.75rem; font-weight:700; color:var(--texto-secundario); margin-bottom:4px; display:block;">Hablante</label>
-          <input type="text" class="input-base" name="turnos[${idx}][hablante]" value="${hablante.replace(/"/g, '&quot;')}" placeholder="Ej: Nurse" required>
+          <input type="text" class="input-base" name="turnos[${idx}][hablante]" value="${escapar(hablante)}" placeholder="Ej: Nurse" required>
         </div>
         <div style="flex:1;">
           <label style="font-size:0.75rem; font-weight:700; color:var(--texto-secundario); margin-bottom:4px; display:block;">Texto en Inglés (EN)</label>
-          <input type="text" class="input-base" name="turnos[${idx}][texto_en]" value="${textoEn.replace(/"/g, '&quot;')}" placeholder="Good morning, what is your name?" required>
-          <input type="text" class="input-base" style="margin-top:6px; font-size:0.8rem; background:rgba(0,0,0,0.05);" name="turnos[${idx}][texto_es]" value="${textoEs.replace(/"/g, '&quot;')}" placeholder="Traducción en Español (ES)">
+          <input type="text" class="input-base" name="turnos[${idx}][texto_en]" value="${escapar(textoEn)}" placeholder="Good morning, what is your name?" required>
+          <input type="text" class="input-base" style="margin-top:6px; font-size:0.8rem; background:rgba(0,0,0,0.05);" name="turnos[${idx}][texto_es]" value="${escapar(textoEs)}" placeholder="Traducción en Español (ES)">
+          <label style="font-size:0.72rem; font-weight:700; color:var(--texto-secundario); margin:8px 0 2px 0; display:block;">
+            ${audioUrl ? 'Reemplazar audio' : 'Audio del turno'} (MP3, OGG o WAV, máx. 2 MB; opcional)
+          </label>
+          <input type="file" class="input-base" style="font-size:0.78rem; padding:4px;" name="turnos[${idx}][audio]" accept=".mp3,.ogg,.wav,audio/*">
+          ${audioActual}
         </div>
         <div style="margin-top:24px;">
           <button type="button" class="btn-accion btn-suspender" style="width:32px; height:32px;" onclick="document.getElementById('turno-row-${idx}').remove()">
@@ -305,7 +336,7 @@
   }
 
   function eliminarDialogo(id) {
-    if (!confirm('¿Estás seguro de eliminar este diálogo?')) return;
+    if (!confirm('¿Eliminar este diálogo? Dejará de verse para los aprendices, pero se conserva en la base de datos.')) return;
     
     const formData = new FormData();
     formData.append('id', id);

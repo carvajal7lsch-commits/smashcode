@@ -21,6 +21,10 @@ services:
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI}
     depends_on:
       - db
+    # Audios e imágenes subidos desde el panel (HU19/HU21). Sin volumen se
+    # borraban en cada despliegue, porque viven dentro del contenedor.
+    volumes:
+      - uploads:/var/www/html/assets/uploads
     networks:
       - smashcode_network
   db:
@@ -35,6 +39,7 @@ services:
       - smashcode_network
 volumes:
   db_data:
+  uploads:
 networks:
   smashcode_network:
     driver: bridge

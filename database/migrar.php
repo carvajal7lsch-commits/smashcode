@@ -46,6 +46,7 @@ const MIGRACIONES = [
     '2026_09_15_quiz_rondas_y_preguntas_activas.sql',
     '2026_09_15_insignias_por_modulo.sql',
     '2026_09_15_ejercicio_instrucciones.sql',
+    '2026_09_15_dialogos_anotaciones_y_turnos.sql',
 ];
 
 const INTENTOS_CONEXION = 30;

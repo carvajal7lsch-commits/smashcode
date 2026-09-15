@@ -13,6 +13,9 @@
 /scratch/
 .gemini/
 
+# Audios e imágenes subidos desde el panel (en Docker viven en un volumen)
+/assets/uploads/
+
 # Archivos del sistema operativo
 Thumbs.db
 Desktop.ini

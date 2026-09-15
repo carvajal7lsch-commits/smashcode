@@ -389,6 +389,7 @@
                 <div class="chat-bubble <?= $isRightBubble ? 'right' : 'left' ?>" 
                      id="turno-<?= $t['id'] ?>" 
                      data-text-en="<?= limpiar($t['texto_en']) ?>"
+                     <?php if (!empty($t['audio_url'])): ?>data-audio="<?= htmlspecialchars(PROYECTO_PATH . $t['audio_url'], ENT_QUOTES) ?>"<?php endif; ?>
                      data-speaker="<?= $speakerGender ?>">
                   <div class="chat-sender">
                     <i class="fas fa-<?= $speakerGender === 'male' ? 'mars' : 'venus' ?>" style="margin-right:4px; font-size:0.8rem; color:<?= $speakerGender === 'male' ? 'var(--azul)' : 'var(--naranja)' ?>;"></i><?= limpiar($t['hablante']) ?>
@@ -1099,8 +1100,56 @@
   let dialogTimeoutList = [];
   const reproductorDialogo = { diaId: null, burbujas: [], idx: 0, estado: 'detenido', sesion: 0 };
 
+  // HU21: si el turno tiene audio subido se reproduce el archivo; si no hay, o si el
+  // archivo falla, se usa la voz sintetizada. Devuelve un objeto con onend/onerror,
+  // igual que speakText, o null si no hay forma de reproducir.
+  let audioTurnoActual = null;
+
+  function detenerAudioTurno() {
+    if (!audioTurnoActual) return;
+    let audio = audioTurnoActual;
+    audioTurnoActual = null;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+  }
+
+  function hablarTurno(bubble) {
+    let texto = bubble.getAttribute('data-text-en');
+    let voz = bubble.getAttribute('data-speaker') || 'female';
+    let src = bubble.getAttribute('data-audio');
+    if (!src || typeof Audio === 'undefined') return speakText(texto, voz);
+
+    let control = { onend: null, onerror: null };
+    let audio = new Audio(src);
+    audioTurnoActual = audio;
+
+    let usarVozSintetizada = () => {
+      if (audioTurnoActual !== audio) return; // ya se detuvo o se usó la voz sintetizada
+      audioTurnoActual = null;
+      let utterance = speakText(texto, voz);
+      if (!utterance) {
+        if (control.onerror) control.onerror();
+        return;
+      }
+      utterance.onend = () => { if (control.onend) control.onend(); };
+      utterance.onerror = () => { if (control.onerror) control.onerror(); };
+    };
+
+    audio.onended = () => {
+      if (audioTurnoActual !== audio) return;
+      audioTurnoActual = null;
+      if (control.onend) control.onend();
+    };
+    audio.onerror = usarVozSintetizada;
+    let reproduccion = audio.play();
+    if (reproduccion && typeof reproduccion.catch === 'function') reproduccion.catch(usarVozSintetizada);
+    return control;
+  }
+
   function cortarVozDialogo() {
     reproductorDialogo.sesion++;
+    detenerAudioTurno();
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -1148,7 +1197,7 @@
     if (bubble.scrollIntoView) bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     pintarControlesDialogo();
 
-    let utterance = speakText(bubble.getAttribute('data-text-en'), bubble.getAttribute('data-speaker') || 'female');
+    let utterance = hablarTurno(bubble);
     if (!utterance) {
       // Navegador sin síntesis de voz
       stopAudioPlayback();
@@ -1214,7 +1263,7 @@
 
     let sesion = reproductorDialogo.sesion;
     bubble.classList.add('active-highlight');
-    let utterance = speakText(bubble.getAttribute('data-text-en'), bubble.getAttribute('data-speaker') || 'female');
+    let utterance = hablarTurno(bubble);
     if (!utterance) {
       bubble.classList.remove('active-highlight');
       return;
