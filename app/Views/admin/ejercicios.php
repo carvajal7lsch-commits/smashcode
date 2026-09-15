@@ -56,7 +56,11 @@
             </p>
           </div>
         </div>
-        <div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <!-- HU20: previsualizar la práctica como la ve el aprendiz, sin guardar nada -->
+          <a href="<?= htmlspecialchars(PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id']) . '&momento=3', ENT_QUOTES) ?>" target="_blank" rel="noopener" class="btn btn-azul" style="padding:10px 18px; font-weight:700; text-decoration:none;" title="Abre la práctica en modo vista previa">
+            <i class="fas fa-eye"></i> Previsualizar
+          </a>
           <button type="button" onclick="abrirModalEjercicio()" class="btn btn-verde" style="padding:10px 18px; font-weight:700;">
             <i class="fas fa-plus"></i> Añadir Ejercicio
           </button>
@@ -104,11 +108,19 @@
                   <span class="badge-categoria" style="text-transform: uppercase;">
                     <?= limpiar(str_replace('_', ' ', $ej['tipo'])) ?>
                   </span>
+                  <div style="font-size:0.75rem; color:var(--texto-secundario); margin-top:6px; font-weight:600;">
+                    <?= (int) $ej['max_intentos'] ?> intentos · <?= (int) $ej['puntos'] ?> pts
+                  </div>
                 </td>
                 <td>
                   <div style="font-weight:600; color:var(--texto-principal);">
                     <?= limpiar($ej['enunciado']) ?>
                   </div>
+                  <?php if (!empty($ej['instrucciones'])): ?>
+                    <div style="font-size:0.8rem; color:var(--texto-secundario); margin-top:4px;">
+                      <i class="fas fa-circle-info"></i> <?= limpiar($ej['instrucciones']) ?>
+                    </div>
+                  <?php endif; ?>
                 </td>
                 <td class="text-center">
                   <span class="badge-area">
@@ -163,11 +175,29 @@
       </div>
 
       <div class="grupo-input">
-        <label class="label-input">Enunciado / Instrucción del Ejercicio <span class="text-rojo">*</span></label>
+        <label class="label-input">Enunciado del Ejercicio <span class="text-rojo">*</span></label>
         <textarea class="input-base" id="ej-enunciado" name="enunciado" rows="2" required placeholder="Ej: Complete the sentence: I ___ a nurse."></textarea>
         <small class="form-hint" id="helper-enunciado" style="color:var(--verde); font-weight:600; margin-top:4px; display:block;">
           Para "Completar Frase", usa "___" (tres guiones bajos) donde irá el espacio en blanco.
         </small>
+      </div>
+
+      <!-- HU20: instrucciones, intentos y puntaje -->
+      <div class="grupo-input">
+        <label class="label-input">Instrucciones para el Aprendiz</label>
+        <textarea class="input-base" id="ej-instrucciones" name="instrucciones" rows="2" maxlength="500" placeholder="Ej: Lee la situación y elige la respuesta más adecuada para el paciente."></textarea>
+        <small class="form-hint">Opcional. Se muestra debajo del enunciado.</small>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px;">
+        <div class="grupo-input" style="margin:0;">
+          <label class="label-input">Máximo de Intentos <span class="text-rojo">*</span></label>
+          <input type="number" class="input-base" id="ej-max-intentos" name="max_intentos" value="3" min="1" max="10" required>
+        </div>
+        <div class="grupo-input" style="margin:0;">
+          <label class="label-input">Puntaje (puntos) <span class="text-rojo">*</span></label>
+          <input type="number" class="input-base" id="ej-puntos" name="puntos" value="10" min="1" max="100" required>
+        </div>
       </div>
 
       <!-- Contenedor dinámico de opciones -->
@@ -230,7 +260,10 @@
     document.getElementById('modal-titulo-ejercicio').textContent = 'Editar Ejercicio';
     document.getElementById('ej-tipo').value = ej.tipo;
     document.getElementById('ej-enunciado').value = ej.enunciado;
-    
+    document.getElementById('ej-instrucciones').value = ej.instrucciones || '';
+    document.getElementById('ej-max-intentos').value = ej.max_intentos || 3;
+    document.getElementById('ej-puntos').value = ej.puntos || 10;
+
     document.getElementById('contenedor-opciones').innerHTML = '';
     opcionIndex = 0;
     
@@ -317,7 +350,7 @@
   }
 
   function eliminarEjercicio(id) {
-    if (!confirm('¿Estás seguro de eliminar este ejercicio?')) return;
+    if (!confirm('¿Eliminar este ejercicio? Dejará de verse para los aprendices, pero su historial de intentos se conserva.')) return;
     
     const formData = new FormData();
     formData.append('id', id);

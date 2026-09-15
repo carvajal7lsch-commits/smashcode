@@ -269,18 +269,18 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU17 | Programas de formación | ✅ Completa | — |
 | HU18 | Catálogos de áreas clínicas y categorías | ✅ Completa | Al editar una palabra se sigue mostrando el área o categoría desactivada que ya tenía asignada, para no perderla al guardar |
 | HU19 | Vocabulario médico por RAP | 🟡 Parcial | Falta el campo "traducción del ejemplo"; audio e imagen no se exigen al publicar |
-| HU20 | Crear ejercicios (admin) | 🟡 Parcial | Faltan instrucciones, configurar máximo de intentos y puntaje, y previsualización |
+| HU20 | Crear ejercicios (admin) | ✅ Completa | Instrucciones, intentos y puntaje configurables, botón *Previsualizar* (abre la práctica en vista previa) y borrado lógico. El puntaje queda configurado, pero el XP de cada acierto sigue viniendo de la configuración de gamificación |
 | HU21 | Crear diálogos (admin) | 🟡 Parcial | Faltan anotaciones pedagógicas y audio individual por turno |
 | HU22 | Configurar quizzes (admin) | ✅ Completa | La publicación es por RAP (HU03): el panel marca *Incompleto* si el quiz no tiene preguntas y hay vista previa, pero no impide publicarlo |
 | HU23 | Progreso de aprendices y CSV | ✅ Completa | — |
 
-**Resumen:** 20 completas y 3 parciales, de 23 historias. Ninguna está sin empezar.
+**Resumen:** 21 completas y 2 parciales, de 23 historias. Ninguna está sin empezar.
 
 ## Pendientes para cerrar el proyecto
 
 Ordenados por impacto en los aprendices.
 
-1. **Criterios parciales** de HU19, HU20 y HU21 (tabla anterior).
+1. **Criterios parciales** de HU19 y HU21 (tabla anterior).
 2. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 3. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
@@ -295,6 +295,11 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU20 · Ejercicios:** el formulario del panel agrega instrucciones (se muestran al aprendiz), máximo de intentos y puntaje, y el botón *Previsualizar*. Eliminar un ejercicio ahora lo desactiva. Se corrigen dos errores:
+  - eliminar un ejercicio que algún aprendiz ya había respondido fallaba, porque sus intentos lo impedían;
+  - una opción sin retroalimentación rompía la página del RAP para los aprendices.
+
+  La migración `2026_09_15_ejercicio_instrucciones.sql` agrega la columna; después del pull, corre `php database/migrar.php`.
 - **HU13 · Diálogos:** botones *Pause*, *Resume* y *Previous Line* mientras suena un diálogo. Corregido además un error: al pulsar *Stop* o tocar un turno suelto, el diálogo completo podía seguir sonando, porque el navegador dispara el fin de la línea al cancelar la voz.
 - **HU07 · Insignias:** cada módulo da su insignia al aprobarlo con 90% o más (antes solo el Módulo 1). "Vocabulario Pro" se gana con 30 palabras y "Estudiante Élite" al completar todos los módulos; antes ningún código las otorgaba. Ya no se repite el anuncio de una insignia que el aprendiz tenía. La migración `2026_09_15_insignias_por_modulo.sql` entrega las insignias ya ganadas.
 - **HU22 · Quizzes:** el máximo de intentos se valida por ronda, se puede aleatorizar el orden de las preguntas y borrar una pregunta es lógico. La migración `2026_09_15_quiz_rondas_y_preguntas_activas.sql` agrega `progreso.ronda_quiz_desde` y `pregunta.activo`, y da una ronda nueva a quien ya podía presentar el quiz. **Después de hacer pull, corre `php database/migrar.php`**: sin esas columnas la página del RAP falla.

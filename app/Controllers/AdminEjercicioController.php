@@ -68,6 +68,12 @@ class AdminEjercicioController extends Controller {
         $enunciado = $_POST['enunciado'] ?? '';
         $orden = $_POST['orden'] ?? 1;
 
+        // HU20: instrucciones, máximo de intentos y puntaje de cada ejercicio
+        $instrucciones = trim((string) ($_POST['instrucciones'] ?? ''));
+        $instrucciones = $instrucciones === '' ? null : mb_substr($instrucciones, 0, 500);
+        $maxIntentos   = max(1, min(10, (int) ($_POST['max_intentos'] ?? 3)));
+        $puntos        = max(1, min(100, (int) ($_POST['puntos'] ?? 10)));
+
         if (empty($rapId) || empty($tipo) || empty($enunciado)) {
             http_response_code(400);
             echo json_encode(['error' => 'Datos incompletos']);
@@ -86,13 +92,19 @@ class AdminEjercicioController extends Controller {
                 $ejercicioId = $ejercicioModel->crear([
                     'rap_id' => $rapId,
                     'tipo' => $tipo,
-                    'enunciado' => $enunciado
+                    'enunciado' => $enunciado,
+                    'instrucciones' => $instrucciones,
+                    'max_intentos' => $maxIntentos,
+                    'puntos' => $puntos
                 ]);
             } else {
                 // Actualizar
                 $ejercicioModel->actualizar($ejercicioId, [
                     'tipo' => $tipo,
-                    'enunciado' => $enunciado
+                    'enunciado' => $enunciado,
+                    'instrucciones' => $instrucciones,
+                    'max_intentos' => $maxIntentos,
+                    'puntos' => $puntos
                 ]);
                 // Eliminar opciones antiguas para recrearlas
                 $opcionModel->eliminarPorEjercicio($ejercicioId);

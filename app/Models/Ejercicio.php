@@ -5,9 +5,13 @@ use App\Core\Model;
 use PDO;
 
 class Ejercicio extends Model {
+    /**
+     * Ejercicios activos del RAP. Los eliminados desde el panel se conservan
+     * desactivados para no perder el historial de intentos (HU20).
+     */
     public function obtenerPorRap(string $rapId): array {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT * FROM ejercicio WHERE rap_id = ? ORDER BY id ASC');
+        $stmt = $pdo->prepare('SELECT * FROM ejercicio WHERE rap_id = ? AND activo = 1 ORDER BY id ASC');
         $stmt->execute([$rapId]);
         return $stmt->fetchAll();
     }
@@ -23,29 +27,39 @@ class Ejercicio extends Model {
         $pdo = self::obtenerConexion();
         // El id se genera automáticamente por uuid() en BD si no se envía, pero es mejor generarlo en PHP para usarlo
         $id = isset($datos['id']) ? $datos['id'] : generarUUID();
-        $stmt = $pdo->prepare('INSERT INTO ejercicio (id, rap_id, tipo, enunciado) VALUES (?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO ejercicio (id, rap_id, tipo, enunciado, instrucciones, max_intentos, puntos) VALUES (?, ?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $id,
             $datos['rap_id'],
             $datos['tipo'],
-            $datos['enunciado']
+            $datos['enunciado'],
+            $datos['instrucciones'] ?? null,
+            $datos['max_intentos'] ?? 3,
+            $datos['puntos'] ?? 10
         ]);
         return $id;
     }
 
     public function actualizar(string $id, array $datos): bool {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('UPDATE ejercicio SET tipo = ?, enunciado = ? WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE ejercicio SET tipo = ?, enunciado = ?, instrucciones = ?, max_intentos = ?, puntos = ? WHERE id = ?');
         return $stmt->execute([
             $datos['tipo'],
             $datos['enunciado'],
+            $datos['instrucciones'] ?? null,
+            $datos['max_intentos'] ?? 3,
+            $datos['puntos'] ?? 10,
             $id
         ]);
     }
 
+    /**
+     * Borrado lógico (HU20): intento_ejercicio apunta al ejercicio con RESTRICT, así
+     * que un DELETE fallaba en cuanto un aprendiz lo había respondido.
+     */
     public function eliminar(string $id): bool {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('DELETE FROM ejercicio WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE ejercicio SET activo = 0 WHERE id = ?');
         return $stmt->execute([$id]);
     }
 }

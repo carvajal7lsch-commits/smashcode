@@ -432,6 +432,12 @@
                 <?php if ($ej['tipo'] !== 'completar_frase'): ?>
                   <div class="exercise-title"><?= limpiar($ej['enunciado']) ?></div>
                 <?php endif; ?>
+                <?php if (!empty($ej['instrucciones'])): ?>
+                  <!-- HU20: instrucciones configuradas por el administrador -->
+                  <p class="exercise-instrucciones" style="margin:-16px 0 20px 0; color:var(--texto-tenue); font-weight:600; font-size:0.95rem;">
+                    <i class="fas fa-circle-info" style="color:var(--azul); margin-right:6px;"></i><?= limpiar($ej['instrucciones']) ?>
+                  </p>
+                <?php endif; ?>
                 
                 <div class="exercise-content">
                   <?php if ($ej['tipo'] === 'seleccion_multiple' || $ej['tipo'] === 'role_play'): ?>
@@ -439,7 +445,7 @@
                       <?php foreach ($ej['opciones'] as $opcIdx => $opc): 
                         $badgeLetter = chr(65 + $opcIdx);
                       ?>
-                        <div class="option-item" onclick="selectOption('<?= $idx ?>', '<?= $opc['id'] ?>', this)" data-correct="<?= $opc['es_correcta'] ?>" data-retro="<?= limpiar($opc['retroalimentacion']) ?>">
+                        <div class="option-item" onclick="selectOption('<?= $idx ?>', '<?= $opc['id'] ?>', this)" data-correct="<?= $opc['es_correcta'] ?>" data-retro="<?= limpiar((string) ($opc['retroalimentacion'] ?? '')) ?>">
                           <span class="option-badge"><?= $badgeLetter ?></span>
                           <span><?= limpiar($opc['texto']) ?></span>
                         </div>

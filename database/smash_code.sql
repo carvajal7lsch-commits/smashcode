@@ -243,6 +243,7 @@ CREATE TABLE IF NOT EXISTS ejercicio (
                         'role_play'
                      ) NOT NULL,
     enunciado        VARCHAR(1000) NOT NULL,
+    instrucciones    VARCHAR(500)  NULL,        -- guía para el aprendiz (HU20)
     max_intentos     INT           NOT NULL DEFAULT 3,
     puntos           INT           NOT NULL DEFAULT 10,
     activo           TINYINT(1)   NOT NULL DEFAULT 1,
