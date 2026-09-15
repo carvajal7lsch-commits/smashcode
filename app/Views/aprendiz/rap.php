@@ -221,6 +221,55 @@
               </div>
             </div>
           </div>
+        <?php elseif ($rap['nivel_orden'] == 4): ?>
+          <h2 style="display:flex; align-items:center; gap:8px;"><i class="fas fa-pills" style="color:var(--naranja);"></i> Grammar Pill: Medical Advice vs. Reporting Results</h2>
+          <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:20px;">
+            Aprende a usar los <strong>verbos modales</strong> para dar consejos e instrucciones de alta (<em>should</em> para aconsejar, <em>must</em> para una obligación) y frases sencillas para <strong>reportar resultados</strong> de la lista de verificación.
+          </p>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; margin-bottom:12px;">
+            <!-- Columna 1: Medical Advice (Modal Verbs) -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--morado); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-user-md"></i> Medical Advice (Verbos Modales)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  You <span style="color:var(--naranja); font-weight:900;">should rest</span> at home for five days.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Debería descansar en casa cinco días)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  You <span style="color:var(--naranja); font-weight:900;">must take</span> this pill every eight hours.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(Debe tomar esta pastilla cada ocho horas)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  You <span style="color:var(--naranja); font-weight:900;">must not lift</span> heavy objects.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(No debe levantar objetos pesados)</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Columna 2: Reporting Results -->
+            <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:14px; padding:18px;">
+              <h3 style="font-size:0.9rem; font-weight:800; color:var(--azul); text-transform:uppercase; margin-bottom:14px; display:flex; align-items:center; gap:8px;">
+                <i class="fas fa-clipboard-check"></i> Reporting Results (Reporte de Resultados)
+              </h3>
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The temperature <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">normal</span>.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(La temperatura es normal)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The pain level <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">low</span>.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(El nivel de dolor es bajo)</div>
+                </div>
+                <div style="background:var(--blanco); padding:12px 14px; border-radius:10px; border:1px solid var(--gris-claro); font-size:0.95rem; font-weight:700;">
+                  The patient <span style="color:var(--azul); font-weight:900;">is</span> <span style="color:var(--verde); font-weight:900;">ready for discharge</span>.
+                  <div style="font-size:0.8rem; color:var(--texto-tenue); font-weight:600; margin-top:2px;">(El paciente está listo para el alta)</div>
+                </div>
+              </div>
+            </div>
+          </div>
         <?php else: ?>
           <h2>Grammar Pill</h2>
           <p style="color:var(--texto-tenue); margin-top:8px; margin-bottom:16px;">Analyze the grammatical structure of clinical interactions: Subject + Verb + Complement.</p>
