@@ -181,6 +181,23 @@ El **módulo es la unidad de progreso**. El mapa muestra un solo camino de cuatr
   - **Quien ya aprobó:** no tiene límite.
   - **Orden de las preguntas:** si el quiz está marcado para aleatorizar, cambia en cada visita. La calificación va por el id de cada pregunta.
 - **Preguntas borradas:** borrar una pregunta del quiz la desactiva (`pregunta.activo = 0`). Deja de verse y de calificarse, pero las respuestas históricas se conservan.
+
+### Insignias (HU07)
+
+Cada insignia se identifica por su `criterio`, y el código busca ese valor, no el nombre. Al aprobar un quiz solo se anuncian las insignias **nuevas**.
+
+| Insignia | Se gana | `criterio` |
+|---|---|---|
+| Primer Nivel | Aprobar el Módulo 1 con 90% o más | `quiz_modulo_1 >= 90` |
+| Handover Specialist | Aprobar el Módulo 2 con 90% o más | `quiz_modulo_2 >= 90` |
+| Clinical Communicator | Aprobar el Módulo 3 con 90% o más | `quiz_modulo_3 >= 90` |
+| Care Evaluator | Aprobar el Módulo 4 con 90% o más | `quiz_modulo_4 >= 90` |
+| Quiz Perfecto | Sacar 100% en un quiz | `puntaje_quiz = 100` |
+| Vocabulario Pro | Sumar 30 palabras en RAPs completados (se llega al aprobar el Módulo 2) | `vocabulario_aprendido >= 30` |
+| Estudiante Élite | Completar todos los RAPs activos | `modulos_completados = todos` |
+| Racha 7 Días | Estudiar 7 días seguidos (se revisa al abrir el perfil) | `racha_dias >= 7` |
+
+La migración `2026_09_15_insignias_por_modulo.sql` creó las tres insignias de módulo, corrigió los criterios y entregó las insignias que los aprendices ya se habían ganado.
 - El quiz del módulo reúne las preguntas de todos sus RAPs y las califica todas.
 - Un módulo se desbloquea cuando el anterior llega al 80%.
 - Si la sesión expira mientras estudia (30 minutos sin actividad), lo que intente guardar queda en espera y un aviso le pide volver a iniciar sesión en otra pestaña. Al volver y pulsar *"Ya inicié sesión: guardar"* se envía todo lo pendiente, incluido un quiz completo.
@@ -239,7 +256,7 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU04 | Gestión de usuarios | ✅ Completa | — |
 | HU05 | Panel de progreso personal | ✅ Completa | — |
 | HU06 | Seguimiento pedagógico y reportes | ✅ Completa | — |
-| HU07 | Retroalimentación inmediata e insignias | ✅ Completa | — |
+| HU07 | Retroalimentación inmediata e insignias | ✅ Completa | Cada módulo da su insignia al aprobarlo con 90% o más; "Vocabulario Pro" y "Estudiante Élite" ya se otorgan |
 | HU08 | Login seguro y recuperación de contraseña | ✅ Completa | Confirmar que la cookie de sesión viaja con `Secure` detrás del proxy del VPS |
 | HU09 | Cuentas de instructor con clave temporal | ✅ Completa | — |
 | HU10 | Editar los niveles precargados | ✅ Completa | Adaptada a 4 módulos según `contenidos.md` (la HU original habla de 6 niveles) |
@@ -264,9 +281,8 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 Ordenados por impacto en los aprendices.
 
 1. **Criterios parciales** de HU13, HU19, HU20 y HU21 (tabla anterior).
-2. **Insignias que nunca se otorgan:** "Estudiante Élite" y "Vocabulario Pro" existen en la base, pero ningún código las entrega. Hoy solo se ganan "Quiz Perfecto", "Primer Nivel" y la de racha. "Estudiante Élite" además pide 6 niveles y la ruta tiene 4 módulos.
-3. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
-4. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
+2. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
+3. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
 ## Cómo trabajamos
 
@@ -279,6 +295,7 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU07 · Insignias:** cada módulo da su insignia al aprobarlo con 90% o más (antes solo el Módulo 1). "Vocabulario Pro" se gana con 30 palabras y "Estudiante Élite" al completar todos los módulos; antes ningún código las otorgaba. Ya no se repite el anuncio de una insignia que el aprendiz tenía. La migración `2026_09_15_insignias_por_modulo.sql` entrega las insignias ya ganadas.
 - **HU22 · Quizzes:** el máximo de intentos se valida por ronda, se puede aleatorizar el orden de las preguntas y borrar una pregunta es lógico. La migración `2026_09_15_quiz_rondas_y_preguntas_activas.sql` agrega `progreso.ronda_quiz_desde` y `pregunta.activo`, y da una ronda nueva a quien ya podía presentar el quiz. **Después de hacer pull, corre `php database/migrar.php`**: sin esas columnas la página del RAP falla.
 - **HU14 · Repetir RAP:** botón en los módulos completados (mapa, página del RAP y resultados del quiz). El repaso reinicia los momentos solo en esa visita y en la base conserva el avance y el mejor puntaje.
 - **RAP 6 (Módulo 4):** tenía la fila pero ningún contenido. La migración `2026_09_15_contenido_rap6.sql` carga lo que pide `contenidos.md`, y la página del Módulo 4 tiene su propia Grammar Pill (*Medical Advice* frente a *Reporting Results*). Se probó en seco en el VPS: 68 filas nuevas. Contenido cargado:

@@ -124,7 +124,9 @@ try {
         printf("%-40s %8s %10s\n", 'columna', 'cambian', 'solo ASCII');
         foreach ($columnas as $nombre => [$tabla, $columna]) {
             $despues = valores($pdo, $tabla, $columna);
-            $cambios = array_keys(array_filter($despues, fn ($v, $k) => $v !== $antes[$nombre][$k], ARRAY_FILTER_USE_BOTH));
+            // Solo filas que ya existían: las que inserta la misma migración se cuentan
+            // en "filas nuevas" por tabla
+            $cambios = array_keys(array_filter($despues, fn ($v, $k) => array_key_exists($k, $antes[$nombre]) && $v !== $antes[$nombre][$k], ARRAY_FILTER_USE_BOTH));
             $soloAscii = count(array_filter($despues, fn ($v) => $v !== null && $v !== '' && !preg_match('/[^\x00-\x7F]/', $v)));
             printf("%-40s %8d %10d\n", $nombre, count($cambios), $soloAscii);
             foreach (array_slice($cambios, 0, 2) as $k) {

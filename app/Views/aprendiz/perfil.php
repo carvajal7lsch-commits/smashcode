@@ -269,10 +269,10 @@
           <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; justify-content:center;">
             <?php 
               $descInsigniasMap = [
-                'Primer Nivel' => 'Completaste con éxito tu primer nivel',
+                'Primer Nivel' => 'Aprobaste el Módulo 1 con 90% o más',
                 'Racha 7 Días' => '7 días consecutivos de práctica clínica',
                 'Quiz Perfecto' => 'Obtuviste 100% de aciertos en un quiz',
-                'Vocabulario Pro' => 'Aprendiste 50 términos médicos',
+                'Vocabulario Pro' => 'Aprendiste 30 términos médicos',
                 'Estudiante Élite' => 'Completaste todos los módulos del curso'
               ];
 
@@ -307,6 +307,12 @@
                     <i class="fas fa-fire"></i>
                   <?php elseif ($cleanNombre === 'Vocabulario Pro'): ?>
                     <i class="fas fa-book-medical"></i>
+                  <?php elseif ($cleanNombre === 'Handover Specialist'): ?>
+                    <i class="fas fa-people-arrows"></i>
+                  <?php elseif ($cleanNombre === 'Clinical Communicator'): ?>
+                    <i class="fas fa-comments"></i>
+                  <?php elseif ($cleanNombre === 'Care Evaluator'): ?>
+                    <i class="fas fa-clipboard-check"></i>
                   <?php else: ?>
                     <i class="fas fa-award"></i>
                   <?php endif; ?>

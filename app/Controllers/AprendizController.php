@@ -484,35 +484,36 @@ class AprendizController extends Controller {
             // HU15: actualizarXP() deja anotado si el aprendiz subio de rango
             $subioNivelPerfil = $userModel->obtenerUltimoAscensoNivel();
 
-            // Verificar e Insignias
-            // 1. "Quiz Perfecto" si obtiene 100%
+            // HU07: insignias. Cada una se identifica por su criterio y solo se anuncian
+            // las que el aprendiz gana en este intento.
+            $nuevas = [];
+
+            // "Quiz Perfecto" con 100%
             if ($puntaje === 100.00) {
-                $stmtIns = $pdo->prepare('SELECT id, nombre FROM insignia WHERE nombre = "Quiz Perfecto" LIMIT 1');
-                $stmtIns->execute();
-                $ins = $stmtIns->fetch();
-                if ($ins) {
-                    $userModel->otorgarInsignia($uid, $ins['id']);
-                    $insigniaGanada = $ins['nombre'];
-                }
+                $nuevas[] = $this->otorgarInsigniaNueva($pdo, $userModel, $uid, 'puntaje_quiz = 100');
             }
 
-            // 2. Insignia de RAP si obtiene >= 90%
+            // Una insignia por módulo al aprobar con 90% o más (M1 Primer Nivel,
+            // M2 Handover Specialist, M3 Clinical Communicator, M4 Care Evaluator)
             if ($puntaje >= 90.00) {
-                // Busquemos la insignia según el orden de nivel. Nivel 1 -> "Primer Nivel"
                 $stmtNiv = $pdo->prepare('SELECT n.orden FROM rap r JOIN nivel n ON n.id = r.nivel_id WHERE r.id = ? LIMIT 1');
                 $stmtNiv->execute([$rapId]);
-                $nivelOrden = (int)$stmtNiv->fetchColumn();
-
-                if ($nivelOrden === 1) {
-                    $stmtIns = $pdo->prepare('SELECT id, nombre FROM insignia WHERE nombre = "Primer Nivel" LIMIT 1');
-                    $stmtIns->execute();
-                    $ins = $stmtIns->fetch();
-                    if ($ins) {
-                        $userModel->otorgarInsignia($uid, $ins['id']);
-                        $insigniaGanada = $insigniaGanada ? $insigniaGanada . " y " . $ins['nombre'] : $ins['nombre'];
-                    }
-                }
+                $nivelOrden = (int) $stmtNiv->fetchColumn();
+                $nuevas[] = $this->otorgarInsigniaNueva($pdo, $userModel, $uid, 'quiz_modulo_' . $nivelOrden . ' >= 90');
             }
+
+            // "Vocabulario Pro": 30 palabras en RAPs completados
+            if ($this->palabrasAprendidas($pdo, $uid) >= 30) {
+                $nuevas[] = $this->otorgarInsigniaNueva($pdo, $userModel, $uid, 'vocabulario_aprendido >= 30');
+            }
+
+            // "Estudiante Élite": todos los RAPs activos completados
+            if ($this->completoTodosLosModulos($pdo, $uid)) {
+                $nuevas[] = $this->otorgarInsigniaNueva($pdo, $userModel, $uid, 'modulos_completados = todos');
+            }
+
+            $nuevas = array_values(array_filter($nuevas));
+            $insigniaGanada = $nuevas ? implode(' y ', $nuevas) : null;
         }
 
         echo json_encode([
@@ -558,6 +559,63 @@ class AprendizController extends Controller {
      * en el orden de sus RAPs. La página y la calificación usan esta misma consulta,
      * para que el aprendiz responda exactamente lo que después se califica.
      */
+    /**
+     * HU07: otorga la insignia de ese criterio si el aprendiz aún no la tiene.
+     * Devuelve su nombre solo cuando es nueva, para no anunciar de nuevo una ya ganada.
+     */
+    private function otorgarInsigniaNueva(\PDO $pdo, User $userModel, string $uid, string $criterio): ?string {
+        $stmt = $pdo->prepare('SELECT id, nombre FROM insignia WHERE criterio = ? LIMIT 1');
+        $stmt->execute([$criterio]);
+        $insignia = $stmt->fetch();
+        if (!$insignia) {
+            return null;
+        }
+
+        $stmt = $pdo->prepare('SELECT 1 FROM insignia_usuario WHERE usuario_id = ? AND insignia_id = ? LIMIT 1');
+        $stmt->execute([$uid, $insignia['id']]);
+        if ($stmt->fetchColumn()) {
+            return null;
+        }
+
+        return $userModel->otorgarInsignia($uid, $insignia['id']) ? $insignia['nombre'] : null;
+    }
+
+    /**
+     * HU07: palabras aprendidas = vocabulario activo de los RAPs que el aprendiz completó.
+     */
+    private function palabrasAprendidas(\PDO $pdo, string $uid): int {
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(v.id)
+             FROM progreso p
+             JOIN rap r ON r.id = p.rap_id AND r.activo = 1
+             JOIN nivel n ON n.id = r.nivel_id AND n.activo = 1
+             JOIN vocabulario v ON v.rap_id = r.id AND v.activo = 1
+             WHERE p.usuario_id = ? AND p.completado = 1'
+        );
+        $stmt->execute([$uid]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    /**
+     * HU07: completó todos los RAPs activos de los módulos activos.
+     */
+    private function completoTodosLosModulos(\PDO $pdo, string $uid): bool {
+        $total = (int) $pdo->query(
+            'SELECT COUNT(*) FROM rap r JOIN nivel n ON n.id = r.nivel_id AND n.activo = 1 WHERE r.activo = 1'
+        )->fetchColumn();
+
+        $stmt = $pdo->prepare(
+            'SELECT COUNT(DISTINCT p.rap_id)
+             FROM progreso p
+             JOIN rap r ON r.id = p.rap_id AND r.activo = 1
+             JOIN nivel n ON n.id = r.nivel_id AND n.activo = 1
+             WHERE p.usuario_id = ? AND p.completado = 1'
+        );
+        $stmt->execute([$uid]);
+
+        return $total > 0 && (int) $stmt->fetchColumn() >= $total;
+    }
+
     /**
      * HU22: intentos del quiz en la ronda actual.
      *
