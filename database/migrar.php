@@ -44,6 +44,7 @@ const MIGRACIONES = [
     '2026_09_15_restaurar_tildes.sql',
     '2026_09_15_contenido_rap6.sql',
     '2026_09_15_quiz_rondas_y_preguntas_activas.sql',
+    '2026_09_15_insignias_por_modulo.sql',
 ];
 
 const INTENTOS_CONEXION = 30;
