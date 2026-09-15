@@ -48,6 +48,7 @@ const MIGRACIONES = [
     '2026_09_15_ejercicio_instrucciones.sql',
     '2026_09_15_dialogos_anotaciones_y_turnos.sql',
     '2026_09_15_vocabulario_traduccion_ejemplo.sql',
+    '2026_09_15_vocabulario_traducciones_ejemplos.sql',
 ];
 
 const INTENTOS_CONEXION = 30;
