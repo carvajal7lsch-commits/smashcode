@@ -168,7 +168,13 @@ El **módulo es la unidad de progreso**. El mapa muestra un solo camino de cuatr
 | 4. Quiz | 100% y completado | Solo al aprobar el quiz |
 
 - El avance nunca retrocede, y desde el navegador no se puede guardar más de 75%.
-- Si el aprendiz sale a mitad de la práctica, al volver sigue en el primer ejercicio que no ha respondido, con los puntos que ya había ganado. Si el RAP ya estaba terminado, la práctica empieza de cero (repetición, HU14).
+- Si el aprendiz sale a mitad de la práctica, al volver sigue en el primer ejercicio que no ha respondido, con los puntos que ya había ganado. Si el RAP ya estaba terminado, la práctica empieza de cero.
+- **Repetir un RAP (HU14):** un módulo completado muestra el botón *Repetir RAP* en el mapa, en la página del RAP y en los resultados del quiz. Abre la página con `repetir=1`, y en esa visita se trabaja como la primera vez:
+  - se empieza en el Momento 1 con los demás bloqueados y la barra en 0%;
+  - la práctica arranca de cero;
+  - cada quiz queda como un intento nuevo.
+
+  En la base no baja nada: el avance y el completado se quedan y el mejor puntaje solo sube. En un RAP sin completar o en vista previa, `repetir=1` no hace nada.
 - El quiz del módulo reúne las preguntas de todos sus RAPs y las califica todas.
 - Un módulo se desbloquea cuando el anterior llega al 80%.
 - Si la sesión expira mientras estudia (30 minutos sin actividad), lo que intente guardar queda en espera y un aviso le pide volver a iniciar sesión en otra pestaña. Al volver y pulsar *"Ya inicié sesión: guardar"* se envía todo lo pendiente, incluido un quiz completo.
@@ -234,7 +240,7 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU11 | Glosario con filtros | ✅ Completa | Audio con síntesis de voz |
 | HU12 | Los 6 tipos de ejercicios | ✅ Completa | — |
 | HU13 | Diálogos con audio sincronizado | 🟡 Parcial | Hay reproducción completa, por turno y detener; faltan pausa y retroceso |
-| HU14 | Repetir RAPs conservando el mejor puntaje | 🟡 Parcial | El mejor puntaje se conserva, pero no existe el botón "Repetir RAP" |
+| HU14 | Repetir RAPs conservando el mejor puntaje | ✅ Completa | Botón "Repetir RAP" en el mapa, en la página del RAP y en los resultados del quiz |
 | HU15 | Nivel de perfil, leaderboard y heatmap | ✅ Completa | — |
 | HU16 | Registro público de aprendices | ✅ Completa | Si el correo de confirmación no sale, la cuenta igual queda activa y el aviso no lo promete |
 | HU17 | Programas de formación | ✅ Completa | — |
@@ -245,13 +251,13 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU22 | Configurar quizzes (admin) | 🟡 Parcial | Aleatorizar no se configura ni se aplica; el máximo de intentos no se valida; no hay borrado lógico de quiz ni de preguntas |
 | HU23 | Progreso de aprendices y CSV | ✅ Completa | — |
 
-**Resumen:** 17 completas y 6 parciales, de 23 historias. Ninguna está sin empezar.
+**Resumen:** 18 completas y 5 parciales, de 23 historias. Ninguna está sin empezar.
 
 ## Pendientes para cerrar el proyecto
 
 Ordenados por impacto en los aprendices.
 
-1. **Criterios parciales** de HU13, HU14, HU19, HU20, HU21 y HU22 (tabla anterior).
+1. **Criterios parciales** de HU13, HU19, HU20, HU21 y HU22 (tabla anterior).
 2. **Insignias que nunca se otorgan:** "Estudiante Élite" y "Vocabulario Pro" existen en la base, pero ningún código las entrega. Hoy solo se ganan "Quiz Perfecto", "Primer Nivel" y la de racha. "Estudiante Élite" además pide 6 niveles y la ruta tiene 4 módulos.
 3. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 4. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
@@ -267,6 +273,7 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU14 · Repetir RAP:** botón en los módulos completados (mapa, página del RAP y resultados del quiz). El repaso reinicia los momentos solo en esa visita y en la base conserva el avance y el mejor puntaje.
 - **RAP 6 (Módulo 4):** tenía la fila pero ningún contenido. La migración `2026_09_15_contenido_rap6.sql` carga lo que pide `contenidos.md`, y la página del Módulo 4 tiene su propia Grammar Pill (*Medical Advice* frente a *Reporting Results*). Se probó en seco en el VPS: 68 filas nuevas. Contenido cargado:
   - 16 palabras con IPA; las del Warm-Up van primero;
   - el diálogo de alta de Mr. Thomas;

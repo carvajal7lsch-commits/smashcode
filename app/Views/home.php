@@ -296,6 +296,15 @@
                             <i class="fas fa-book-open" style="margin-right:6px; color:var(--duo-green);"></i>
                             <?= limpiar($nivelData['nombre']) ?>
                         </span>
+                        <?php if ($autenticado && $estadoRap === 'completado'): ?>
+                            <!-- HU14: repetir un módulo completado; el avance y el mejor puntaje se conservan -->
+                            <a href="<?= htmlspecialchars(PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id']) . '&repetir=1', ENT_QUOTES) ?>"
+                               class="btn-repetir-rap"
+                               title="Repasa el módulo desde el Momento 1. Tu avance y tu mejor puntaje se conservan."
+                               style="display:inline-block; vertical-align:middle; margin-left:8px; padding:6px 12px; border-radius:10px; background:var(--azul, #1cb0f6); color:#fff; font-size:12px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; text-decoration:none;">
+                                <i class="fas fa-redo" style="margin-right:4px;"></i> Repetir RAP
+                            </a>
+                        <?php endif; ?>
                     </div>
 
             <?php foreach ($momentosDef as $mNum => $mDef):

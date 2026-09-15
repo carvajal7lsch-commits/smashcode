@@ -14,6 +14,13 @@
   <script src="<?= PROYECTO_PATH ?>/assets/js/sonidos.js"></script>
 </head>
 <body>
+<?php
+  // HU14: en modo repaso la visita empieza de cero; la base conserva el avance real
+  $modoRepaso    = $modoRepaso ?? false;
+  $rapCompletado = $rapCompletado ?? false;
+  $pctSesion     = $modoRepaso ? 0.0 : (float) $progreso['porcentaje'];
+  $urlRepetir    = PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id']) . '&repetir=1';
+?>
 
 <?php if (isset($esPreview) && $esPreview): ?>
   <div style="background: linear-gradient(90deg, #1cb0f6, #1899d6); color: white; text-align: center; padding: 12px; font-weight: 800; font-size: 0.88rem; letter-spacing: 0.05em; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(28, 176, 246, 0.25); z-index: 1000; position: relative;">
@@ -28,9 +35,9 @@
       <i class="fas fa-times"></i>
     </button>
     <div class="progreso-header-bar">
-      <div class="progreso-header-fill" id="header-progress-fill" style="width: <?= $progreso['porcentaje'] ?>%;"></div>
+      <div class="progreso-header-fill" id="header-progress-fill" style="width: <?= $pctSesion ?>%;"></div>
     </div>
-    <div class="progreso-texto" id="header-progress-text"><?= (int)$progreso['porcentaje'] ?>%</div>
+    <div class="progreso-texto" id="header-progress-text"><?= (int) $pctSesion ?>%</div>
     
     <div class="header-xp-badge">
       <i class="fas fa-bolt"></i>
@@ -43,16 +50,30 @@
     <div class="moment-tab active" id="tab-moment-1" onclick="switchTab(1)">
       <i class="fas fa-gamepad"></i> Moment 1: Warm-Up
     </div>
-    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || $progreso['porcentaje'] >= 25 || $progreso['completado'] ? '' : 'locked' ?>" id="tab-moment-2" onclick="switchTab(2)">
+    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || (!$modoRepaso && ($progreso['porcentaje'] >= 25 || $progreso['completado'])) ? '' : 'locked' ?>" id="tab-moment-2" onclick="switchTab(2)">
       <i class="fas fa-book-reader"></i> Moment 2: Absorption
     </div>
-    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || $progreso['porcentaje'] >= 50 || $progreso['completado'] ? '' : 'locked' ?>" id="tab-moment-3" onclick="switchTab(3)">
+    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || (!$modoRepaso && ($progreso['porcentaje'] >= 50 || $progreso['completado'])) ? '' : 'locked' ?>" id="tab-moment-3" onclick="switchTab(3)">
       <i class="fas fa-dumbbell"></i> Moment 3: Practice
     </div>
-    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || $progreso['porcentaje'] >= 75 || $progreso['completado'] ? '' : 'locked' ?>" id="tab-moment-4" onclick="switchTab(4)">
+    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || (!$modoRepaso && ($progreso['porcentaje'] >= 75 || $progreso['completado'])) ? '' : 'locked' ?>" id="tab-moment-4" onclick="switchTab(4)">
       <i class="fas fa-award"></i> Moment 4: Quiz
     </div>
   </nav>
+
+  <?php if ($modoRepaso || $rapCompletado): ?>
+    <!-- HU14: repetir un RAP completado -->
+    <div id="aviso-repaso" style="max-width:960px; margin:12px auto 0 auto; padding:12px 18px; border-radius:14px; border:2px solid var(--gris-claro); background:var(--fondo); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-weight:700; color:var(--gris-texto);">
+      <?php if ($modoRepaso): ?>
+        <span><i class="fas fa-redo" style="color:var(--azul); margin-right:8px;"></i>Modo repaso: empiezas de nuevo desde el Momento 1. Tu avance y tu mejor puntaje (<?= number_format((float) $progreso['mejor_puntaje_quiz'], 0) ?>%) se conservan aunque saques menos.</span>
+      <?php else: ?>
+        <span><i class="fas fa-circle-check" style="color:var(--verde); margin-right:8px;"></i>Ya completaste este RAP. Mejor puntaje en el quiz: <?= number_format((float) $progreso['mejor_puntaje_quiz'], 0) ?>%.</span>
+        <a class="btn btn-azul" href="<?= htmlspecialchars($urlRepetir, ENT_QUOTES) ?>" style="padding:8px 16px; font-weight:800; text-decoration:none;">
+          <i class="fas fa-redo" style="margin-right:6px;"></i> Repetir RAP
+        </a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
 
   <!-- CONTENEDOR DE PANELES -->
   <main class="moments-container">
@@ -632,9 +653,17 @@
         <!-- Resumen de cierre del RAP (HU07): fortalezas, mejoras y recomendaciones -->
         <div id="quiz-resumen" style="display:none; text-align:left; max-width:640px; margin:8px auto 0 auto;"></div>
 
-        <button class="btn-verde" style="margin:24px auto 0 auto; display:block;" onclick="window.location='<?= PROYECTO_PATH ?>/'">
-          Volver al Mapa de Aprendizaje
-        </button>
+        <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:24px;">
+          <?php if (!(isset($esPreview) && $esPreview)): ?>
+            <!-- HU14: se muestra al aprobar (el RAP queda completado) o si ya lo estaba -->
+            <a class="btn btn-azul" id="btn-repetir-rap-resultados" href="<?= htmlspecialchars($urlRepetir, ENT_QUOTES) ?>" style="display:none; text-decoration:none; font-weight:800;">
+              <i class="fas fa-redo" style="margin-right:6px;"></i> Repetir RAP
+            </a>
+          <?php endif; ?>
+          <button class="btn-verde" onclick="window.location='<?= PROYECTO_PATH ?>/'">
+            Volver al Mapa de Aprendizaje
+          </button>
+        </div>
       </div>
     </section>
 
@@ -657,7 +686,9 @@
 
   // Variables de estado
   let activeTab = 1;
-  let maxTabUnlocked = <?= (isset($esPreview) && $esPreview) ? 4 : ($progreso['porcentaje'] >= 75 || $progreso['completado'] ? 4 : ($progreso['porcentaje'] >= 50 ? 3 : ($progreso['porcentaje'] >= 25 ? 2 : 1))) ?>;
+  // HU14: en modo repaso solo el Momento 1 está abierto; los demás se desbloquean al avanzar
+  const rapCompletado = <?= $rapCompletado ? 'true' : 'false' ?>;
+  let maxTabUnlocked = <?= (isset($esPreview) && $esPreview) ? 4 : ($modoRepaso ? 1 : ($progreso['porcentaje'] >= 75 || $progreso['completado'] ? 4 : ($progreso['porcentaje'] >= 50 ? 3 : ($progreso['porcentaje'] >= 25 ? 2 : 1)))) ?>;
   let vocabIndex = 0;
   let sessionXp = 0;
 
@@ -756,8 +787,9 @@
     pendientes.forEach(intentar => intentar());
   }
 
-  // Avance ya alcanzado en este RAP: la barra nunca retrocede, igual que en el servidor
-  let progresoActual = <?= (float) $progreso['porcentaje'] ?>;
+  // Avance ya alcanzado en este RAP: la barra nunca retrocede, igual que en el servidor.
+  // En modo repaso (HU14) la barra mide solo esta visita y arranca en 0.
+  let progresoActual = <?= (float) $pctSesion ?>;
 
   function pintarProgreso(pct) {
     progresoActual = Math.max(progresoActual, pct);
@@ -1609,6 +1641,12 @@
 
     pintarAvisos(data);
     pintarResumenRap(data.resumen);
+
+    // HU14: aprobar deja el RAP completado, así que ya se puede repetir
+    let btnRepetir = document.getElementById('btn-repetir-rap-resultados');
+    if (btnRepetir && (data.aprobado || rapCompletado)) {
+      btnRepetir.style.display = 'inline-block';
+    }
   }
 
   // Avisos de logro: subida de rango de perfil (HU15) y modulo desbloqueado (HU05).

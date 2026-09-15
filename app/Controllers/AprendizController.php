@@ -149,7 +149,13 @@ class AprendizController extends Controller {
             }
         }
 
-        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos'));
+        // HU14: un RAP completado se puede repetir. El repaso reinicia los momentos solo en
+        // esta visita; en la base el avance nunca baja y el mejor puntaje se conserva
+        // (actualizarProgreso y guardarMejorPuntaje guardan siempre el máximo).
+        $rapCompletado = !$esPreview && (int) $progreso['completado'] === 1;
+        $modoRepaso    = $rapCompletado && ($_GET['repetir'] ?? '') === '1';
+
+        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos', 'rapCompletado', 'modoRepaso'));
     }
 
     public function toggleVocabMarcado(): void {
