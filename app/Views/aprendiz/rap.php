@@ -360,9 +360,19 @@
           <?php foreach ($dialogos as $d): ?>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px;">
               <h3 style="font-size:1.15rem; font-weight:800; color:var(--gris-texto);"><i class="fas fa-hospital-user" style="margin-right:8px; color:var(--azul);"></i><?= limpiar($d['titulo']) ?></h3>
-              <div style="display:flex; gap:10px; align-items:center;">
+              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                 <button class="btn-play-full-dialogue" onclick="playFullDialogue('dialogue-<?= $d['id'] ?>')">
                   <i class="fas fa-play-circle"></i> Play Full Dialog
+                </button>
+                <!-- HU13: controles que aparecen mientras el diálogo está en curso -->
+                <button class="btn-control-dialogo" id="btn-prev-turn-<?= $d['id'] ?>" onclick="previousTurn()" style="display:none;" title="Volver a la línea anterior">
+                  <i class="fas fa-backward-step"></i> Previous Line
+                </button>
+                <button class="btn-control-dialogo" id="btn-pause-audio-<?= $d['id'] ?>" onclick="pauseDialogue()" style="display:none;" title="Pausar el diálogo">
+                  <i class="fas fa-pause-circle"></i> Pause
+                </button>
+                <button class="btn-control-dialogo" id="btn-resume-audio-<?= $d['id'] ?>" onclick="resumeDialogue()" style="display:none;" title="Reanudar desde la línea en pausa">
+                  <i class="fas fa-play-circle"></i> Resume
                 </button>
                 <button class="btn-stop-dialogue" id="btn-stop-audio-<?= $d['id'] ?>" onclick="stopAudioPlayback()" style="display:none;" title="Stop audio playback">
                   <i class="fas fa-stop-circle"></i> Stop Dialog
@@ -1075,69 +1085,136 @@
     }
   }
 
-  // --- STORYBOOK DIALOGUE PLAYBACK & HIGHLIGHT ---
+  // --- STORYBOOK DIALOGUE PLAYBACK & HIGHLIGHT (HU13) ---
+  // Un solo reproductor para la página: la síntesis de voz tiene un único canal.
+  // Detener, pausar, retroceder o tocar otro turno abren una sesión nueva y los
+  // eventos de la voz anterior se ignoran. Antes, al cancelar, Chrome disparaba
+  // onend y el diálogo seguía avanzando aunque se hubiera pulsado Stop.
   let dialogTimeoutList = [];
+  const reproductorDialogo = { diaId: null, burbujas: [], idx: 0, estado: 'detenido', sesion: 0 };
 
-  function stopAudioPlayback() {
+  function cortarVozDialogo() {
+    reproductorDialogo.sesion++;
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
     dialogTimeoutList.forEach(t => clearTimeout(t));
     dialogTimeoutList = [];
-    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
-    document.querySelectorAll('.btn-stop-dialogue').forEach(b => b.style.display = 'none');
   }
 
-  function playFullDialogue(diaElementId) {
-    stopAudioPlayback();
-    
-    let container = document.getElementById(diaElementId);
-    let diaId = diaElementId.replace('dialogue-', '');
-    let stopBtn = document.getElementById('btn-stop-audio-' + diaId);
-    if (stopBtn) stopBtn.style.display = 'inline-flex';
+  function pintarControlesDialogo() {
+    let r = reproductorDialogo;
+    document.querySelectorAll('.btn-stop-dialogue, .btn-control-dialogo').forEach(b => b.style.display = 'none');
+    if (r.estado === 'detenido' || !r.diaId) return;
 
-    let bubbles = Array.from(container.querySelectorAll('.chat-bubble'));
-    bubbles.forEach(b => b.classList.remove('active-highlight'));
+    let mostrar = (prefijo) => {
+      let boton = document.getElementById(prefijo + r.diaId);
+      if (boton) boton.style.display = 'inline-flex';
+    };
+    mostrar('btn-stop-audio-');
+    mostrar('btn-prev-turn-');
+    mostrar(r.estado === 'pausado' ? 'btn-resume-audio-' : 'btn-pause-audio-');
+  }
 
-    function playTurn(idx) {
-      if (idx >= bubbles.length) {
-        if (stopBtn) stopBtn.style.display = 'none';
-        return;
-      }
-      let bubble = bubbles[idx];
-      let text = bubble.getAttribute('data-text-en');
-      let speaker = bubble.getAttribute('data-speaker') || 'female';
+  function resaltarTurno(idx) {
+    reproductorDialogo.burbujas.forEach((b, i) => b.classList.toggle('active-highlight', i === idx));
+  }
 
-      bubble.classList.add('active-highlight');
-      bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  function stopAudioPlayback() {
+    cortarVozDialogo();
+    document.querySelectorAll('.chat-bubble').forEach(b => b.classList.remove('active-highlight'));
+    reproductorDialogo.estado = 'detenido';
+    pintarControlesDialogo();
+  }
 
-      let utterance = speakText(text, speaker);
-      
-      utterance.onend = () => {
-        bubble.classList.remove('active-highlight');
-        let timeout = setTimeout(() => {
-          playTurn(idx + 1);
-        }, 500);
-        dialogTimeoutList.push(timeout);
-      };
-      utterance.onerror = () => {
-        if (stopBtn) stopBtn.style.display = 'none';
-      };
+  function reproducirTurnoDialogo(idx) {
+    let r = reproductorDialogo;
+    if (idx >= r.burbujas.length) {
+      stopAudioPlayback();
+      return;
     }
-    
-    playTurn(0);
+
+    r.idx = idx;
+    r.estado = 'reproduciendo';
+    let sesion = r.sesion;
+    let bubble = r.burbujas[idx];
+    resaltarTurno(idx);
+    if (bubble.scrollIntoView) bubble.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    pintarControlesDialogo();
+
+    let utterance = speakText(bubble.getAttribute('data-text-en'), bubble.getAttribute('data-speaker') || 'female');
+    if (!utterance) {
+      // Navegador sin síntesis de voz
+      stopAudioPlayback();
+      return;
+    }
+    utterance.onend = () => {
+      if (sesion !== r.sesion) return; // se detuvo, pausó o cambió de turno
+      let timeout = setTimeout(() => {
+        if (sesion === r.sesion) reproducirTurnoDialogo(idx + 1);
+      }, 500);
+      dialogTimeoutList.push(timeout);
+    };
+    utterance.onerror = () => {
+      if (sesion === r.sesion) stopAudioPlayback();
+    };
+  }
+
+  function playFullDialogue(diaElementId, desde = 0) {
+    stopAudioPlayback();
+    let container = document.getElementById(diaElementId);
+    if (!container) return;
+
+    reproductorDialogo.diaId = diaElementId.replace('dialogue-', '');
+    reproductorDialogo.burbujas = Array.from(container.querySelectorAll('.chat-bubble'));
+    reproducirTurnoDialogo(desde);
+  }
+
+  function pauseDialogue() {
+    let r = reproductorDialogo;
+    if (r.estado !== 'reproduciendo') return;
+    cortarVozDialogo();
+    r.estado = 'pausado';
+    resaltarTurno(r.idx); // la línea en pausa sigue resaltada
+    pintarControlesDialogo();
+  }
+
+  // Reanuda repitiendo desde el principio la línea en pausa: pause() y resume() de la
+  // síntesis de voz no funcionan igual en todos los navegadores
+  function resumeDialogue() {
+    let r = reproductorDialogo;
+    if (r.estado !== 'pausado') return;
+    reproducirTurnoDialogo(r.idx);
+  }
+
+  function previousTurn() {
+    let r = reproductorDialogo;
+    if (r.estado === 'detenido') return;
+
+    let anterior = Math.max(0, r.idx - 1);
+    if (r.estado === 'pausado') {
+      r.idx = anterior;
+      resaltarTurno(anterior);
+      return;
+    }
+    cortarVozDialogo();
+    reproducirTurnoDialogo(anterior);
   }
 
   function speakSingleTurn(turnId) {
     stopAudioPlayback();
     let bubble = document.getElementById(turnId);
-    let text = bubble.getAttribute('data-text-en');
-    let speaker = bubble.getAttribute('data-speaker') || 'female';
+    if (!bubble) return;
 
+    let sesion = reproductorDialogo.sesion;
     bubble.classList.add('active-highlight');
-    let utterance = speakText(text, speaker);
-    utterance.onend = () => {
+    let utterance = speakText(bubble.getAttribute('data-text-en'), bubble.getAttribute('data-speaker') || 'female');
+    if (!utterance) {
       bubble.classList.remove('active-highlight');
+      return;
+    }
+    utterance.onend = () => {
+      if (sesion === reproductorDialogo.sesion) bubble.classList.remove('active-highlight');
     };
   }
 

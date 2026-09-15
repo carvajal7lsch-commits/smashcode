@@ -262,7 +262,7 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU10 | Editar los niveles precargados | ✅ Completa | Adaptada a 4 módulos según `contenidos.md` (la HU original habla de 6 niveles) |
 | HU11 | Glosario con filtros | ✅ Completa | Audio con síntesis de voz |
 | HU12 | Los 6 tipos de ejercicios | ✅ Completa | — |
-| HU13 | Diálogos con audio sincronizado | 🟡 Parcial | Hay reproducción completa, por turno y detener; faltan pausa y retroceso |
+| HU13 | Diálogos con audio sincronizado | ✅ Completa | Pausa, línea anterior y reanudar. Reanudar repite la línea en pausa desde el principio, porque la pausa nativa de la síntesis de voz no es confiable en todos los navegadores |
 | HU14 | Repetir RAPs conservando el mejor puntaje | ✅ Completa | Botón "Repetir RAP" en el mapa, en la página del RAP y en los resultados del quiz |
 | HU15 | Nivel de perfil, leaderboard y heatmap | ✅ Completa | — |
 | HU16 | Registro público de aprendices | ✅ Completa | Si el correo de confirmación no sale, la cuenta igual queda activa y el aviso no lo promete |
@@ -274,13 +274,13 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU22 | Configurar quizzes (admin) | ✅ Completa | La publicación es por RAP (HU03): el panel marca *Incompleto* si el quiz no tiene preguntas y hay vista previa, pero no impide publicarlo |
 | HU23 | Progreso de aprendices y CSV | ✅ Completa | — |
 
-**Resumen:** 19 completas y 4 parciales, de 23 historias. Ninguna está sin empezar.
+**Resumen:** 20 completas y 3 parciales, de 23 historias. Ninguna está sin empezar.
 
 ## Pendientes para cerrar el proyecto
 
 Ordenados por impacto en los aprendices.
 
-1. **Criterios parciales** de HU13, HU19, HU20 y HU21 (tabla anterior).
+1. **Criterios parciales** de HU19, HU20 y HU21 (tabla anterior).
 2. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 3. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
@@ -295,6 +295,7 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU13 · Diálogos:** botones *Pause*, *Resume* y *Previous Line* mientras suena un diálogo. Corregido además un error: al pulsar *Stop* o tocar un turno suelto, el diálogo completo podía seguir sonando, porque el navegador dispara el fin de la línea al cancelar la voz.
 - **HU07 · Insignias:** cada módulo da su insignia al aprobarlo con 90% o más (antes solo el Módulo 1). "Vocabulario Pro" se gana con 30 palabras y "Estudiante Élite" al completar todos los módulos; antes ningún código las otorgaba. Ya no se repite el anuncio de una insignia que el aprendiz tenía. La migración `2026_09_15_insignias_por_modulo.sql` entrega las insignias ya ganadas.
 - **HU22 · Quizzes:** el máximo de intentos se valida por ronda, se puede aleatorizar el orden de las preguntas y borrar una pregunta es lógico. La migración `2026_09_15_quiz_rondas_y_preguntas_activas.sql` agrega `progreso.ronda_quiz_desde` y `pregunta.activo`, y da una ronda nueva a quien ya podía presentar el quiz. **Después de hacer pull, corre `php database/migrar.php`**: sin esas columnas la página del RAP falla.
 - **HU14 · Repetir RAP:** botón en los módulos completados (mapa, página del RAP y resultados del quiz). El repaso reinicia los momentos solo en esa visita y en la base conserva el avance y el mejor puntaje.

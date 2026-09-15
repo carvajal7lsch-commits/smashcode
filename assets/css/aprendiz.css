@@ -672,6 +672,30 @@
       box-shadow: none;
     }
 
+    /* HU13: anterior, pausa y reanudar del diálogo */
+    .btn-control-dialogo {
+      background: var(--blanco);
+      color: var(--azul);
+      border: 2px solid var(--gris-claro);
+      padding: 8px 16px;
+      font-weight: 800;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      border-radius: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-control-dialogo:hover {
+      border-color: var(--azul);
+      transform: translateY(-2px);
+    }
+    .btn-control-dialogo:active {
+      transform: translateY(2px);
+    }
+
     /* Moment 3: Exercises Carousel */
     .exercise-box { display: none; }
     .exercise-box.active { display: block; }
