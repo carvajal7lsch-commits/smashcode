@@ -86,8 +86,18 @@
             </div>
 
             <div class="grupo-input" style="margin:0;">
-              <label class="label-input">Máximo de Intentos Permitidos</label>
+              <label class="label-input">Máximo de Intentos por Ronda</label>
               <input type="number" class="input-base" name="max_intentos" value="<?= $quiz ? (int)$quiz['max_intentos'] : 3 ?>" required min="1" max="10">
+              <small class="form-hint">Al agotarlos, el aprendiz repasa el RAP para recibir intentos nuevos. Tras aprobar no hay límite.</small>
+            </div>
+
+            <div class="grupo-input" style="margin:0;">
+              <label class="label-input">Orden de las Preguntas</label>
+              <label style="display:flex; align-items:center; gap:8px; font-weight:700; cursor:pointer; margin-top:8px;">
+                <input type="checkbox" name="aleatorizar" value="1" <?= !empty($quiz['aleatorizar']) ? 'checked' : '' ?> style="width:18px; height:18px; cursor:pointer;">
+                Aleatorizar preguntas
+              </label>
+              <small class="form-hint">Cada aprendiz las ve en un orden distinto en cada intento.</small>
             </div>
           </div>
         </div>

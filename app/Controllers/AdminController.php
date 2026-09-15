@@ -597,7 +597,7 @@ class AdminController extends Controller {
                     (SELECT COUNT(*) FROM ejercicio e WHERE e.rap_id = r.id AND e.activo = 1) AS total_ejercicios,
                     (SELECT COUNT(*) FROM dialogo d WHERE d.rap_id = r.id AND d.activo = 1) AS total_dialogos,
                     (SELECT COUNT(*) FROM quiz q WHERE q.rap_id = r.id AND q.activo = 1) AS tiene_quiz,
-                    (SELECT COUNT(p.id) FROM quiz q JOIN pregunta p ON p.quiz_id = q.id WHERE q.rap_id = r.id AND q.activo = 1) AS total_preguntas_quiz
+                    (SELECT COUNT(p.id) FROM quiz q JOIN pregunta p ON p.quiz_id = q.id AND p.activo = 1 WHERE q.rap_id = r.id AND q.activo = 1) AS total_preguntas_quiz
              FROM rap r
              JOIN nivel n ON n.id = r.nivel_id
              WHERE n.orden <= 4

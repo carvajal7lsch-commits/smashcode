@@ -48,6 +48,16 @@ class Progreso extends Model {
     }
 
     /**
+     * Empieza una ronda nueva de intentos del quiz (HU22). Se llama al terminar la
+     * práctica: los intentos reprobados anteriores dejan de contar para el límite.
+     */
+    public function iniciarRondaQuiz(string $usuarioId, string $rapId): bool {
+        $pdo = self::obtenerConexion();
+        $stmt = $pdo->prepare('UPDATE progreso SET ronda_quiz_desde = NOW() WHERE usuario_id = ? AND rap_id = ?');
+        return $stmt->execute([$usuarioId, $rapId]);
+    }
+
+    /**
      * Guarda el mejor puntaje del quiz para un RAP, conservando el mejor histórico.
      */
     public function guardarMejorPuntaje(string $usuarioId, string $rapId, float $puntaje): bool {

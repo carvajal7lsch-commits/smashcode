@@ -20,6 +20,9 @@
   $rapCompletado = $rapCompletado ?? false;
   $pctSesion     = $modoRepaso ? 0.0 : (float) $progreso['porcentaje'];
   $urlRepetir    = PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id']) . '&repetir=1';
+  // HU22: intentos del quiz en la ronda actual (null en vista previa o sin quiz)
+  $intentosQuiz  = $intentosQuiz ?? null;
+  $quizBloqueado = !empty($intentosQuiz['bloqueado']);
 ?>
 
 <?php if (isset($esPreview) && $esPreview): ?>
@@ -65,7 +68,7 @@
     <!-- HU14: repetir un RAP completado -->
     <div id="aviso-repaso" style="max-width:960px; margin:12px auto 0 auto; padding:12px 18px; border-radius:14px; border:2px solid var(--gris-claro); background:var(--fondo); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; font-weight:700; color:var(--gris-texto);">
       <?php if ($modoRepaso): ?>
-        <span><i class="fas fa-redo" style="color:var(--azul); margin-right:8px;"></i>Modo repaso: empiezas de nuevo desde el Momento 1. Tu avance y tu mejor puntaje (<?= number_format((float) $progreso['mejor_puntaje_quiz'], 0) ?>%) se conservan aunque saques menos.</span>
+        <span><i class="fas fa-redo" style="color:var(--azul); margin-right:8px;"></i>Modo repaso: empiezas de nuevo desde el Momento 1. Tu avance y tu mejor puntaje (<?= number_format((float) $progreso['mejor_puntaje_quiz'], 0) ?>%) se conservan aunque saques menos.<?php if ($quizBloqueado): ?> Al terminar la práctica (Momento 3) recibirás <?= (int) $intentosQuiz['limite'] ?> intentos nuevos para el quiz.<?php endif; ?></span>
       <?php else: ?>
         <span><i class="fas fa-circle-check" style="color:var(--verde); margin-right:8px;"></i>Ya completaste este RAP. Mejor puntaje en el quiz: <?= number_format((float) $progreso['mejor_puntaje_quiz'], 0) ?>%.</span>
         <a class="btn btn-azul" href="<?= htmlspecialchars($urlRepetir, ENT_QUOTES) ?>" style="padding:8px 16px; font-weight:800; text-decoration:none;">
@@ -592,7 +595,28 @@
             <div style="font-size:1.4rem; font-weight:900; color:var(--morado);"><?= intdiv($limiteQuizSeg, 60) ?>:<?= sprintf('%02d', $limiteQuizSeg % 60) ?> min</div>
           </div>
         </div>
-        <button class="btn btn-morado" style="display:block; width:100%; font-size:1.1rem; padding:14px 24px; font-weight:800; text-align:center; box-shadow: 0 4px 0 #a855f7;" onclick="startQuiz()">
+        <?php if ($intentosQuiz !== null): ?>
+          <!-- HU22: intentos por ronda -->
+          <p id="quiz-intentos-info" style="margin:-8px 0 16px 0; font-weight:700; color:var(--texto-tenue); text-align:center;">
+            <?php if ($intentosQuiz['sin_limite']): ?>
+              <i class="fas fa-infinity" style="margin-right:6px; color:var(--verde);"></i>Intentos sin límite: ya aprobaste este quiz.
+            <?php else: ?>
+              <i class="fas fa-rotate-right" style="margin-right:6px; color:var(--morado);"></i>Intentos en esta ronda: <span id="quiz-intentos-usados"><?= (int) $intentosQuiz['usados'] ?></span> de <?= (int) $intentosQuiz['limite'] ?>
+            <?php endif; ?>
+          </p>
+        <?php endif; ?>
+        <div id="quiz-bloqueado-box" style="display:<?= $quizBloqueado ? 'block' : 'none' ?>; background:var(--fondo); border:2px solid var(--rojo); border-radius:12px; padding:18px; text-align:center; font-weight:700; color:var(--gris-texto);">
+          <p style="margin:0 0 12px 0;">
+            <i class="fas fa-lock" style="color:var(--rojo); margin-right:6px;"></i>
+            Usaste tus <?= (int) ($intentosQuiz['limite'] ?? 0) ?> intentos de esta ronda. Repasa el RAP y termina la práctica (Momento 3) para recibir intentos nuevos. Tu avance y tu mejor puntaje se conservan.
+          </p>
+          <?php if (!$modoRepaso): ?>
+            <a class="btn btn-azul" href="<?= htmlspecialchars($urlRepetir, ENT_QUOTES) ?>" style="text-decoration:none; font-weight:800;">
+              <i class="fas fa-redo" style="margin-right:6px;"></i> Repasar el RAP
+            </a>
+          <?php endif; ?>
+        </div>
+        <button id="btn-comenzar-quiz" class="btn btn-morado" style="display:<?= $quizBloqueado ? 'none' : 'block' ?>; width:100%; font-size:1.1rem; padding:14px 24px; font-weight:800; text-align:center; box-shadow: 0 4px 0 #a855f7;" onclick="startQuiz()">
           <i class="fas fa-play-circle" style="margin-right:8px;"></i> Comenzar Evaluación
         </button>
       </div>
@@ -688,6 +712,8 @@
   let activeTab = 1;
   // HU14: en modo repaso solo el Momento 1 está abierto; los demás se desbloquean al avanzar
   const rapCompletado = <?= $rapCompletado ? 'true' : 'false' ?>;
+  // HU22: intentos del quiz en la ronda actual (null en vista previa)
+  let intentosQuiz = <?= json_encode($intentosQuiz) ?>;
   let maxTabUnlocked = <?= (isset($esPreview) && $esPreview) ? 4 : ($modoRepaso ? 1 : ($progreso['porcentaje'] >= 75 || $progreso['completado'] ? 4 : ($progreso['porcentaje'] >= 50 ? 3 : ($progreso['porcentaje'] >= 25 ? 2 : 1)))) ?>;
   let vocabIndex = 0;
   let sessionXp = 0;
@@ -1467,6 +1493,7 @@
 
     saveProgress(75).then(() => {
       unlockMoment(4);
+      abrirRondaQuiz();
       let carousel = document.getElementById('exercises-carousel');
       let finishBox = document.createElement('div');
       finishBox.className = 'card-moment';
@@ -1487,6 +1514,22 @@
       `;
       carousel.appendChild(finishBox);
     });
+  }
+
+  // HU22: al terminar la práctica el servidor abre una ronda nueva de intentos;
+  // se refleja en el Momento 4 sin recargar la página
+  function abrirRondaQuiz() {
+    if (!intentosQuiz || intentosQuiz.sin_limite) return;
+    intentosQuiz.usados = 0;
+    intentosQuiz.restantes = intentosQuiz.limite;
+    intentosQuiz.bloqueado = false;
+
+    let usados = document.getElementById('quiz-intentos-usados');
+    if (usados) usados.textContent = '0';
+    let bloqueado = document.getElementById('quiz-bloqueado-box');
+    if (bloqueado) bloqueado.style.display = 'none';
+    let comenzar = document.getElementById('btn-comenzar-quiz');
+    if (comenzar) comenzar.style.display = 'block';
   }
 
   // --- MOMENTO 4: QUIZ EVALUATION CLOSURE ---
@@ -1588,6 +1631,10 @@
     .then(data => {
       if (data.exito) {
         showQuizResults(data);
+      } else if (data.bloqueado) {
+        // HU22: el servidor rechazó el intento; la página vuelve con el aviso de bloqueo
+        alert(data.error);
+        window.location.reload();
       } else {
         alert("Ocurrió un error al procesar el Quiz: " + data.error);
       }
@@ -1634,6 +1681,12 @@
       title.textContent = 'Sigue practicando';
       title.style.color = 'var(--rojo)';
       msg.textContent = `Has obtenido ${pct}%. Necesitas un mínimo de ${quizMinPct}% para aprobar la lección.`;
+      // HU22: intentos que quedan en la ronda
+      if (data.intentos && !data.intentos.sin_limite) {
+        msg.textContent += data.intentos.bloqueado
+          ? ` Usaste tus ${data.intentos.limite} intentos de esta ronda: repasa el RAP y termina la práctica para recibir intentos nuevos.`
+          : ` Te quedan ${data.intentos.restantes} de ${data.intentos.limite} intentos en esta ronda.`;
+      }
       xpBox.textContent = '+0 XP';
       badgeBox.textContent = 'Ninguna';
       if (window.SonidosApp) SonidosApp.playIncorrect();
@@ -1644,7 +1697,12 @@
 
     // HU14: aprobar deja el RAP completado, así que ya se puede repetir
     let btnRepetir = document.getElementById('btn-repetir-rap-resultados');
-    if (btnRepetir && (data.aprobado || rapCompletado)) {
+    let quizAgotado = !!(data.intentos && data.intentos.bloqueado);
+    if (btnRepetir && (data.aprobado || rapCompletado || quizAgotado)) {
+      // HU22: con los intentos agotados el mismo botón lleva a repasar el RAP
+      if (quizAgotado && !data.aprobado) {
+        btnRepetir.innerHTML = '<i class="fas fa-redo" style="margin-right:6px;"></i> Repasar el RAP';
+      }
       btnRepetir.style.display = 'inline-block';
     }
   }

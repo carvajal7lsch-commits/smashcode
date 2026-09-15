@@ -116,6 +116,13 @@ class AprendizController extends Controller {
             foreach ($preguntas as &$preg) {
                 $preg['opciones'] = json_decode($preg['opciones'], true);
             }
+            unset($preg);
+
+            // HU22: si el quiz del RAP abierto está configurado para aleatorizar, las
+            // preguntas cambian de orden en cada visita (se califican por id, no por posición)
+            if (!empty($quiz['aleatorizar'])) {
+                shuffle($preguntas);
+            }
         }
 
         // Obtener o inicializar progreso
@@ -153,9 +160,14 @@ class AprendizController extends Controller {
         // esta visita; en la base el avance nunca baja y el mejor puntaje se conserva
         // (actualizarProgreso y guardarMejorPuntaje guardan siempre el máximo).
         $rapCompletado = !$esPreview && (int) $progreso['completado'] === 1;
-        $modoRepaso    = $rapCompletado && ($_GET['repetir'] ?? '') === '1';
 
-        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos', 'rapCompletado', 'modoRepaso'));
+        // HU22: intentos del quiz en la ronda actual. Con el quiz bloqueado también se
+        // puede entrar en modo repaso: al terminar la práctica empieza una ronda nueva.
+        $intentosQuiz  = (!$esPreview && !empty($quizzes)) ? $this->estadoIntentosQuiz($pdo, $uid, $quizzes, $rapId) : null;
+        $quizBloqueado = !empty($intentosQuiz['bloqueado']);
+        $modoRepaso    = ($rapCompletado || $quizBloqueado) && ($_GET['repetir'] ?? '') === '1';
+
+        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos', 'rapCompletado', 'modoRepaso', 'intentosQuiz'));
     }
 
     public function toggleVocabMarcado(): void {
@@ -208,6 +220,10 @@ class AprendizController extends Controller {
         $progresoModel = new Progreso();
         foreach ($this->obtenerRapsDelModulo(obtenerConexion(), $rapId) as $idRap) {
             $progresoModel->actualizarProgreso($uid, $idRap, $porcentaje, 0);
+            // HU22: terminar la práctica (75%) abre una ronda nueva de intentos del quiz
+            if ($porcentaje >= 75.0) {
+                $progresoModel->iniciarRondaQuiz($uid, $idRap);
+            }
         }
 
         echo json_encode(['exito' => true, 'porcentaje' => $porcentaje]);
@@ -366,6 +382,18 @@ class AprendizController extends Controller {
         // El intento queda registrado en el primero, que es el quiz del RAP abierto
         $quiz = $quizzes[0];
 
+        // HU22: con los intentos de la ronda agotados no se califica ni se registra
+        $intentos = $this->estadoIntentosQuiz($pdo, $uid, $quizzes, $rapId);
+        if ($intentos['bloqueado']) {
+            echo json_encode([
+                'exito'     => false,
+                'bloqueado' => true,
+                'intentos'  => $intentos,
+                'error'     => 'Usaste tus ' . $intentos['limite'] . ' intentos de esta ronda. Repasa el RAP y termina la práctica para recibir intentos nuevos.',
+            ]);
+            return;
+        }
+
         // 2. Obtener Preguntas del Quiz
         $preguntas = $this->obtenerPreguntasDeQuizzes($pdo, array_column($quizzes, 'id'));
         $totalPreguntas = count($preguntas);
@@ -494,6 +522,7 @@ class AprendizController extends Controller {
             'xp_ganados' => $xpGanados,
             'insignia_ganada' => $insigniaGanada,
             'detalles' => $detalles,
+            'intentos' => $this->estadoIntentosQuiz($pdo, $uid, $quizzes, $rapId),
             'subio_nivel' => $subioNivelPerfil,
             'modulo_desbloqueado' => $moduloDesbloqueado,
             'resumen' => $this->construirResumenRap($pdo, $uid, $rapId, $detalles, $correctas, $totalPreguntas, (bool)$aprobado)
@@ -529,6 +558,46 @@ class AprendizController extends Controller {
      * en el orden de sus RAPs. La página y la calificación usan esta misma consulta,
      * para que el aprendiz responda exactamente lo que después se califica.
      */
+    /**
+     * HU22: intentos del quiz en la ronda actual.
+     *
+     * Una ronda empieza al terminar la práctica (Momento 3, ver guardarProgreso). Se
+     * cuentan los intentos reprobados del módulo desde entonces; al llegar a
+     * max_intentos el quiz queda bloqueado hasta repasar el RAP. Quien ya aprobó no
+     * tiene límite (HU14). Sin ronda registrada cuentan todos los intentos reprobados.
+     */
+    private function estadoIntentosQuiz(\PDO $pdo, string $uid, array $quizzes, string $rapId): array {
+        $limite = (int) ($quizzes[0]['max_intentos'] ?? 0);
+
+        $stmt = $pdo->prepare('SELECT completado, ronda_quiz_desde FROM progreso WHERE usuario_id = ? AND rap_id = ? LIMIT 1');
+        $stmt->execute([$uid, $rapId]);
+        $prog = $stmt->fetch() ?: ['completado' => 0, 'ronda_quiz_desde' => null];
+
+        if ((int) $prog['completado'] === 1 || $limite <= 0) {
+            return ['sin_limite' => true, 'limite' => $limite, 'usados' => 0, 'restantes' => null, 'bloqueado' => false];
+        }
+
+        $ids    = array_column($quizzes, 'id');
+        $in     = implode(',', array_fill(0, count($ids), '?'));
+        $sql    = "SELECT COUNT(*) FROM intento_quiz WHERE usuario_id = ? AND quiz_id IN ($in) AND aprobado = 0";
+        $params = [$uid, ...$ids];
+        if (!empty($prog['ronda_quiz_desde'])) {
+            $sql     .= ' AND creado_en >= ?';
+            $params[] = $prog['ronda_quiz_desde'];
+        }
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $usados = (int) $stmt->fetchColumn();
+
+        return [
+            'sin_limite' => false,
+            'limite'     => $limite,
+            'usados'     => min($usados, $limite),
+            'restantes'  => max(0, $limite - $usados),
+            'bloqueado'  => $usados >= $limite,
+        ];
+    }
+
     private function obtenerQuizzesDelModulo(\PDO $pdo, array $rapIds, string $rapAbierto): array {
         $in = implode(',', array_fill(0, count($rapIds), '?'));
         $stmt = $pdo->prepare(
@@ -551,7 +620,7 @@ class AprendizController extends Controller {
         $stmt = $pdo->prepare(
             "SELECT id, quiz_id, texto, opciones, respuesta_correcta, retroalimentacion
              FROM pregunta
-             WHERE quiz_id IN ($in)
+             WHERE quiz_id IN ($in) AND activo = 1
              ORDER BY FIELD(quiz_id, $in), id"
         );
         $stmt->execute([...$quizIds, ...$quizIds]);

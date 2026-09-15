@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS progreso (
     ultimo_acceso     DATETIME      NULL,
     tiempo_total_seg  INT           NOT NULL DEFAULT 0,
     mejor_puntaje_quiz DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    ronda_quiz_desde  DATETIME      NULL,        -- inicio de la ronda de intentos del quiz (HU22)
     PRIMARY KEY (id),
     UNIQUE KEY uk_progreso (usuario_id, rap_id),
     CONSTRAINT fk_prog_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(id)  ON DELETE CASCADE,
@@ -302,6 +303,7 @@ CREATE TABLE IF NOT EXISTS pregunta (
     opciones        JSON          NOT NULL,    -- array de opciones
     respuesta_correcta VARCHAR(255) NOT NULL,
     retroalimentacion VARCHAR(500) NULL,
+    activo          TINYINT(1)    NOT NULL DEFAULT 1,  -- borrado lógico (HU22)
     PRIMARY KEY (id),
     CONSTRAINT fk_pregunta_quiz FOREIGN KEY (quiz_id) REFERENCES quiz(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

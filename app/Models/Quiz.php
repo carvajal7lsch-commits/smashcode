@@ -15,24 +15,26 @@ class Quiz extends Model {
     public function crear(array $datos): string {
         $pdo = self::obtenerConexion();
         $id = $datos['id'] ?? generarUUID();
-        $stmt = $pdo->prepare('INSERT INTO quiz (id, rap_id, puntaje_minimo, limite_tiempo_seg, max_intentos) VALUES (?, ?, ?, ?, ?)');
+        $stmt = $pdo->prepare('INSERT INTO quiz (id, rap_id, puntaje_minimo, limite_tiempo_seg, max_intentos, aleatorizar) VALUES (?, ?, ?, ?, ?, ?)');
         $stmt->execute([
             $id,
             $datos['rap_id'],
             $datos['puntaje_minimo'] ?? 60.00,
             $datos['limite_tiempo_seg'] ?? 300,
-            $datos['max_intentos'] ?? 3
+            $datos['max_intentos'] ?? 3,
+            !empty($datos['aleatorizar']) ? 1 : 0
         ]);
         return $id;
     }
 
     public function actualizar(string $id, array $datos): bool {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('UPDATE quiz SET puntaje_minimo = ?, limite_tiempo_seg = ?, max_intentos = ? WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE quiz SET puntaje_minimo = ?, limite_tiempo_seg = ?, max_intentos = ?, aleatorizar = ? WHERE id = ?');
         return $stmt->execute([
             $datos['puntaje_minimo'] ?? 60.00,
             $datos['limite_tiempo_seg'] ?? 300,
             $datos['max_intentos'] ?? 3,
+            !empty($datos['aleatorizar']) ? 1 : 0,
             $id
         ]);
     }

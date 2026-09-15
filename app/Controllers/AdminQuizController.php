@@ -75,6 +75,7 @@ class AdminQuizController extends Controller {
         $puntajeMinimo = $_POST['puntaje_minimo'] ?? 60.00;
         $limiteTiempoSeg = $_POST['limite_tiempo_seg'] ?? 300;
         $maxIntentos = $_POST['max_intentos'] ?? 3;
+        $aleatorizar = !empty($_POST['aleatorizar']) ? 1 : 0;
 
         if (empty($rapId)) {
             http_response_code(400);
@@ -95,14 +96,16 @@ class AdminQuizController extends Controller {
                     'rap_id' => $rapId,
                     'puntaje_minimo' => $puntajeMinimo,
                     'limite_tiempo_seg' => $limiteTiempoSeg,
-                    'max_intentos' => $maxIntentos
+                    'max_intentos' => $maxIntentos,
+                    'aleatorizar' => $aleatorizar
                 ]);
             } else {
                 $quizId = $quiz['id'];
                 $quizModel->actualizar($quizId, [
                     'puntaje_minimo' => $puntajeMinimo,
                     'limite_tiempo_seg' => $limiteTiempoSeg,
-                    'max_intentos' => $maxIntentos
+                    'max_intentos' => $maxIntentos,
+                    'aleatorizar' => $aleatorizar
                 ]);
             }
 
@@ -145,14 +148,11 @@ class AdminQuizController extends Controller {
                 }
             }
 
-            // Intentar eliminar solo las preguntas que el usuario borró expresamente en la UI
+            // Las preguntas que el admin quitó en la UI se desactivan (borrado lógico, HU22):
+            // así se conserva el historial de respuestas de los aprendices
             foreach ($idsActuales as $idViejo) {
                 if (!in_array($idViejo, $idsEnviados)) {
-                    try {
-                        $preguntaModel->eliminar($idViejo);
-                    } catch (\Exception $eEx) {
-                        // Si falla la restricción FK (porque aprendices ya la respondieron), se ignora la eliminación para no romper historial
-                    }
+                    $preguntaModel->eliminar($idViejo);
                 }
             }
 

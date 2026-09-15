@@ -7,7 +7,8 @@ use PDO;
 class Pregunta extends Model {
     public function obtenerPorQuiz(string $quizId): array {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT * FROM pregunta WHERE quiz_id = ? ORDER BY id ASC');
+        // Solo las activas: las borradas desde el panel se conservan para el historial (HU22)
+        $stmt = $pdo->prepare('SELECT * FROM pregunta WHERE quiz_id = ? AND activo = 1 ORDER BY id ASC');
         $stmt->execute([$quizId]);
         return $stmt->fetchAll();
     }
@@ -39,15 +40,19 @@ class Pregunta extends Model {
         ]);
     }
 
+    /**
+     * Borrado lógico (HU22): las respuestas de los aprendices apuntan a la
+     * pregunta, así que se oculta en lugar de eliminarla.
+     */
     public function eliminarPorQuiz(string $quizId): bool {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('DELETE FROM pregunta WHERE quiz_id = ?');
+        $stmt = $pdo->prepare('UPDATE pregunta SET activo = 0 WHERE quiz_id = ?');
         return $stmt->execute([$quizId]);
     }
 
     public function eliminar(string $id): bool {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('DELETE FROM pregunta WHERE id = ?');
+        $stmt = $pdo->prepare('UPDATE pregunta SET activo = 0 WHERE id = ?');
         return $stmt->execute([$id]);
     }
 }

@@ -175,6 +175,12 @@ El **módulo es la unidad de progreso**. El mapa muestra un solo camino de cuatr
   - cada quiz queda como un intento nuevo.
 
   En la base no baja nada: el avance y el completado se quedan y el mejor puntaje solo sube. En un RAP sin completar o en vista previa, `repetir=1` no hace nada.
+- **Intentos del quiz por ronda (HU22):** el administrador define el máximo de intentos de cada quiz.
+  - **Cuándo empieza una ronda:** al terminar la práctica (Momento 3), que guarda `progreso.ronda_quiz_desde`. Cuentan los intentos reprobados desde entonces.
+  - **Al agotarlos:** el servidor rechaza el quiz y la página ofrece *Repasar el RAP*. Al terminar otra vez la práctica empieza una ronda nueva.
+  - **Quien ya aprobó:** no tiene límite.
+  - **Orden de las preguntas:** si el quiz está marcado para aleatorizar, cambia en cada visita. La calificación va por el id de cada pregunta.
+- **Preguntas borradas:** borrar una pregunta del quiz la desactiva (`pregunta.activo = 0`). Deja de verse y de calificarse, pero las respuestas históricas se conservan.
 - El quiz del módulo reúne las preguntas de todos sus RAPs y las califica todas.
 - Un módulo se desbloquea cuando el anterior llega al 80%.
 - Si la sesión expira mientras estudia (30 minutos sin actividad), lo que intente guardar queda en espera y un aviso le pide volver a iniciar sesión en otra pestaña. Al volver y pulsar *"Ya inicié sesión: guardar"* se envía todo lo pendiente, incluido un quiz completo.
@@ -248,16 +254,16 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 | HU19 | Vocabulario médico por RAP | 🟡 Parcial | Falta el campo "traducción del ejemplo"; audio e imagen no se exigen al publicar |
 | HU20 | Crear ejercicios (admin) | 🟡 Parcial | Faltan instrucciones, configurar máximo de intentos y puntaje, y previsualización |
 | HU21 | Crear diálogos (admin) | 🟡 Parcial | Faltan anotaciones pedagógicas y audio individual por turno |
-| HU22 | Configurar quizzes (admin) | 🟡 Parcial | Aleatorizar no se configura ni se aplica; el máximo de intentos no se valida; no hay borrado lógico de quiz ni de preguntas |
+| HU22 | Configurar quizzes (admin) | ✅ Completa | La publicación es por RAP (HU03): el panel marca *Incompleto* si el quiz no tiene preguntas y hay vista previa, pero no impide publicarlo |
 | HU23 | Progreso de aprendices y CSV | ✅ Completa | — |
 
-**Resumen:** 18 completas y 5 parciales, de 23 historias. Ninguna está sin empezar.
+**Resumen:** 19 completas y 4 parciales, de 23 historias. Ninguna está sin empezar.
 
 ## Pendientes para cerrar el proyecto
 
 Ordenados por impacto en los aprendices.
 
-1. **Criterios parciales** de HU13, HU19, HU20, HU21 y HU22 (tabla anterior).
+1. **Criterios parciales** de HU13, HU19, HU20 y HU21 (tabla anterior).
 2. **Insignias que nunca se otorgan:** "Estudiante Élite" y "Vocabulario Pro" existen en la base, pero ningún código las entrega. Hoy solo se ganan "Quiz Perfecto", "Primer Nivel" y la de racha. "Estudiante Élite" además pide 6 niveles y la ruta tiene 4 módulos.
 3. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 4. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
@@ -273,6 +279,7 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **HU22 · Quizzes:** el máximo de intentos se valida por ronda, se puede aleatorizar el orden de las preguntas y borrar una pregunta es lógico. La migración `2026_09_15_quiz_rondas_y_preguntas_activas.sql` agrega `progreso.ronda_quiz_desde` y `pregunta.activo`, y da una ronda nueva a quien ya podía presentar el quiz. **Después de hacer pull, corre `php database/migrar.php`**: sin esas columnas la página del RAP falla.
 - **HU14 · Repetir RAP:** botón en los módulos completados (mapa, página del RAP y resultados del quiz). El repaso reinicia los momentos solo en esa visita y en la base conserva el avance y el mejor puntaje.
 - **RAP 6 (Módulo 4):** tenía la fila pero ningún contenido. La migración `2026_09_15_contenido_rap6.sql` carga lo que pide `contenidos.md`, y la página del Módulo 4 tiene su propia Grammar Pill (*Medical Advice* frente a *Reporting Results*). Se probó en seco en el VPS: 68 filas nuevas. Contenido cargado:
   - 16 palabras con IPA; las del Warm-Up van primero;
