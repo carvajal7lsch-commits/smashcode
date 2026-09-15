@@ -148,6 +148,7 @@ El **módulo es la unidad de progreso**. El mapa muestra un solo camino de cuatr
 - Si el aprendiz sale a mitad de la práctica, al volver sigue en el primer ejercicio que no ha respondido, con los puntos que ya había ganado. Si el RAP ya estaba terminado, la práctica empieza de cero (repetición, HU14).
 - El quiz del módulo reúne las preguntas de todos sus RAPs y las califica todas.
 - Un módulo se desbloquea cuando el anterior llega al 80%.
+- Si la sesión expira mientras estudia (30 minutos sin actividad), lo que intente guardar queda en espera y un aviso le pide volver a iniciar sesión en otra pestaña. Al volver y pulsar *"Ya inicié sesión: guardar"* se envía todo lo pendiente, incluido un quiz completo.
 
 > Antes del 14 de septiembre el avance se guardaba solo en el primer RAP de cada módulo: los módulos de dos RAPs se quedaban en 50% y nadie podía pasar del Módulo 2. La migración `2026_09_14_progreso_por_modulo.sql` sincroniza a los aprendices que quedaron atascados.
 
@@ -197,7 +198,7 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 
 | HU | Historia | Estado | Qué falta |
 |---|---|---|---|
-| HU01 | Módulos por nivel de dificultad | ✅ Completa | Corregida el 14 de septiembre, pendiente de despliegue: el avance se guarda en cada momento, la práctica se retoma y los módulos de dos RAPs ya desbloquean el siguiente |
+| HU01 | Módulos por nivel de dificultad | ✅ Completa | Corregida y desplegada el 14 de septiembre: el avance se guarda en cada momento, la práctica se retoma y los módulos de dos RAPs ya desbloquean el siguiente |
 | HU02 | Pronunciación con IPA y palabras difíciles | ✅ Completa | El audio usa síntesis de voz, no archivos MP3. El repaso de palabras marcadas está en *Mi Vocabulario* |
 | HU03 | Previsualizar y publicar RAPs | ✅ Completa | — |
 | HU04 | Gestión de usuarios | ✅ Completa | — |
@@ -227,8 +228,8 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 
 Ordenados por impacto en los aprendices.
 
-1. **Desplegar el arreglo del progreso por módulo.** Al arrancar el contenedor corre sola la migración `2026_09_14_progreso_por_modulo.sql`, que desatasca al aprendiz bloqueado en el Módulo 2.
-2. **Limpiar los RAPs duplicados del VPS.** Ya están diagnosticados (ver [RAPs duplicados en producción](#raps-duplicados-en-producción)); falta la migración que retire las dos filas sobrantes y añada la restricción única.
+1. **Limpiar los RAPs duplicados del VPS.** Ya están diagnosticados (ver [RAPs duplicados en producción](#raps-duplicados-en-producción)); falta la migración que retire las dos filas sobrantes y añada la restricción única.
+2. **Arreglos rápidos:** las áreas y categorías desactivadas siguen como opción al crear vocabulario (HU18), el temporizador del quiz está fijo en 5 minutos (HU22) y el registro no envía correo de confirmación (HU16).
 3. **Corregir las tildes perdidas en la base del VPS.** Hoy se parchean palabra por palabra con `normalizarTextoEspanol()` en `includes/funciones.php`. Conviene hacerlo antes de cargar el RAP 6.
 4. **Cargar el contenido del RAP 6** (Módulo 4). No tiene seed; el guion completo está en `contenidos.md`. Incluye la Grammar Pill del Módulo 4.
 5. **Criterios parciales** de HU13, HU14, HU16, HU18, HU19, HU20, HU21 y HU22 (tabla anterior).
@@ -246,6 +247,7 @@ Ordenados por impacto en los aprendices.
 
 **14 de septiembre de 2026**
 - **Progreso por módulo:** nadie podía pasar del Módulo 2, porque el avance se guardaba solo en el primer RAP de cada módulo y el siguiente exige 80%. Ahora el avance y la aprobación del quiz cuentan para todos los RAPs del módulo, el quiz califica todas las preguntas que muestra, cada momento guarda su avance al terminarlo y la práctica se retoma donde quedó. La migración `2026_09_14_progreso_por_modulo.sql` desatasca a quienes ya estaban bloqueados.
+- **Sesión expirada:** si la sesión caducaba, el avance, los ejercicios y el quiz se perdían sin aviso, porque las peticiones de la página recibían la página de login como respuesta. Ahora el servidor responde `401` a esas peticiones y el RAP muestra un aviso: lo pendiente se guarda al volver a iniciar sesión. En *Mi Vocabulario* y el *Glosario* la estrella avisa y lleva al login.
 - HU23 completa: el instructor ve solo a los aprendices de su programa; los filtros de nivel, RAP y estado se pueden combinar sin errores y ya no esconden a quien no ha empezado; avance por RAP visible al filtrar; selectores sin módulos repetidos; CSV protegido contra fórmulas.
 - Paneles de RAPs: aviso **Duplicado** con el título y el identificador reales, y la fila activa primero.
 - Nuevo `database/diagnostico_raps.php` para revisar la tabla `rap` sin modificarla.
