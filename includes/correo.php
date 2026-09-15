@@ -27,6 +27,10 @@ function enviarCorreo(string $destinatario, string $asunto, string $cuerpo): boo
         $mail->Password   = SMTP_PASS; 
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port       = SMTP_PORT;
+        // Sin esto PHPMailer usa ISO-8859-1 y las tildes llegan dañadas
+        $mail->CharSet    = PHPMailer::CHARSET_UTF8;
+        // Por defecto espera 300 s: un SMTP lento dejaría colgado el registro o la recuperación
+        $mail->Timeout    = 10;
 
         // Remitente y destinatario
         $mail->setFrom('no-reply@smashcode.edu.co', 'SmashCode SENA');

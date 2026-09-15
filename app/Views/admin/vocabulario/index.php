@@ -313,7 +313,7 @@
                 <select name="categoria_id" id="vocab-categoria" class="input-base">
                   <option value="">-- Ninguna --</option>
                   <?php foreach ($categorias as $cat): ?>
-                    <option value="<?= $cat['id'] ?>"><?= limpiar($cat['nombre']) ?></option>
+                    <option value="<?= $cat['id'] ?>"<?= empty($cat['activo']) ? ' data-activo="0" hidden disabled' : '' ?>><?= limpiar($cat['nombre']) ?><?= empty($cat['activo']) ? ' (desactivada)' : '' ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -323,7 +323,7 @@
                 <select name="area_clinica_id" id="vocab-area" class="input-base">
                   <option value="">-- Ninguna --</option>
                   <?php foreach ($areas as $area): ?>
-                    <option value="<?= $area['id'] ?>"><?= limpiar($area['nombre']) ?></option>
+                    <option value="<?= $area['id'] ?>"<?= empty($area['activo']) ? ' data-activo="0" hidden disabled' : '' ?>><?= limpiar($area['nombre']) ?><?= empty($area['activo']) ? ' (desactivada)' : '' ?></option>
                   <?php endforeach; ?>
                 </select>
               </div>
@@ -356,12 +356,26 @@
     inicializarBusqueda('buscar-vocab', '.tabla-usuarios tbody tr');
   });
 
+  // Las áreas y categorías desactivadas no se ofrecen para vocabulario nuevo (HU18).
+  // Si la palabra que se edita ya tiene una asignada, esa sí se muestra: una opción
+  // oculta o deshabilitada no se envía con el formulario y se perdería al guardar.
+  function soloCatalogosActivos(select, valorActual) {
+    select.querySelectorAll('option[data-activo="0"]').forEach(opcion => {
+      const esLaAsignada = valorActual !== '' && opcion.value === valorActual;
+      opcion.hidden = !esLaAsignada;
+      opcion.disabled = !esLaAsignada;
+    });
+    select.value = valorActual;
+  }
+
   function abrirModalVocabulario(btn = null) {
     const form = document.getElementById('form-vocabulario');
     const actionBase = "<?= PROYECTO_PATH ?>/admin/vocabulario";
     
     // Reseteamos el formulario
     form.reset();
+    soloCatalogosActivos(document.getElementById('vocab-categoria'), '');
+    soloCatalogosActivos(document.getElementById('vocab-area'), '');
     document.getElementById('vocab-id').value = '';
     document.getElementById('vocab-audio-actual').value = '';
     document.getElementById('vocab-imagen-actual').value = '';
@@ -379,8 +393,8 @@
       document.getElementById('vocab-termino-es').value = btn.dataset.termino_es || '';
       document.getElementById('vocab-ipa').value = btn.dataset.transcripcion_ipa || '';
       document.getElementById('vocab-oracion').value = btn.dataset.oracion_ejemplo || '';
-      document.getElementById('vocab-categoria').value = btn.dataset.categoria_id || '';
-      document.getElementById('vocab-area').value = btn.dataset.area_clinica_id || '';
+      soloCatalogosActivos(document.getElementById('vocab-categoria'), btn.dataset.categoria_id || '');
+      soloCatalogosActivos(document.getElementById('vocab-area'), btn.dataset.area_clinica_id || '');
       document.getElementById('vocab-dificultad').value = btn.dataset.nivel_dificultad || 'intermedio';
 
       const audioUrl = btn.dataset.audio_url;

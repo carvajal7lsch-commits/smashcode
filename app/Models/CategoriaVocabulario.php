@@ -10,9 +10,16 @@ use PDO;
  */
 class CategoriaVocabulario extends Model {
 
-    public function obtenerTodas(): array {
+    /**
+     * Categorías gramaticales con su estado. Sin la columna activo, el panel de Catálogos mostraba
+     * todo como activo y ocultaba el botón de desactivar. Con $soloActivas deja
+     * fuera las desactivadas (HU18).
+     */
+    public function obtenerTodas(bool $soloActivas = false): array {
         $pdo  = self::obtenerConexion();
-        $sql = 'SELECT id, nombre FROM categoria_vocabulario ORDER BY nombre';
+        $sql = 'SELECT id, nombre, activo FROM categoria_vocabulario'
+             . ($soloActivas ? ' WHERE activo = 1' : '')
+             . ' ORDER BY nombre';
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll();
     }

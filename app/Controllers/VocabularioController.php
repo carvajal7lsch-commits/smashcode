@@ -43,8 +43,10 @@ class VocabularioController extends Controller {
 
         $vocabulario   = $this->vocabularioModel->obtenerPorRap($rapId);
         $totalUsuarios = $this->adminModel->obtenerTotalUsuarios();
-        $areas         = $this->areaModel->obtenerTodas(true);
-        $categorias    = $this->categoriaModel->obtenerTodas(true);
+        // Todas, con su estado: la vista oculta las desactivadas para vocabulario nuevo,
+        // pero muestra la que ya tenga asignada la palabra que se edita (HU18)
+        $areas         = $this->areaModel->obtenerTodas();
+        $categorias    = $this->categoriaModel->obtenerTodas();
         
         // Obtener el registro del RAP para mostrar en la vista
         $rapModel = new \App\Models\Rap();

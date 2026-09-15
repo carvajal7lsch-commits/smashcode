@@ -498,11 +498,19 @@
     </section>
 
     <!-- ==================== MOMENTO 4: QUIZ ==================== -->
+    <?php
+      // Límite configurado por el administrador para este quiz (HU22); 5 minutos si no tiene
+      $limiteQuizSeg = (int) ($quiz['limite_tiempo_seg'] ?? 0);
+      if ($limiteQuizSeg <= 0) {
+          $limiteQuizSeg = 300;
+      }
+      $limiteQuizReloj = sprintf('%02d:%02d', intdiv($limiteQuizSeg, 60), $limiteQuizSeg % 60);
+    ?>
     <section class="moment-pane" id="pane-moment-4" aria-labelledby="tab-moment-4">
       <div class="card-moment" id="quiz-intro-box">
         <h2 style="color:var(--morado);"><i class="fas fa-graduation-cap" style="margin-right:8px;"></i>Quiz Closure: Prueba tus conocimientos</h2>
         <p style="color:var(--texto-tenue); margin-top:10px; line-height:1.6;">
-          Has completado todos los momentos pedagógicos de este Resultado de Aprendizaje (RAP). Toma este quiz final de <strong>5 preguntas</strong> para evaluar tu nivel y desbloquear oficialmente el siguiente nivel en tu mapa de aprendizaje.
+          Has completado todos los momentos pedagógicos de este Resultado de Aprendizaje (RAP). Toma este quiz final de <strong><?= count($preguntas) ?> preguntas</strong> para evaluar tu nivel y desbloquear oficialmente el siguiente nivel en tu mapa de aprendizaje.
         </p>
         <div style="background:var(--fondo); border:2px solid var(--gris-claro); border-radius:12px; padding:20px; margin:24px 0; display:grid; grid-template-columns:1fr 1fr; gap:16px;">
           <div>
@@ -511,7 +519,7 @@
           </div>
           <div>
             <div style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--gris-medio);">Límite de tiempo</div>
-            <div style="font-size:1.4rem; font-weight:900; color:var(--morado);">5:00 min</div>
+            <div style="font-size:1.4rem; font-weight:900; color:var(--morado);"><?= intdiv($limiteQuizSeg, 60) ?>:<?= sprintf('%02d', $limiteQuizSeg % 60) ?> min</div>
           </div>
         </div>
         <button class="btn btn-morado" style="display:block; width:100%; font-size:1.1rem; padding:14px 24px; font-weight:800; text-align:center; box-shadow: 0 4px 0 #a855f7;" onclick="startQuiz()">
@@ -522,8 +530,8 @@
       <!-- Quiz Player -->
       <div class="card-moment" id="quiz-player-box" style="display:none;">
         <div class="exercise-header">
-          <span style="color:var(--morado);" id="quiz-question-indicator">PREGUNTA 1 DE 5</span>
-          <span style="color:var(--rojo);" id="quiz-timer"><i class="fas fa-clock" style="margin-right:4px;"></i>05:00</span>
+          <span style="color:var(--morado);" id="quiz-question-indicator">PREGUNTA 1 DE <?= count($preguntas) ?></span>
+          <span style="color:var(--rojo);" id="quiz-timer"><i class="fas fa-clock" style="margin-right:4px;"></i><?= $limiteQuizReloj ?></span>
         </div>
 
         <div id="quiz-questions-wrap">
@@ -621,7 +629,8 @@
   let currentQuizPregIdx = 0;
   let quizAnswers = {};
   let quizTimerInterval = null;
-  let quizTimeRemaining = 300; // 5 mins
+  const quizLimiteSeg = <?= $limiteQuizSeg ?>; // HU22: límite configurado para este quiz
+  let quizTimeRemaining = quizLimiteSeg;
 
   // --- NAVEGACIÓN ENTRE TABS ---
   function switchTab(num) {
@@ -1405,7 +1414,7 @@
     document.getElementById('quiz-player-box').style.display = 'block';
     currentQuizPregIdx = 0;
     quizAnswers = {};
-    quizTimeRemaining = 300;
+    quizTimeRemaining = quizLimiteSeg;
     
     // Mostrar primera pregunta
     document.querySelectorAll('.quiz-question-box').forEach(b => b.style.display = 'none');
@@ -1484,7 +1493,7 @@
       answersData[quizAnswers[key].pregunta_id] = quizAnswers[key].respuesta;
     }
 
-    let duracion = 300 - quizTimeRemaining;
+    let duracion = quizLimiteSeg - quizTimeRemaining;
 
     let formData = new FormData();
     formData.append('rap_id', rapId);

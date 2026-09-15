@@ -40,6 +40,7 @@ const MIGRACIONES = [
     '2026_08_21_leaderboard_semanal.sql',
     '2026_09_14_progreso_por_modulo.sql',
     '2026_09_14_retirar_raps_duplicados.sql',
+    '2026_09_14_activo_en_catalogos.sql',
 ];
 
 const INTENTOS_CONEXION = 30;

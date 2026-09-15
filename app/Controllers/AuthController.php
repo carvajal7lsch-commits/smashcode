@@ -200,7 +200,11 @@ class AuthController extends Controller {
                     $id = generarUUID();
                     
                     if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
-                        $exito = '¡Cuenta creada! Ya puedes iniciar sesión.';
+                        // HU16: correo de confirmación. Si el servidor de correo falla, la cuenta
+                        // igual queda creada y activa, y el aviso no promete un correo que no salió.
+                        $exito = $this->enviarCorreoBienvenida($correo, $nombre)
+                            ? '¡Cuenta creada! Te enviamos un correo de confirmación. Ya puedes iniciar sesión.'
+                            : '¡Cuenta creada! Ya puedes iniciar sesión.';
                         $accion = 'ingresar';
                         
                         $this->render('auth/login', [
@@ -225,6 +229,35 @@ class AuthController extends Controller {
             'programas' => $programas,
             'csrf' => $csrf
         ]);
+    }
+
+    /**
+     * Envía el correo de confirmación de registro (HU16) y devuelve si salió.
+     */
+    private function enviarCorreoBienvenida(string $correo, string $nombre): bool {
+        $rutaCorreo = dirname(__DIR__, 2) . '/includes/correo.php';
+        if (!file_exists($rutaCorreo)) {
+            return false;
+        }
+        require_once $rutaCorreo;
+
+        return enviarCorreo($correo, 'Bienvenido a SmashCode: tu cuenta está activa', $this->cuerpoCorreoBienvenida($nombre));
+    }
+
+    /**
+     * Cuerpo del correo de bienvenida. $nombre llega ya escapado por limpiar().
+     * Detrás del proxy del VPS el HTTPS lo indica X-Forwarded-Proto.
+     */
+    private function cuerpoCorreoBienvenida(string $nombre): string {
+        $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+        $enlace = ($esHttps ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . PROYECTO_PATH . '/login';
+
+        return '<h1>¡Bienvenido a SmashCode!</h1>'
+             . '<p>Hola ' . $nombre . ',</p>'
+             . '<p>Tu cuenta de aprendiz quedó creada y activa. Ya puedes iniciar sesión y empezar por el Módulo 1: Getting to Know Other People.</p>'
+             . "<p><a href='" . $enlace . "'>" . $enlace . '</a></p>'
+             . '<p>Si no creaste esta cuenta, ignora este mensaje.</p>';
     }
 
     /**

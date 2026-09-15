@@ -764,8 +764,9 @@ class AprendizController extends Controller {
         $vocabulario = $stmt->fetchAll();
 
         // Obtener filtros
-        $areas = $pdo->query("SELECT id, nombre FROM area_clinica ORDER BY nombre")->fetchAll();
-        $categorias = $pdo->query("SELECT id, nombre FROM categoria_vocabulario ORDER BY nombre")->fetchAll();
+        // Solo catálogos activos: desactivar un área o categoría la quita de los filtros (HU18)
+        $areas = $pdo->query("SELECT id, nombre FROM area_clinica WHERE activo = 1 ORDER BY nombre")->fetchAll();
+        $categorias = $pdo->query("SELECT id, nombre FROM categoria_vocabulario WHERE activo = 1 ORDER BY nombre")->fetchAll();
         $niveles = $pdo->query("SELECT id, nombre FROM nivel ORDER BY orden")->fetchAll();
 
         // Obtener vocabulario marcado por el usuario para las estrellas

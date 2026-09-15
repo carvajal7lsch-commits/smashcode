@@ -10,9 +10,16 @@ use PDO;
  */
 class AreaClinica extends Model {
 
-    public function obtenerTodas(): array {
+    /**
+     * Áreas clínicas con su estado. Sin la columna activo, el panel de Catálogos mostraba
+     * todo como activo y ocultaba el botón de desactivar. Con $soloActivas deja
+     * fuera las desactivadas (HU18).
+     */
+    public function obtenerTodas(bool $soloActivas = false): array {
         $pdo  = self::obtenerConexion();
-        $sql = 'SELECT id, nombre FROM area_clinica ORDER BY nombre';
+        $sql = 'SELECT id, nombre, activo FROM area_clinica'
+             . ($soloActivas ? ' WHERE activo = 1' : '')
+             . ' ORDER BY nombre';
         $stmt = $pdo->query($sql);
         return $stmt->fetchAll();
     }
