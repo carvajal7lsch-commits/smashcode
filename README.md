@@ -116,7 +116,7 @@ Producción corre en **Dokploy** con **Autodeploy activado sobre la rama `main`*
 php database/probar_migracion.php database/migraciones/<archivo>.sql
 ```
 
-Ejecuta la migración dentro de una transacción, muestra cuántas filas cambiaría por columna (con ejemplos de antes y después) y la revierte. Solo acepta migraciones de `UPDATE` de una línea: una sentencia de estructura confirmaría la transacción. Para probarla en el VPS, súbela **sin agregarla todavía a `migrar.php`**, córrela desde *Open Terminal* y regístrala en un segundo push.
+Ejecuta la migración dentro de una transacción, muestra cuántas filas cambiaría por columna (con ejemplos de antes y después) o insertaría por tabla, y la revierte. Solo acepta `UPDATE`, `INSERT`, `SET @variable` y `SELECT`: una sentencia de estructura (`ALTER`, `CREATE`, `PREPARE`…) confirmaría la transacción y la prueba se niega a correr. Cada sentencia debe terminar con `;` al final de una línea. Para probarla en el VPS, súbela **sin agregarla todavía a `migrar.php`**, córrela desde *Open Terminal* y regístrala en un segundo push.
 
 ### Tildes y caracteres especiales
 
@@ -130,6 +130,8 @@ La migración `2026_09_15_restaurar_tildes.sql` restauró 124 filas. Solo reempl
 ### Seeds
 
 Los seeds **borran y recrean** el contenido de su RAP, incluidos los intentos de quiz asociados. Sirven para una base nueva o local. **No los ejecutes en producción**: se perdería el historial de los aprendices.
+
+El **RAP 6** no tiene seed: su contenido lo carga la migración `2026_09_15_contenido_rap6.sql`, que solo inserta si el RAP 6 existe y está vacío, y nunca borra. En una base nueva, si corres los seeds después de `migrar.php`, vuelve a correr `migrar.php` para que cargue el RAP 6. Para cargar contenido nuevo en producción, usa una migración así, nunca un seed.
 
 ### RAPs duplicados en producción
 
@@ -249,8 +251,8 @@ Revisión del 14 de septiembre de 2026 contra el código de `main`.
 
 Ordenados por impacto en los aprendices.
 
-1. **Cargar el contenido del RAP 6** (Módulo 4). No tiene seed; el guion completo está en `contenidos.md`. Incluye la Grammar Pill del Módulo 4.
-2. **Criterios parciales** de HU13, HU14, HU19, HU20, HU21 y HU22 (tabla anterior).
+1. **Criterios parciales** de HU13, HU14, HU19, HU20, HU21 y HU22 (tabla anterior).
+2. **Insignias que nunca se otorgan:** "Estudiante Élite" y "Vocabulario Pro" existen en la base, pero ningún código las entrega. Hoy solo se ganan "Quiz Perfecto", "Primer Nivel" y la de racha. "Estudiante Élite" además pide 6 niveles y la ruta tiene 4 módulos.
 3. **Decidir si se retira `normalizarTextoEspanol()` de `limpiar()`** (ver *Tildes y caracteres especiales*).
 4. **Alcance de `contenidos.md` que no está en `hu.md`:** PRE-TEST inicial, POS-TEST global y "El Desafío" (grabación de audio del aprendiz en cada módulo).
 
@@ -265,6 +267,11 @@ Ordenados por impacto en los aprendices.
 ## Cambios recientes
 
 **15 de septiembre de 2026**
+- **RAP 6 (Módulo 4):** tenía la fila pero ningún contenido. La migración `2026_09_15_contenido_rap6.sql` carga lo que pide `contenidos.md`, y la página del Módulo 4 tiene su propia Grammar Pill (*Medical Advice* frente a *Reporting Results*). Se probó en seco en el VPS: 68 filas nuevas. Contenido cargado:
+  - 16 palabras con IPA; las del Warm-Up van primero;
+  - el diálogo de alta de Mr. Thomas;
+  - 9 ejercicios: dictados del *Discharge Summary*, lectura de la *Nursing Checklist*, modales, emparejar, ordenar y El Desafío;
+  - un quiz de 6 preguntas.
 - **Tildes del VPS:** la migración `2026_09_15_restaurar_tildes.sql` restaura las tildes, signos, emojis y la pronunciación IPA que se borraron al cargar el contenido (124 filas; las 49 IPA vuelven a leerse). Se probó antes en el VPS con el nuevo `database/probar_migracion.php`.
 - **HU18 · catálogos:** las áreas clínicas y categorías desactivadas ya no salen al crear vocabulario ni en los filtros del glosario. Las bases creadas antes no tenían la columna `activo` (por eso el panel de Catálogos escondía el botón de desactivar); la migración `2026_09_14_activo_en_catalogos.sql` la añade con todo activo.
 - **HU22 · quiz:** el temporizador usa el límite configurado por el administrador (antes siempre 5 minutos) y la bienvenida muestra el número real de preguntas.
