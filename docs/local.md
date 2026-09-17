@@ -42,3 +42,9 @@ Se pueden indicar `--php`, `--node` y `--artifact-root`. Las pruebas crean y eli
 Antes de activar el código en otro entorno, respaldar la base y ejecutar `php database/migrar.php`. La nueva migración añade sesiones de práctica/quiz y resultados idempotentes; conserva el contenido y progreso existente. El despliegue invalida sesiones antiguas: los usuarios deben volver a entrar. No ejecutar seeds durante el despliegue.
 
 La política existente del instructor sin programa asignado se conserva. El login no solicita seleccionar un perfil; la autorización y el panel de destino usan el rol guardado en la base de datos.
+
+## Integridad del contenido y reportes
+
+Publicar exige tres palabras para Warm-Up, ejercicios válidos por tipo, diálogos con turnos y un quiz evaluable. Las actividades se reúnen por módulo. Para dejar temporalmente incompleto un RAP, despublicarlo primero. Las ediciones de contenido publicado se validan dentro de la transacción y se revierten si dejan actividades inutilizables.
+
+Los intentos nuevos guardan el mínimo de aprobación y los enunciados originales. Los intentos anteriores a esta migración conservan puntaje, aprobación y respuestas; el criterio original queda vacío en CSV y el enunciado se indica como no disponible, porque no puede recuperarse con certeza. No se inventan valores históricos a partir del quiz actual.

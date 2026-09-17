@@ -155,7 +155,24 @@ class VocabularioController extends Controller {
         $rapId = limpiar($_POST['rap_id'] ?? '');
 
         if (!empty($id)) {
-            $this->vocabularioModel->toggleActivo($id);
+            $pdo = \App\Core\Model::obtenerConexion();
+            try {
+                $pdo->beginTransaction();
+                $palabra = $this->vocabularioModel->obtenerPorId($id);
+                if (!$palabra || $palabra['rap_id'] !== $rapId) throw new \DomainException('La palabra no pertenece al RAP.');
+                $contenido = new \App\Models\ContenidoCurso();
+                $contenido->bloquearModulo($rapId);
+                $this->vocabularioModel->toggleActivo($id);
+                $contenido->validarPublicado($rapId);
+                $pdo->commit();
+            } catch (\DomainException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                $this->redirect('admin/vocabulario?rap_id=' . urlencode($rapId) . '&error=' . urlencode($e->getMessage()));
+                return;
+            } catch (\Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
+            }
         }
 
         $this->redirect("admin/vocabulario?rap_id={$rapId}&exito=estado");

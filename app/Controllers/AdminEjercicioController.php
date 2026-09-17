@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\Ejercicio;
 use App\Models\EjercicioOpcion;
 use App\Models\Rap;
+use App\Models\ContenidoCurso;
 
 class AdminEjercicioController extends Controller {
 
@@ -86,6 +87,13 @@ class AdminEjercicioController extends Controller {
         try {
             $pdo = \App\Core\Model::obtenerConexion();
             $pdo->beginTransaction();
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($rapId);
+
+            $opciones = $_POST['opciones'] ?? [];
+            if (!is_array($opciones)) throw new \DomainException('Opciones inválidas.');
+            ContenidoCurso::validarEjercicio($tipo,$opciones,$enunciado);
+            if ($ejercicioId && ($ejercicioModel->obtenerPorId($ejercicioId)['rap_id'] ?? null) !== $rapId) throw new \DomainException('El ejercicio no pertenece al RAP.');
 
             if (empty($ejercicioId)) {
                 // Crear
@@ -125,10 +133,15 @@ class AdminEjercicioController extends Controller {
                 }
             }
 
+            $contenido->validarPublicado($rapId);
             $pdo->commit();
             echo json_encode(['success' => true]);
 
-        } catch (\Exception $e) {
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422);
+            echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
             $pdo->rollBack();
             http_response_code(500);
             echo json_encode(['error' => 'Error al guardar: ' . $e->getMessage()]);
@@ -162,12 +175,25 @@ class AdminEjercicioController extends Controller {
             exit;
         }
 
-        $ejercicioModel = new Ejercicio();
-        if ($ejercicioModel->eliminar($id)) {
+        $pdo = \App\Core\Model::obtenerConexion();
+        try {
+            $pdo->beginTransaction();
+            $ejercicioModel = new Ejercicio();
+            $registro = $ejercicioModel->obtenerPorId($id);
+            if (!$registro) throw new \DomainException('No se encontró el ejercicio.');
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($registro['rap_id']);
+            $ejercicioModel->eliminar($id);
+            $contenido->validarPublicado($registro['rap_id']);
+            $pdo->commit();
             echo json_encode(['success' => true]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'No se pudo eliminar el ejercicio']);
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422); echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log($e->getMessage());
+            http_response_code(500); echo json_encode(['error' => 'No se pudo eliminar el contenido.']);
         }
     }
 }

@@ -6,9 +6,13 @@ use PDO;
 use DomainException;
 
 class AccesoCurso extends Model {
+    public static function alcanzaUmbral(float $avance, float $umbral): bool {
+        return $avance >= max(0,min(100,$umbral));
+    }
+
     public function rap(string $rapId, bool $preview = false): array {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT r.*, n.orden AS nivel_orden, n.activo AS nivel_activo FROM rap r JOIN nivel n ON n.id = r.nivel_id WHERE r.id = ?');
+        $stmt = $pdo->prepare('SELECT r.*, n.orden AS nivel_orden, n.activo AS nivel_activo, n.umbral_desbloqueo FROM rap r JOIN nivel n ON n.id = r.nivel_id WHERE r.id = ?');
         $stmt->execute([$rapId]);
         $rap = $stmt->fetch();
         if (!$rap || (!$preview && (!$rap['activo'] || !$rap['nivel_activo']))) {
@@ -21,7 +25,7 @@ class AccesoCurso extends Model {
             if ($anterior) {
                 $stmt = $pdo->prepare('SELECT COALESCE(AVG(COALESCE(p.porcentaje, 0)), 0) FROM rap r LEFT JOIN progreso p ON p.rap_id=r.id AND p.usuario_id=? WHERE r.nivel_id=? AND r.activo=1');
                 $stmt->execute([$_SESSION['usuario_id'], $anterior]);
-                if ((float) $stmt->fetchColumn() < 80) throw new DomainException('Completa el módulo anterior antes de acceder a este RAP.');
+                if (!self::alcanzaUmbral((float)$stmt->fetchColumn(),(float)$rap['umbral_desbloqueo'])) throw new DomainException('Completa el módulo anterior antes de acceder a este RAP.');
             }
         }
         return $rap;

@@ -630,17 +630,24 @@ class AdminController extends Controller {
         $id = limpiar($_POST['id'] ?? '');
         if (!empty($id)) {
             $pdo = obtenerConexion();
-            $stmt = $pdo->prepare('SELECT activo FROM rap WHERE id=?');
-            $stmt->execute([$id]);
-            if ((int)$stmt->fetchColumn() === 0) {
-                $stmt = $pdo->prepare('SELECT COUNT(*) FROM quiz q JOIN pregunta p ON p.quiz_id=q.id AND p.activo=1 WHERE q.rap_id=? AND q.activo=1');
+            try {
+                $pdo->beginTransaction();
+                $contenido = new \App\Models\ContenidoCurso();
+                $contenido->bloquearModulo($id);
+                $stmt = $pdo->prepare('SELECT activo FROM rap WHERE id=? FOR UPDATE');
                 $stmt->execute([$id]);
-                if ((int)$stmt->fetchColumn() === 0) {
-                    $this->redirect('admin/raps?error=' . urlencode('Completa el quiz con preguntas activas antes de publicar el RAP.'));
-                }
+                if ((int)$stmt->fetchColumn() === 0) $contenido->validarPublicacion($id);
+                $stmt = $pdo->prepare('UPDATE rap SET activo = IF(activo = 1, 0, 1) WHERE id = ?');
+                $stmt->execute([$id]);
+                $pdo->commit();
+            } catch (\DomainException $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                $this->redirect('admin/raps?error=' . urlencode($e->getMessage()));
+                return;
+            } catch (\Throwable $e) {
+                if ($pdo->inTransaction()) $pdo->rollBack();
+                throw $e;
             }
-            $stmt = $pdo->prepare('UPDATE rap SET activo = IF(activo = 1, 0, 1) WHERE id = ?');
-            $stmt->execute([$id]);
         }
 
         $this->redirect('admin/raps?exito=estado');

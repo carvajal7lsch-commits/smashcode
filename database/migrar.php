@@ -51,6 +51,7 @@ const MIGRACIONES = [
     '2026_09_15_vocabulario_traduccion_ejemplo.sql',
     '2026_09_15_vocabulario_traducciones_ejemplos.sql',
     '2026_09_17_control_aprendiz.sql',
+    '2026_09_17_historial_quiz.sql',
 ];
 
 const INTENTOS_CONEXION = 30;

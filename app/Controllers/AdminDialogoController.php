@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\Dialogo;
 use App\Models\TurnoDialogo;
 use App\Models\Rap;
+use App\Models\ContenidoCurso;
 
 class AdminDialogoController extends Controller {
 
@@ -83,6 +84,17 @@ class AdminDialogoController extends Controller {
         try {
             $pdo = \App\Core\Model::obtenerConexion();
             $pdo->beginTransaction();
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($rapId);
+
+            $turnos = $_POST['turnos'] ?? [];
+            if (!is_array($turnos) || !$turnos) throw new \DomainException('El diálogo necesita al menos un turno.');
+            foreach ($turnos as $turno) {
+                if (!is_array($turno) || trim((string)($turno['hablante'] ?? '')) === '' || trim((string)($turno['texto_en'] ?? '')) === '') {
+                    throw new \DomainException('Cada turno necesita hablante y texto en inglés.');
+                }
+            }
+            if ($dialogoId && ($dialogoModel->obtenerPorId($dialogoId)['rap_id'] ?? null) !== $rapId) throw new \DomainException('El diálogo no pertenece al RAP.');
 
             if (empty($dialogoId)) {
                 $dialogoId = $dialogoModel->crear([
@@ -151,10 +163,15 @@ class AdminDialogoController extends Controller {
                 $turnoModel->desactivar($idQuitado);
             }
 
+            $contenido->validarPublicado($rapId);
             $pdo->commit();
             echo json_encode(['success' => true]);
 
-        } catch (\Exception $e) {
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422);
+            echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
             $pdo->rollBack();
             http_response_code(500);
             echo json_encode(['error' => 'Error al guardar: ' . $e->getMessage()]);
@@ -188,12 +205,25 @@ class AdminDialogoController extends Controller {
             exit;
         }
 
-        $dialogoModel = new Dialogo();
-        if ($dialogoModel->eliminar($id)) {
+        $pdo = \App\Core\Model::obtenerConexion();
+        try {
+            $pdo->beginTransaction();
+            $dialogoModel = new Dialogo();
+            $registro = $dialogoModel->obtenerPorId($id);
+            if (!$registro) throw new \DomainException('No se encontró el diálogo.');
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($registro['rap_id']);
+            $dialogoModel->eliminar($id);
+            $contenido->validarPublicado($registro['rap_id']);
+            $pdo->commit();
             echo json_encode(['success' => true]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'No se pudo eliminar el diálogo']);
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422); echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log($e->getMessage());
+            http_response_code(500); echo json_encode(['error' => 'No se pudo eliminar el contenido.']);
         }
     }
 

@@ -552,7 +552,10 @@
                   <?php elseif ($ej['tipo'] === 'escucha_escribe'): ?>
                     <?php
                       // Buscar respuesta correcta en las opciones
-                      $correctWord = $ej['opciones'][0]['texto'] ?? '';
+                      $correctWord = '';
+                      foreach ($ej['opciones'] as $opcion) {
+                          if ((int)$opcion['es_correcta'] === 1) { $correctWord = $opcion['texto']; break; }
+                      }
                     ?>
                     <button class="dictation-play-btn" data-value="<?= limpiar($correctWord) ?>" onclick="speakText(this.dataset.value)" title="Escuchar Dictado">
                       <i class="fas fa-volume-up"></i>

@@ -21,6 +21,15 @@ if(($input['action'] ?? '')==='init') {
         $users[$name]=['id'=>$id,'correo'=>$email,'rol'=>$role];
     }
     echo json_encode(['users'=>$users,'password'=>$password]);
+} elseif (($input['action'] ?? '') === 'validate-course') {
+    require_once $root . '/app/Core/Autoloader.php';
+    \App\Core\Autoloader::registrar();
+    $failures=[];
+    foreach ($pdo->query('SELECT r.id FROM rap r JOIN nivel n ON n.id=r.nivel_id WHERE r.activo=1 AND n.activo=1')->fetchAll() as $rap) {
+        try { (new \App\Models\ContenidoCurso())->validarPublicacion($rap['id']); }
+        catch (\DomainException $e) { $failures[]=$e->getMessage(); }
+    }
+    echo json_encode(['failures'=>$failures]);
 } else {
     $stmt=$pdo->prepare($input['sql']); $stmt->execute($input['params'] ?? []);
     echo json_encode(['rows'=>$stmt->columnCount()?$stmt->fetchAll():[],'affected'=>$stmt->rowCount()]);

@@ -383,7 +383,10 @@ class AprendizController extends Controller {
             return $respuesta!=='' && $esperada && $esperada===array_map($normalizar,explode('|',$respuesta)) ? 1 : 0;
         }
         if ($respuesta==='') return 0;
-        if ($tipo === 'escucha_escribe') return isset($opciones[0]) && $normalizar($opciones[0]['texto'])===$normalizar($respuesta) ? 1 : 0;
+        if ($tipo === 'escucha_escribe') {
+            $correctas = array_values(array_filter($opciones,static fn($opcion)=>(int)$opcion['es_correcta']===1));
+            return count($correctas)===1 && $normalizar($correctas[0]['texto'])===$normalizar($respuesta) ? 1 : 0;
+        }
         foreach($opciones as $op) if((int)$op['es_correcta']===1 && $normalizar($op['texto'])===$normalizar($respuesta)) return 1;
         return 0;
     }
@@ -565,13 +568,13 @@ class AprendizController extends Controller {
         $numeroIntento = $intentosPrevios + 1;
 
         $intentoId = generarUUID();
-        $stmtInsInt = $pdo->prepare('INSERT INTO intento_quiz (id, quiz_id, usuario_id, puntaje, aprobado, numero_intento, duracion_seg) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmtInsInt->execute([$intentoId, $quiz['id'], $uid, $puntaje, $aprobado, $numeroIntento, $duracionSeg]);
+        $stmtInsInt = $pdo->prepare('INSERT INTO intento_quiz (id, quiz_id, usuario_id, puntaje, aprobado, numero_intento, duracion_seg, puntaje_minimo_original) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmtInsInt->execute([$intentoId, $quiz['id'], $uid, $puntaje, $aprobado, $numeroIntento, $duracionSeg, $quiz['puntaje_minimo']]);
 
         // Guardar respuestas individuales
-        $stmtInsResp = $pdo->prepare('INSERT INTO respuesta_quiz (id, intento_quiz_id, pregunta_id, respuesta_elegida, es_correcto) VALUES (?, ?, ?, ?, ?)');
+        $stmtInsResp = $pdo->prepare('INSERT INTO respuesta_quiz (id, intento_quiz_id, pregunta_id, respuesta_elegida, es_correcto, texto_pregunta_original) VALUES (?, ?, ?, ?, ?, ?)');
         foreach ($detalles as $pregId => $det) {
-            $stmtInsResp->execute([generarUUID(), $intentoId, $pregId, $det['elegida'], $det['es_correcto']]);
+            $stmtInsResp->execute([generarUUID(), $intentoId, $pregId, $det['elegida'], $det['es_correcto'], $det['texto']]);
         }
 
         // 5. Actualizar Progreso del módulo (mejor puntaje y completado)
@@ -598,7 +601,9 @@ class AprendizController extends Controller {
             }
 
             $promedioModuloDespues = $this->obtenerPromedioModuloDelRap($pdo, $uid, $rapId);
-            if ($promedioModuloAntes < 80.0 && $promedioModuloDespues >= 80.0) {
+            $umbralSiguiente = $this->obtenerUmbralSiguienteModulo($pdo,$rapId);
+            if ($umbralSiguiente !== null && !AccesoCurso::alcanzaUmbral($promedioModuloAntes,$umbralSiguiente)
+                && AccesoCurso::alcanzaUmbral($promedioModuloDespues,$umbralSiguiente)) {
                 $moduloDesbloqueado = $this->obtenerNombreSiguienteModulo($pdo, $rapId);
             }
 
@@ -854,6 +859,12 @@ class AprendizController extends Controller {
      * Nombre del módulo siguiente al que contiene el RAP indicado, o null si
      * este ya era el último módulo activo del curso (HU05).
      */
+    private function obtenerUmbralSiguienteModulo(\PDO $pdo, string $rapId): ?float {
+        $stmt=$pdo->prepare('SELECT n.umbral_desbloqueo FROM nivel n WHERE n.activo=1 AND n.orden>(SELECT n2.orden FROM nivel n2 JOIN rap r ON r.nivel_id=n2.id WHERE r.id=?) ORDER BY n.orden LIMIT 1');
+        $stmt->execute([$rapId]);$umbral=$stmt->fetchColumn();
+        return $umbral===false ? null : (float)$umbral;
+    }
+
     private function obtenerNombreSiguienteModulo(\PDO $pdo, string $rapId): ?string {
         $stmt = $pdo->prepare(
             'SELECT n.nombre
