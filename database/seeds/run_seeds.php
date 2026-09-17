@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../../includes/solo_cli.php';
 /**
  * run_seeds.php
  * Script ejecutor de semillas y actualización de base de datos con UTF-8 (utf8mb4) garantizado.

@@ -155,12 +155,11 @@ function normalizarTextoEspanol(string $texto): string {
 }
 
 /**
- * Sanitiza una cadena para prevenir XSS y restaura tildes en español.
+ * Recorta y escapa una cadena para HTML sin modificar su ortografía.
  * @param string $valor Cadena de entrada
- * @return string Cadena segura y normalizada
+ * @return string Cadena escapada
  */
 function limpiar(string $valor): string {
-    $valor = normalizarTextoEspanol($valor);
     return htmlspecialchars(strip_tags(trim($valor)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 

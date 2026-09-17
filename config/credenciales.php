@@ -5,6 +5,11 @@
  * Lee las configuraciones de seguridad de manera dinámica desde el archivo .env
  */
 
+// Los comandos CLI también deben leer .env, no solo index.php.
+if (file_exists(dirname(__DIR__) . '/vendor/autoload.php')) {
+    require_once dirname(__DIR__) . '/vendor/autoload.php';
+}
+
 // Cargar variables de entorno si existe la librería
 if (class_exists(\Dotenv\Dotenv::class)) {
     // Buscar .env en la raíz del proyecto
@@ -18,6 +23,7 @@ if (class_exists(\Dotenv\Dotenv::class)) {
 
 // Base de Datos
 define('DB_HOST', $_ENV['DB_HOST'] ?? $_SERVER['DB_HOST'] ?? getenv('DB_HOST') ?: 'localhost');
+define('DB_PUERTO', (int) ($_ENV['DB_PUERTO'] ?? $_SERVER['DB_PUERTO'] ?? getenv('DB_PUERTO') ?: 3306));
 define('DB_NOMBRE', $_ENV['DB_NOMBRE'] ?? $_SERVER['DB_NOMBRE'] ?? getenv('DB_NOMBRE') ?: 'smash_code');
 define('DB_USUARIO', $_ENV['DB_USUARIO'] ?? $_SERVER['DB_USUARIO'] ?? getenv('DB_USUARIO') ?: 'root');
 define('DB_CLAVE', $_ENV['DB_CLAVE'] ?? $_SERVER['DB_CLAVE'] ?? getenv('DB_CLAVE') ?: '');

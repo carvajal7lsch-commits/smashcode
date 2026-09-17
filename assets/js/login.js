@@ -7,10 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ── Tabs de ROL (Aprendiz / Instructor / Admin) ── */
   const tabsRol = document.querySelectorAll('.tab-rol');
+  if (document.getElementById('rol-ingreso')?.value !== 'aprendiz') {
+    document.getElementById('btn-registrar').style.display = 'none';
+  }
   tabsRol.forEach(tab => {
     tab.addEventListener('click', () => {
       tabsRol.forEach(t => t.classList.remove('activo'));
       tab.classList.add('activo');
+      document.getElementById('rol-ingreso').value = tab.id.replace('tab-', '');
 
       /* Instructor y Admin solo tienen formulario de ingresar */
       if (tab.id !== 'tab-aprendiz') {

@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/solo_cli.php';
 /**
  * diagnostico_raps.php
  * Diagnóstico de SOLO LECTURA de la tabla `rap`: no modifica nada.

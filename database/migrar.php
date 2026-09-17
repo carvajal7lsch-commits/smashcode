@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/solo_cli.php';
 /**
  * migrar.php
  * Aplica el esquema base (solo si la base está vacía) y las migraciones
@@ -49,6 +50,7 @@ const MIGRACIONES = [
     '2026_09_15_dialogos_anotaciones_y_turnos.sql',
     '2026_09_15_vocabulario_traduccion_ejemplo.sql',
     '2026_09_15_vocabulario_traducciones_ejemplos.sql',
+    '2026_09_17_control_aprendiz.sql',
 ];
 
 const INTENTOS_CONEXION = 30;
@@ -64,7 +66,7 @@ echo "========================================================\n\n";
  * listo antes que MySQL.
  */
 function conectarConReintentos(): PDO {
-    $dsn = 'mysql:host=' . DB_HOST . ';charset=' . DB_CHARSET;
+    $dsn = 'mysql:host=' . DB_HOST . ';port=' . DB_PUERTO . ';charset=' . DB_CHARSET;
     $ultimoError = '';
 
     for ($intento = 1; $intento <= INTENTOS_CONEXION; $intento++) {

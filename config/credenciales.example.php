@@ -6,6 +6,7 @@
 
 // Base de Datos
 define('DB_HOST', 'localhost');
+define('DB_PUERTO', 3306);
 define('DB_NOMBRE', 'smash_code');
 define('DB_USUARIO', 'root');
 define('DB_CLAVE', '');

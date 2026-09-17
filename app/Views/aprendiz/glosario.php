@@ -164,6 +164,7 @@
   function toggleStar(vocabId, btnNode) {
     let formData = new FormData();
     formData.append('vocabulario_id', vocabId);
+    formData.append('csrf_token',<?= json_encode(generarTokenCSRF()) ?>);
 
     fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/marcar-vocabulario', {
       method: 'POST',
@@ -178,6 +179,7 @@
         window.location.href = '<?= PROYECTO_PATH ?>/login';
         return;
       }
+      if (!d.exito) { alert(d.error || 'No se pudo guardar.'); return; }
       if (d.exito) {
         let icon = btnNode.querySelector('i');
         if (d.marcado) {

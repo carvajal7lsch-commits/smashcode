@@ -76,6 +76,13 @@ class AdminQuizController extends Controller {
         $limiteTiempoSeg = $_POST['limite_tiempo_seg'] ?? 300;
         $maxIntentos = $_POST['max_intentos'] ?? 3;
         $aleatorizar = !empty($_POST['aleatorizar']) ? 1 : 0;
+        if (!is_numeric($puntajeMinimo) || $puntajeMinimo < 1 || $puntajeMinimo > 100
+            || filter_var($limiteTiempoSeg,FILTER_VALIDATE_INT) === false || $limiteTiempoSeg < 1 || $limiteTiempoSeg > 86400
+            || filter_var($maxIntentos,FILTER_VALIDATE_INT) === false || $maxIntentos < 1 || $maxIntentos > 100) {
+            http_response_code(400);
+            echo json_encode(['error'=>'Configuración inválida del quiz.']);
+            return;
+        }
 
         if (empty($rapId)) {
             http_response_code(400);
@@ -127,6 +134,9 @@ class AdminQuizController extends Controller {
                     }
 
                     $preguntaId = $p['id'] ?? null;
+                    if (count($opcionesClean) < 2 || !in_array($p['respuesta_correcta'], $opcionesClean, true)) {
+                        throw new \RuntimeException('Cada pregunta necesita al menos dos opciones y la respuesta correcta debe ser una de ellas.');
+                    }
                     if (!empty($preguntaId) && in_array($preguntaId, $idsActuales)) {
                         $idsEnviados[] = $preguntaId;
                         $preguntaModel->actualizar($preguntaId, [

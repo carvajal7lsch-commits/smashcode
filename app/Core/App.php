@@ -101,6 +101,19 @@ class App {
      * @param string $controladorMetodo Controlador y método
      */
     protected function despachar(string $controladorMetodo): void {
+        $autenticado = estaAutenticado();
+        if ($autenticado && !empty($_SESSION['debe_cambiar_clave'])
+            && !in_array($controladorMetodo, ['AuthController@showCambiarClave', 'AuthController@guardarCambiarClave', 'AuthController@logout', 'AuthController@csrf'], true)) {
+            if (stripos($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json') !== false
+                || strcasecmp($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '', 'XMLHttpRequest') === 0) {
+                http_response_code(403);
+                header('Content-Type: application/json');
+                echo json_encode(['exito' => false, 'error' => 'Debes cambiar tu contraseña antes de continuar.', 'redirigir' => PROYECTO_PATH . '/cambiar-clave']);
+            } else {
+                header('Location: ' . PROYECTO_PATH . '/cambiar-clave');
+            }
+            exit;
+        }
         list($nombreControlador, $metodo) = explode('@', $controladorMetodo);
         
         // Agregar namespace completo de controladores

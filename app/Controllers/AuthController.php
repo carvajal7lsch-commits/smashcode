@@ -108,6 +108,8 @@ class AuthController extends Controller {
                     } else {
                         $error = 'Contraseña incorrecta. Intento ' . $intentos . ' de 5.';
                     }
+                } elseif (($_POST['rol'] ?? 'aprendiz') !== $usuario['rol']) {
+                    $error = 'La cuenta no pertenece al perfil seleccionado. Elige el perfil correcto.';
                 } else {
                     // Autenticación exitosa
                     $this->userModel->resetearIntentosFallidos($usuario['id']);
@@ -116,6 +118,7 @@ class AuthController extends Controller {
                     $_SESSION['nombre'] = $usuario['nombre_completo'];
                     $_SESSION['rol'] = $usuario['rol'];
                     $_SESSION['ultima_actividad'] = time();
+                    actualizarHuellaSesion();
 
                     // Generar token JWT para la sesión
                     if (!defined('JWT_SECRET')) {
@@ -513,6 +516,7 @@ class AuthController extends Controller {
 
         $hash = password_hash($claveNueva, PASSWORD_BCRYPT, ['cost' => 12]);
         $this->userModel->actualizarContrasenaYLimpiarFlag($_SESSION['usuario_id'], $hash);
+        actualizarHuellaSesion();
 
         // Redirigir al panel correspondiente con mensaje de éxito
         $this->redirigirPorRol($_SESSION['rol']);
@@ -830,6 +834,7 @@ class AuthController extends Controller {
         $_SESSION['nombre'] = $usuario['nombre_completo'];
         $_SESSION['rol'] = $usuario['rol'];
         $_SESSION['ultima_actividad'] = time();
+        actualizarHuellaSesion();
 
         // Generar token JWT para la sesión
         if (!defined('JWT_SECRET')) {
@@ -853,5 +858,15 @@ class AuthController extends Controller {
         ];
         $jwt = JWT::encode($payload, $secret_key, 'HS256');
         $_SESSION['jwt_token'] = $jwt;
+    }
+
+    public function csrf(): void {
+        header('Content-Type: application/json');
+        if (!estaAutenticado()) {
+            http_response_code(401);
+            echo json_encode(['exito' => false, 'sesion_expirada' => true]);
+            return;
+        }
+        echo json_encode(['exito' => true, 'csrf_token' => generarTokenCSRF(), 'usuario_id' => $_SESSION['usuario_id']]);
     }
 }

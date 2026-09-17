@@ -17,7 +17,7 @@ class User extends Model {
      */
     public function obtenerPorCorreo(string $correo): ?array {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT id, nombre_completo, contrasena, rol, activo, bloqueado, intentos_fallidos, debe_cambiar_clave FROM usuarios WHERE correo = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, nombre_completo, contrasena, rol, activo, bloqueado, intentos_fallidos, debe_cambiar_clave FROM usuarios WHERE correo = ? AND eliminado = 0 LIMIT 1');
         $stmt->execute([$correo]);
         $usuario = $stmt->fetch();
         return $usuario ?: null;
@@ -236,14 +236,15 @@ class User extends Model {
      */
     public function actualizarXP(string $id, int $puntos): bool {
         $pdo = self::obtenerConexion();
-        $pdo->beginTransaction();
+        $propia = !$pdo->inTransaction();
+        if ($propia) $pdo->beginTransaction();
         try {
             // Obtener XP actuales
             $stmt = $pdo->prepare('SELECT xp_puntos, nivel_perfil FROM usuarios WHERE id = ? FOR UPDATE');
             $stmt->execute([$id]);
             $user = $stmt->fetch();
             if (!$user) {
-                $pdo->rollBack();
+                if ($propia) $pdo->rollBack();
                 return false;
             }
 
@@ -265,9 +266,10 @@ class User extends Model {
             $nivelAnterior = (int)floor((int)$user['xp_puntos'] / $xpPorNivel) + 1;
             $this->ultimoAscensoNivel = ($nuevoNivel > $nivelAnterior) ? $nuevoNivel : 0;
 
-            $pdo->commit();
+            if ($propia) $pdo->commit();
             return true;
         } catch (Exception $e) {
+            if (!$propia) throw $e;
             $pdo->rollBack();
             error_log('[User Model] Error en actualizarXP: ' . $e->getMessage());
             return false;

@@ -8,6 +8,10 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
 function enviarCorreo(string $destinatario, string $asunto, string $cuerpo): bool {
+    $enabled = $_ENV['MAIL_ENABLED'] ?? getenv('MAIL_ENABLED');
+    if ($enabled !== false && $enabled !== null && $enabled !== '' && !filter_var($enabled, FILTER_VALIDATE_BOOLEAN)) {
+        return false;
+    }
     $mail = new PHPMailer(true);
     try {
         // Cargar configuración de correo

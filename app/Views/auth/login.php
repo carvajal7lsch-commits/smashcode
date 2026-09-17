@@ -1,3 +1,7 @@
+<?php
+$rolElegido = $_POST['rol'] ?? 'aprendiz';
+if (!is_string($rolElegido) || !in_array($rolElegido,['aprendiz','instructor','admin'],true)) $rolElegido='aprendiz';
+?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
@@ -78,9 +82,9 @@
 
       <!-- Tabs rol -->
       <div class="tabs-rol" role="tablist">
-        <button class="tab-rol activo" id="tab-aprendiz" role="tab">Aprendiz</button>
-        <button class="tab-rol" id="tab-instructor" role="tab">Instructor</button>
-        <button class="tab-rol" id="tab-admin" role="tab">Admin</button>
+        <button class="tab-rol <?= $rolElegido==='aprendiz' ? 'activo' : '' ?>" id="tab-aprendiz" role="tab">Aprendiz</button>
+        <button class="tab-rol <?= $rolElegido==='instructor' ? 'activo' : '' ?>" id="tab-instructor" role="tab">Instructor</button>
+        <button class="tab-rol <?= $rolElegido==='admin' ? 'activo' : '' ?>" id="tab-admin" role="tab">Admin</button>
       </div>
 
       <!-- Tabs acción -->
@@ -100,6 +104,7 @@
       <form id="formulario-ingresar" method="POST" action="<?= PROYECTO_PATH ?>/login/ingresar" class="<?= $accion==='ingresar'?'auth-form-visible':'auth-form-hidden' ?>" novalidate>
         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
         <input type="hidden" name="accion" value="ingresar">
+        <input type="hidden" name="rol" id="rol-ingreso" value="<?= $rolElegido ?>">
 
         <div class="grupo-campo">
           <label class="etiqueta-campo" for="correo-ingreso">Correo</label>

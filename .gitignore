@@ -2,6 +2,7 @@
 
 # Ignorar archivos de configuración sensibles
 .env
+/.local/
 
 # Ignorar dependencias de Composer (es buena práctica que cada entorno corra composer install)
 /vendor/

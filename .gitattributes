@@ -2,3 +2,6 @@
 # convertiria a CRLF al hacer checkout y el contenedor fallaria al arrancar
 # con "no such file or directory" en el shebang.
 *.sh text eol=lf
+
+# index.php ya está versionado con CRLF; conservarlo sin reformatear el archivo.
+/index.php -text

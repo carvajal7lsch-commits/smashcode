@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/solo_cli.php';
 /**
  * probar_migracion.php
  * Prueba en seco una migración de datos: la ejecuta dentro de una transacción,

@@ -10,9 +10,9 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
 }
 
 // 2. Cargar utilidades procedimentales heredadas (funciones globales y manejo de sesión)
+require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
 require_once __DIR__ . '/includes/funciones.php';
-require_once __DIR__ . '/config/conexion.php';
 
 // 3. Registrar el Autocargador PSR-4 del núcleo MVC
 require_once __DIR__ . '/app/Core/Autoloader.php';
@@ -30,6 +30,7 @@ $app->post('/aprendiz/rap/marcar-vocabulario', 'AprendizController@toggleVocabMa
 $app->post('/aprendiz/rap/guardar-progreso', 'AprendizController@guardarProgreso');
 $app->post('/aprendiz/rap/guardar-ejercicio', 'AprendizController@guardarIntentoEjercicio');
 $app->post('/aprendiz/rap/guardar-quiz', 'AprendizController@guardarIntentoQuiz');
+$app->post('/aprendiz/rap/iniciar-quiz', 'AprendizController@iniciarQuiz');
 $app->get('/aprendiz/vocabulario', 'AprendizController@vocabulario');
 $app->get('/aprendiz/glosario', 'AprendizController@glosario');
 $app->get('/aprendiz/perfil', 'AprendizController@perfil');
@@ -41,6 +42,7 @@ $app->get('/login', 'AuthController@showLogin');
 $app->post('/login/ingresar', 'AuthController@ingresar');
 $app->post('/login/registrar', 'AuthController@registrar');
 $app->get('/logout', 'AuthController@logout');
+$app->get('/sesion/csrf', 'AuthController@csrf');
 
 // --- Inicio de Sesión con Google (OAuth 2.0) ---
 $app->get('/login/google', 'AuthController@googleRedirect');
@@ -142,4 +144,4 @@ $app->post('/admin/programas/eliminar',      'AdminController@eliminarPrograma')
 // ==============================================================
 
 // 5. Ejecutar la aplicación
-$app->run();
+$app->run();

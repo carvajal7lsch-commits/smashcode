@@ -51,6 +51,9 @@
       </div>
 
       <!-- Alertas flash -->
+      <?php if (!empty($error)): ?>
+        <div class="alerta-flash alerta-error" role="alert"><?= $error ?></div>
+      <?php endif; ?>
       <?php if ($exito): ?>
         <div class="alerta-flash alerta-exito" role="alert">
           <i class="fas fa-check-circle"></i> Estado del RAP actualizado correctamente.

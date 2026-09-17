@@ -17,6 +17,11 @@ abstract class Model {
      */
     public static function obtenerConexion(): PDO {
         if (self::$conexion === null) {
+            // Una conexión compartida permite transacciones entre dominios.
+            if (function_exists('obtenerConexion')) {
+                self::$conexion = \obtenerConexion();
+                return self::$conexion;
+            }
             // Cargar credenciales si no han sido definidas aún
             if (!defined('DB_HOST')) {
                 $rutaCredenciales = dirname(__DIR__, 2) . '/config/credenciales.php';
@@ -30,6 +35,7 @@ abstract class Model {
             }
 
             $dsn = 'mysql:host=' . DB_HOST
+                 . ';port=' . (defined('DB_PUERTO') ? DB_PUERTO : 3306)
                  . ';dbname=' . DB_NOMBRE
                  . ';charset=' . DB_CHARSET;
 

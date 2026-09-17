@@ -231,6 +231,14 @@ class AdminController extends Controller {
             return;
         }
 
+        if (!in_array($rol,['aprendiz','instructor','admin'],true)) {
+            $this->redirect('admin/usuarios?error=' . urlencode('Selecciona un rol válido.'));
+        }
+        $stmt = obtenerConexion()->prepare('SELECT id FROM usuarios WHERE correo=? AND id<>?');
+        $stmt->execute([$correo,$id]);
+        if ($stmt->fetchColumn()) {
+            $this->redirect('admin/usuarios?error=' . urlencode('Este correo ya está registrado.'));
+        }
         $this->usuarioModel->actualizar($id, $nombre, $correo, $rol, $ficha ?: null, $programaId ?: null);
         $this->redirect('admin/usuarios?exito=actualizado');
     }
@@ -622,6 +630,15 @@ class AdminController extends Controller {
         $id = limpiar($_POST['id'] ?? '');
         if (!empty($id)) {
             $pdo = obtenerConexion();
+            $stmt = $pdo->prepare('SELECT activo FROM rap WHERE id=?');
+            $stmt->execute([$id]);
+            if ((int)$stmt->fetchColumn() === 0) {
+                $stmt = $pdo->prepare('SELECT COUNT(*) FROM quiz q JOIN pregunta p ON p.quiz_id=q.id AND p.activo=1 WHERE q.rap_id=? AND q.activo=1');
+                $stmt->execute([$id]);
+                if ((int)$stmt->fetchColumn() === 0) {
+                    $this->redirect('admin/raps?error=' . urlencode('Completa el quiz con preguntas activas antes de publicar el RAP.'));
+                }
+            }
             $stmt = $pdo->prepare('UPDATE rap SET activo = IF(activo = 1, 0, 1) WHERE id = ?');
             $stmt->execute([$id]);
         }
