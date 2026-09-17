@@ -1,7 +1,3 @@
-<?php
-$rolElegido = $_POST['rol'] ?? 'aprendiz';
-if (!is_string($rolElegido) || !in_array($rolElegido,['aprendiz','instructor','admin'],true)) $rolElegido='aprendiz';
-?>
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
@@ -80,17 +76,10 @@ if (!is_string($rolElegido) || !in_array($rolElegido,['aprendiz','instructor','a
       <h2 class="titulo-formulario titulo-formulario-auth"><?= $accion === 'registrar' ? 'Crea tu cuenta' : 'Inicia sesión' ?></h2>
       <p class="subtitulo-formulario">Ingresa al mundo del inglés clínico para enfermería.</p>
 
-      <!-- Tabs rol -->
-      <div class="tabs-rol" role="tablist">
-        <button class="tab-rol <?= $rolElegido==='aprendiz' ? 'activo' : '' ?>" id="tab-aprendiz" role="tab">Aprendiz</button>
-        <button class="tab-rol <?= $rolElegido==='instructor' ? 'activo' : '' ?>" id="tab-instructor" role="tab">Instructor</button>
-        <button class="tab-rol <?= $rolElegido==='admin' ? 'activo' : '' ?>" id="tab-admin" role="tab">Admin</button>
-      </div>
-
       <!-- Tabs acción -->
       <div class="tabs-accion">
-        <button class="tab-accion <?= $accion === 'ingresar'  ? 'activo' : '' ?>" id="btn-ingresar"  type="button">Ingresar</button>
-        <button class="tab-accion <?= $accion === 'registrar' ? 'activo' : '' ?>" id="btn-registrar" type="button">Registrarse</button>
+        <button class="tab-accion <?= $accion === 'ingresar'  ? 'activo' : '' ?>" id="btn-ingresar"  type="button">Iniciar sesión</button>
+        <button class="tab-accion <?= $accion === 'registrar' ? 'activo' : '' ?>" id="btn-registrar" type="button">Regístrate</button>
       </div>
 
       <?php if ($error): ?>
@@ -104,7 +93,6 @@ if (!is_string($rolElegido) || !in_array($rolElegido,['aprendiz','instructor','a
       <form id="formulario-ingresar" method="POST" action="<?= PROYECTO_PATH ?>/login/ingresar" class="<?= $accion==='ingresar'?'auth-form-visible':'auth-form-hidden' ?>" novalidate>
         <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
         <input type="hidden" name="accion" value="ingresar">
-        <input type="hidden" name="rol" id="rol-ingreso" value="<?= $rolElegido ?>">
 
         <div class="grupo-campo">
           <label class="etiqueta-campo" for="correo-ingreso">Correo</label>
@@ -126,7 +114,7 @@ if (!is_string($rolElegido) || !in_array($rolElegido,['aprendiz','instructor','a
         </div>
 
         <button type="submit" class="btn btn-verde btn-block">
-          <i class="fas fa-right-to-bracket"></i> Ingresar
+          <i class="fas fa-right-to-bracket"></i> Iniciar sesión
         </button>
         <div class="separador-o">o ingresa con</div>
         <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">

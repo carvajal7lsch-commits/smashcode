@@ -21,7 +21,7 @@ GOOGLE_REDIRECT_URI=http://127.0.0.1:8097/login/google/callback
 ```
 
 3. Ejecutar `powershell -ExecutionPolicy Bypass -File tools/start-local.ps1`.
-4. Abrir http://127.0.0.1:8097. Las credenciales de aprendiz, instructor y admin se generan en `.local/local-users.json`. Seleccionar el perfil correspondiente al iniciar sesión.
+4. Abrir http://127.0.0.1:8097. Las credenciales de aprendiz, instructor y admin se generan en `.local/local-users.json`. El sistema identifica el rol automáticamente con el correo y la contraseña.
 
 El primer arranque crea la base, ejecuta migraciones, carga contenido y genera cuentas de prueba. Los siguientes arranques conservan los datos y solo ejecutan migraciones idempotentes. Los seeds borran contenido: no ejecutarlos de nuevo sobre una base con progreso. Los logs y las sesiones están en `.local/` y no se versionan. Para usar un directorio de datos existente, definir `LOCAL_MYSQL_DATADIR` en `.env`. El lanzador verifica `@@datadir` antes de ejecutar mantenimiento.
 
@@ -41,4 +41,4 @@ Se pueden indicar `--php`, `--node` y `--artifact-root`. Las pruebas crean y eli
 
 Antes de activar el código en otro entorno, respaldar la base y ejecutar `php database/migrar.php`. La nueva migración añade sesiones de práctica/quiz y resultados idempotentes; conserva el contenido y progreso existente. El despliegue invalida sesiones antiguas: los usuarios deben volver a entrar. No ejecutar seeds durante el despliegue.
 
-La política existente del instructor sin programa asignado se conserva. La interfaz valida el perfil elegido; la autorización siempre usa el rol guardado en la base de datos.
+La política existente del instructor sin programa asignado se conserva. El login no solicita seleccionar un perfil; la autorización y el panel de destino usan el rol guardado en la base de datos.

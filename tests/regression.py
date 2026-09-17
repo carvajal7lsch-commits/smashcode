@@ -59,7 +59,9 @@ class Client:
 def login(client,user,password,role=None):
     code,body,_=client.request('/login')
     token=re.search(r'name="csrf_token" value="([^"]+)"',body).group(1)
-    code,body,headers=client.request('/login/ingresar',{'csrf_token':token,'correo':user['correo'],'contrasena':password,'rol':role or user['rol']})
+    payload={'csrf_token':token,'correo':user['correo'],'contrasena':password}
+    if role is not None: payload['rol']=role
+    code,body,headers=client.request('/login/ingresar',payload)
     if code==302: client.token()
     return code,body,headers
 
@@ -91,12 +93,16 @@ try:
     check('CSS accesible',guest.request('/assets/css/estilos.css')[0]==200)
     check('AJAX sin sesión devuelve 401',guest.json('/aprendiz/rap/guardar-progreso',{})[0]==401)
     wrong=Client(); code,body,_=login(wrong,users['aprendiz'],password,'admin')
-    check('Login rechaza rol discordante',code==200 and 'perfil seleccionado' in body)
+    check('Rol enviado por cliente no eleva privilegios',code==302 and wrong.request('/admin')[0] in (302,403))
+    login_page=guest.request('/login')[1]
+    check('Login sin selector ni campo de rol','tab-aprendiz' not in login_page and 'tab-instructor' not in login_page and 'tab-admin' not in login_page and 'name="rol"' not in login_page)
+    invalid=Client(); code,body,_=login(invalid,users['aprendiz'],password+'incorrecta')
+    check('Login rechaza contraseña incorrecta',code==200 and invalid.request('/admin')[0] in (302,403))
     clients={}
     for role in ['aprendiz','instructor','admin']:
         client=Client(); clients[role]=client
         code,_,headers=login(client,users[role],password)
-        check('Login '+role,code==302)
+        check('Login automático '+role,code==302 and headers.get('Location')==('/' if role=='aprendiz' else '/'+role))
         allowed='/' if role=='aprendiz' else '/'+role
         check('Panel '+role,client.request(allowed)[0]==200)
         for forbidden in ['/admin','/instructor']:

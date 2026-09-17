@@ -108,8 +108,6 @@ class AuthController extends Controller {
                     } else {
                         $error = 'Contraseña incorrecta. Intento ' . $intentos . ' de 5.';
                     }
-                } elseif (($_POST['rol'] ?? 'aprendiz') !== $usuario['rol']) {
-                    $error = 'La cuenta no pertenece al perfil seleccionado. Elige el perfil correcto.';
                 } else {
                     // Autenticación exitosa
                     $this->userModel->resetearIntentosFallidos($usuario['id']);
