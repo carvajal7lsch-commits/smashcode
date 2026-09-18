@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Niveles — Instructor SmashCode</title>
-  <meta name="description" content="Panel del instructor: gestiona los 6 niveles del programa de inglés médico.">
+  <meta name="description" content="Panel del instructor: consulta los niveles y actividades del programa de inglés médico.">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
   <script>(function(){var t=localStorage.getItem('smashcode_tema');if(t)document.documentElement.setAttribute('data-theme',t);})();</script>
@@ -64,7 +64,7 @@
       <div class="encabezado-seccion-admin">
         <div>
           <h1 class="titulo-seccion-admin"><i class="fas fa-layer-group icono-seccion-admin"></i>Gestión de Niveles</h1>
-          <p class="desc-seccion-admin">Edita los 6 niveles del programa · MCER A1 → B2</p>
+          <p class="desc-seccion-admin">Consulta los <?= count($niveles) ?> niveles disponibles y previsualiza sus actividades.</p>
         </div>
       </div>
 
@@ -83,18 +83,18 @@
       <div class="grid-niveles">
         <?php
         $mcer = ['A1', 'A2', 'B1', 'B1+', 'B2-', 'B2'];
-        $iconos = ['🩺','💊','🏥','📋','🚑','🩻'];
+        $iconos = ['stethoscope','pill','hospital','clipboard','ambulance','activity'];
         foreach ($niveles as $n):
           $orden = (int)$n['orden'];
           $mcerLabel = $mcer[$orden - 1] ?? 'N/A';
-          $icono     = $iconos[$orden - 1] ?? '📚';
+          $icono     = $iconos[$orden - 1] ?? 'book';
         ?>
         <div class="card-nivel <?= $n['activo'] ? '' : 'inactivo' ?>">
           <div class="card-nivel-imagen">
             <?php if (!empty($n['imagen_url'])): ?>
               <img src="<?= limpiar($n['imagen_url']) ?>" alt="Portada Nivel <?= $orden ?>">
             <?php else: ?>
-              <span><?= $icono ?></span>
+              <span><?= icono_svg($icono,'icono-portada') ?></span>
             <?php endif; ?>
           </div>
           <div class="card-nivel-body">

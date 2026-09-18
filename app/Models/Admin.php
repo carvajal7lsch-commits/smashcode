@@ -10,11 +10,11 @@ use App\Core\Model;
 class Admin extends Model {
 
     /**
-     * Obtiene el número total de usuarios registrados con el rol de aprendiz.
+     * Obtiene el número total de usuarios registrados no eliminados.
      */
     public function obtenerTotalUsuarios(): int {
         $pdo = self::obtenerConexion();
-        return (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'aprendiz'")->fetchColumn();
+        return (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE eliminado = 0")->fetchColumn();
     }
 
     /**
@@ -22,7 +22,7 @@ class Admin extends Model {
      */
     public function obtenerAprendicesActivos(): int {
         $pdo = self::obtenerConexion();
-        return (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'aprendiz' AND activo = 1")->fetchColumn();
+        return (int) $pdo->query("SELECT COUNT(*) FROM usuarios WHERE rol = 'aprendiz' AND activo = 1 AND eliminado = 0")->fetchColumn();
     }
 
     /**
@@ -30,7 +30,7 @@ class Admin extends Model {
      */
     public function obtenerTotalXP(): int {
         $pdo = self::obtenerConexion();
-        return (int) $pdo->query("SELECT COALESCE(SUM(xp_puntos), 0) FROM usuarios")->fetchColumn();
+        return (int) $pdo->query("SELECT COALESCE(SUM(xp_puntos), 0) FROM usuarios WHERE eliminado = 0")->fetchColumn();
     }
 
     /**

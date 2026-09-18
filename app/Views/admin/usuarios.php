@@ -312,7 +312,7 @@
                     <span style="color: var(--texto-tenue); display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.02em;">Puntos XP</span>
                     <strong style="color: #FF9600; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; gap: 4px;">
                       <?php if ($u['rol'] === 'aprendiz'): ?>
-                        🔥 <?= number_format($u['xp_puntos']) ?>
+                        <?= icono_svg('flame') ?> <?= number_format($u['xp_puntos']) ?>
                       <?php else: ?>
                         <span style="color:var(--texto-tenue); font-weight:400;">—</span>
                       <?php endif; ?>
@@ -417,7 +417,7 @@
 <!-- Modal: Eliminar -->
 <div class="modal-fondo" id="modal-eliminar">
   <div class="modal-caja-premium">
-    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:#E11D48; margin-bottom:12px;">⚠️ Confirmar Eliminación</p>
+    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:#E11D48; margin-bottom:12px;"><?= icono_svg('warning') ?> Confirmar eliminación</p>
     <p class="modal-desc" id="modal-eliminar-desc" style="font-size:0.875rem; color:var(--texto-secundario); line-height:1.6; margin-bottom:24px;"></p>
     <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/eliminar">
       <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">

@@ -1618,3 +1618,11 @@ body.bg-mesh, body {
   background: linear-gradient(135deg, var(--morado), var(--azul)) !important;
 }
 
+
+/* Iconografía local SVG: tamaño uniforme y compatible con ambos temas. */
+.icono-svg { display:inline-block; width:1.15em; height:1.15em; vertical-align:-0.18em; flex-shrink:0; }
+.icono-portada { width:1em; height:1em; color:#fff; }
+.medalla-oro { color:#a87914; }
+.medalla-plata { color:#64748b; }
+.medalla-bronce { color:#9a5530; }
+.google-marca { display:inline-block; width:20px; height:20px; vertical-align:middle; flex-shrink:0; }

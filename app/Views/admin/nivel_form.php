@@ -133,7 +133,7 @@
                        <?= (int)$nivel['orden'] === 1 ? 'disabled title="El Nivel 1 siempre está disponible (0%)"' : '' ?>>
               </div>
               <p class="form-hint ayuda-campo" style="margin-top: 6px;">
-                <?= (int)$nivel['orden'] === 1 ? '⚡ El Nivel 1 siempre es accesible sin requisito previo.' : '% mínimo del nivel anterior para desbloquear este.' ?>
+                <?= (int)$nivel['orden'] === 1 ? 'El Nivel 1 siempre es accesible sin requisito previo.' : '% mínimo del nivel anterior para desbloquear este.' ?>
               </p>
             </div>
 

@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\User;
 use App\Models\Programa;
 use App\Models\ValidacionUsuario;
+use App\Services\CorreoPlantillas;
 use Firebase\JWT\JWT;
 use Exception;
 
@@ -86,9 +87,11 @@ class AuthController extends Controller {
                 if (!$usuario) {
                     $error = 'Correo o contraseña incorrectos.';
                 } elseif ($usuario['bloqueado']) {
-                    $error = 'Cuenta bloqueada. Revisa tu correo.';
+                    $error = 'Cuenta bloqueada. Usa Recuperar contraseña o contacta al administrador.';
                 } elseif (!$usuario['activo']) {
                     $error = 'Cuenta suspendida. Contacta al administrador.';
+                } elseif ($usuario['contrasena']===null) {
+                    $error='Esta cuenta no tiene una contraseña creada. Elige Continuar con Google o Recuperar contraseña.';
                 } elseif (!password_verify($contrasena, $usuario['contrasena'])) {
                     // Contraseña incorrecta
                     $intentos = $usuario['intentos_fallidos'] + 1;
@@ -100,11 +103,12 @@ class AuthController extends Controller {
                         // Importar la función de envío de correos desde includes
                         if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
                             require_once dirname(__DIR__, 2) . '/includes/correo.php';
-                            enviarCorreo(
-                                $correo,
-                                'Alerta de Seguridad - Cuenta Bloqueada',
-                                '<h1>Cuenta Bloqueada</h1><p>Tu cuenta ha sido bloqueada tras 5 intentos fallidos de inicio de sesión. Por favor, restablece tu contraseña para recuperar el acceso.</p>'
-                            );
+                            try {
+                                $mensaje=CorreoPlantillas::bloqueo($usuario['nombre_completo'],CorreoPlantillas::urlAplicacion('recuperar'));
+                                enviarCorreo($correo,$mensaje['asunto'],$mensaje['html']);
+                            } catch (\Throwable $e) {
+                                error_log('[Correo] No se pudo preparar el aviso de bloqueo: '.$e->getMessage());
+                            }
                         }
                     } else {
                         $error = 'Contraseña incorrecta. Intento ' . $intentos . ' de 5.';
@@ -211,7 +215,7 @@ class AuthController extends Controller {
                             // HU16: correo de confirmación. Si el servidor de correo falla, la cuenta
                             // igual queda creada y activa, y el aviso no promete un correo que no salió.
                             $exito = $this->enviarCorreoBienvenida($correo, $nombre)
-                                ? '¡Cuenta creada! Te enviamos un correo de confirmación. Ya puedes iniciar sesión.'
+                                ? '¡Cuenta creada! Te enviamos un correo de bienvenida. Ya puedes iniciar sesión.'
                                 : '¡Cuenta creada! Ya puedes iniciar sesión.';
                             $accion = 'ingresar';
                         
@@ -253,23 +257,20 @@ class AuthController extends Controller {
         }
         require_once $rutaCorreo;
 
-        return enviarCorreo($correo, 'Bienvenido a SmashCode: tu cuenta está activa', $this->cuerpoCorreoBienvenida($nombre));
+        try {
+            return enviarCorreo($correo, 'Tu cuenta en SmashCode está lista', $this->cuerpoCorreoBienvenida($nombre));
+        } catch (\Throwable $e) {
+            error_log('[Correo] No se pudo preparar la bienvenida: '.$e->getMessage());
+            return false;
+        }
     }
 
     /**
      * Cuerpo del correo de bienvenida. $nombre llega ya escapado por limpiar().
-     * Detrás del proxy del VPS el HTTPS lo indica X-Forwarded-Proto.
+     * Usa APP_URL o el esquema del servidor y los proxies configurados.
      */
     private function cuerpoCorreoBienvenida(string $nombre): string {
-        $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-        $enlace = ($esHttps ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . PROYECTO_PATH . '/login';
-
-        return '<h1>¡Bienvenido a SmashCode!</h1>'
-             . '<p>Hola ' . $nombre . ',</p>'
-             . '<p>Tu cuenta de aprendiz quedó creada y activa. Ya puedes iniciar sesión y empezar por el Módulo 1: Getting to Know Other People.</p>'
-             . "<p><a href='" . $enlace . "'>" . $enlace . '</a></p>'
-             . '<p>Si no creaste esta cuenta, ignora este mensaje.</p>';
+        return CorreoPlantillas::bienvenida($nombre,CorreoPlantillas::urlAplicacion('login'))['html'];
     }
 
     /**
@@ -322,6 +323,14 @@ class AuthController extends Controller {
             if (empty($correo) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
                 $error = 'Ingresa un correo electrónico válido.';
             } else {
+                require_once dirname(__DIR__,2).'/includes/correo.php';
+                if (!correoDisponible()) {
+                    $this->render('auth/recuperar', [
+                        'error'=>'La recuperación por correo no está disponible por ahora. Contacta al administrador de tu programa.',
+                        'exito'=>'', 'csrf'=>$csrf
+                    ]);
+                    return;
+                }
                 $usuario = $this->userModel->obtenerPorCorreo($correo);
 
                 if ($usuario) {
@@ -334,24 +343,16 @@ class AuthController extends Controller {
                     
                     $this->userModel->crearTokenRecuperacion($usuario['id'], $token_string, $expira);
 
-                    // Construcción dinámica de la URI
-                    $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-                    $enlace = $protocolo . $_SERVER['HTTP_HOST'] . PROYECTO_PATH . "/restablecer?token=" . $token_string;
-
-                    $cuerpo = "<h1>Recuperación de Contraseña</h1>";
-                    $cuerpo .= "<p>Hola " . limpiar($usuario['nombre_completo']) . ",</p>";
-                    $cuerpo .= "<p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace. Este enlace expira en 24 horas.</p>";
-                    $cuerpo .= "<p><a href='$enlace'>$enlace</a></p>";
-                    $cuerpo .= "<p>Si no fuiste tú, ignora este mensaje.</p>";
-
-                    if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
-                        require_once dirname(__DIR__, 2) . '/includes/correo.php';
-                        enviarCorreo($correo, 'Recupera tu contraseña en SmashCode', $cuerpo);
+                    $enlace=CorreoPlantillas::urlAplicacion('restablecer?token='.rawurlencode($token_string));
+                    $mensaje=CorreoPlantillas::recuperacion($usuario['nombre_completo'],$enlace);
+                    if (file_exists(dirname(__DIR__,2).'/includes/correo.php')) {
+                        require_once dirname(__DIR__,2).'/includes/correo.php';
+                        enviarCorreo($correo,$mensaje['asunto'],$mensaje['html']);
                     }
                 }
                 
                 // Siempre mostramos éxito por seguridad para no revelar si el correo existe
-                $exito = 'Si el correo está registrado, te hemos enviado las instrucciones para restablecer tu contraseña.';
+                $exito = 'Solicitud recibida. Revisa tu correo y la carpeta de spam. Si no recibes el enlace en unos minutos, solicita otro o contacta al administrador.';
             }
         }
 
@@ -547,7 +548,7 @@ class AuthController extends Controller {
         }
 
         if (empty(GOOGLE_CLIENT_ID) || empty(GOOGLE_CLIENT_SECRET) || empty(GOOGLE_REDIRECT_URI)) {
-            $this->redirect('login?error=' . urlencode('El inicio de sesión con Google no está configurado. Revisa el archivo .env'));
+            $this->redirect('login?error=' . urlencode('El acceso con Google no está disponible por ahora. Inicia sesión con tu correo y contraseña.'));
             return;
         }
 
@@ -594,13 +595,13 @@ class AuthController extends Controller {
                 $origenState !== '' ? trim($origenState) : 'ninguno',
                 empty($stateRecibido) ? 'vacio' : 'presente'
             ));
-            $this->redirect('login?error=' . urlencode('Solicitud inválida. Vuelve a intentarlo desde el botón de Google.'));
+            $this->redirect('login?error=' . urlencode('Tu solicitud de Google venció o no se pudo validar. Vuelve a elegir Continuar con Google.'));
             return;
         }
 
         // 2. Google devuelve ?error=access_denied si el usuario cancela el consentimiento
         if (!empty($_GET['error'])) {
-            $this->redirect('login?error=' . urlencode('Cancelaste el inicio de sesión con Google.'));
+            $this->redirect('login?error=' . urlencode('Cancelaste el acceso con Google. Puedes intentarlo de nuevo o usar tu correo y contraseña.'));
             return;
         }
 
@@ -654,7 +655,7 @@ class AuthController extends Controller {
                 return;
             }
             if (!empty($usuario['bloqueado'])) {
-                $this->redirect('login?error=' . urlencode('Cuenta bloqueada. Revisa tu correo.'));
+            $this->redirect('login?error=' . urlencode('Cuenta bloqueada. Usa Recuperar contraseña o contacta al administrador.'));
                 return;
             }
         } else {

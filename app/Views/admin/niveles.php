@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Niveles — Admin SmashCode</title>
-  <meta name="description" content="Panel de administración: gestiona los 6 niveles del programa de inglés médico SmashCode.">
+  <meta name="description" content="Panel de administración: gestiona los niveles del programa de inglés médico SmashCode.">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/cruds.css?v=<?= time() ?>">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -116,12 +116,12 @@
       <div class="grid-niveles">
         <?php
         $mcer = ['A1', 'A2', 'B1', 'B1+'];
-        $iconosNivel = ['🩺','💊','🏥','📋'];
+        $iconosNivel = ['stethoscope','pill','hospital','clipboard'];
 
         foreach ($niveles as $n):
           $orden = (int)$n['orden'];
           $mcerLabel = $mcer[$orden - 1] ?? 'N/A';
-          $icono     = $iconosNivel[$orden - 1] ?? '📚';
+          $icono     = $iconosNivel[$orden - 1] ?? 'book';
         ?>
         <div class="card-nivel <?= $n['activo'] ? '' : 'inactivo' ?>" 
              id="nivel-<?= limpiar($n['id']) ?>" 
@@ -133,7 +133,7 @@
             <?php if (!empty($n['imagen_url'])): ?>
               <img src="<?= limpiar($n['imagen_url']) ?>" alt="Portada Nivel <?= $orden ?>">
             <?php else: ?>
-              <span><?= $icono ?></span>
+              <span><?= icono_svg($icono,'icono-portada') ?></span>
             <?php endif; ?>
           </div>
 

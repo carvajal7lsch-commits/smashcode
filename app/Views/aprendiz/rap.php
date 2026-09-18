@@ -773,7 +773,7 @@
   // --- NAVEGACIÓN ENTRE TABS ---
   function switchTab(num) {
     if (num > maxTabUnlocked) {
-      alert("🔒 Este momento está bloqueado. Completa el momento actual para desbloquear el siguiente.");
+      alert("Este momento está bloqueado. Completa el momento actual para desbloquear el siguiente.");
       return;
     }
     document.querySelectorAll('.moment-tab').forEach(el => el.classList.remove('active'));

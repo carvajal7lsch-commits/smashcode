@@ -7,6 +7,7 @@ use App\Models\GestionUsuarios;
 use App\Models\Nivel;
 use App\Models\Programa;
 use App\Models\ValidacionUsuario;
+use App\Services\CorreoPlantillas;
 use App\Models\User;
 use App\Models\GamificacionConfig;
 
@@ -337,29 +338,15 @@ class AdminController extends Controller {
             }
         }
 
-        $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-        $urlLogin  = $protocolo . $_SERVER['HTTP_HOST'] . PROYECTO_PATH . '/login';
-
-        $rolTexto = ucfirst($rol);
-
-        $asunto = '¡Bienvenido a SmashCode! Tus credenciales de acceso';
-        $cuerpo  = "<h2 style='color:#58CC02;'>¡Bienvenido(a) al equipo SmashCode!</h2>";
-        $cuerpo .= "<p>Hola <strong>" . htmlspecialchars($nombre) . "</strong>,</p>";
-        $cuerpo .= "<p>El administrador ha generado una clave temporal para tu cuenta como <strong>{$rolTexto}</strong> en la plataforma SmashCode SENA.</p>";
-        $cuerpo .= "<p>Para acceder, utiliza las siguientes credenciales temporales. Por tu seguridad, el sistema te forzará a cambiarlas en tu primer inicio de sesión.</p>";
-        $cuerpo .= "<table style='border-collapse:collapse; font-size:1rem; margin:16px 0; background:#f4f4f4; padding:12px; border-radius:8px;'>";
-        $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Correo:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($correo) . "</td></tr>";
-        $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Contraseña Temporal:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($claveTemp) . "</td></tr>";
-        if ($ficha)         $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Ficha SENA:</td><td style='padding:8px 0;'>" . htmlspecialchars($ficha) . "</td></tr>";
-        if ($nombrePrograma) $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Programa asignado:</td><td style='padding:8px 0;'>" . htmlspecialchars($nombrePrograma) . "</td></tr>";
-        $cuerpo .= "</table>";
-        $cuerpo .= "<p style='margin-top:24px;'><a href='{$urlLogin}' style='display:inline-block; background:#58CC02; color:#fff; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:700;'>Ir a Iniciar Sesión</a></p>";
-        $cuerpo .= "<hr><p style='font-size:0.8rem; color:#aaa; margin-top:24px;'>Si tienes algún problema para acceder, contacta al administrador del sistema.</p>";
-
         $enviado=false;
-        if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
-            require_once dirname(__DIR__, 2) . '/includes/correo.php';
-            $enviado=enviarCorreo($correo, $asunto, $cuerpo);
+        try {
+            $mensaje=CorreoPlantillas::credenciales($nombre,$correo,$rol,$claveTemp,$nombrePrograma,CorreoPlantillas::urlAplicacion('login'),$ficha);
+            if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
+                require_once dirname(__DIR__, 2) . '/includes/correo.php';
+                $enviado=enviarCorreo($correo,$mensaje['asunto'],$mensaje['html']);
+            }
+        } catch (\Throwable $e) {
+            error_log('[Correo] No se pudo preparar la entrega temporal: '.$e->getMessage());
         }
 
         unset($_SESSION['credenciales_temporales']);

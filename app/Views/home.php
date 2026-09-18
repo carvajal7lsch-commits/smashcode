@@ -496,7 +496,7 @@
 <script>
   /* Mostrar mensaje cuando el aprendiz intenta acceder a un nivel bloqueado */
   function mostrarMensajeBloqueado(umbral, moduloBloqueado) {
-    alert(moduloBloqueado ? `🔒 Este módulo está bloqueado. Completa el módulo anterior con al menos ${umbral}% de progreso.` : 'Completa el momento anterior antes de continuar.');
+    alert(moduloBloqueado ? `Este módulo está bloqueado. Completa el módulo anterior con al menos ${umbral}% de progreso.` : 'Completa el momento anterior antes de continuar.');
   }
 </script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>

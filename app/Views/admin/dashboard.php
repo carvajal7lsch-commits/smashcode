@@ -46,7 +46,7 @@
         <div>
           <h1 class="pagina-titulo dashboard-welcome-title">Dashboard</h1>
           <p class="pagina-subtitulo dashboard-welcome-subtitle">
-            ¡Bienvenido, <strong><?= limpiar(explode(' ', $_SESSION['nombre'])[0]) ?></strong>! 👋
+            ¡Bienvenido, <strong><?= limpiar(explode(' ', $_SESSION['nombre'])[0]) ?></strong>!
             &nbsp;— Resumen de control de Smash Code
           </p>
         </div>
@@ -63,7 +63,7 @@
           </div>
           <div class="stat-valor-premium"><?= $totalUsuarios ?></div>
           <div class="stat-cambio-azul">
-            <i class="fas fa-arrow-trend-up"></i> +12 este mes
+            <i class="fas fa-users"></i> Cuentas registradas no eliminadas
           </div>
         </div>
 
@@ -75,7 +75,7 @@
           </div>
           <div class="stat-valor-premium"><?= $aprendicesActivos ?></div>
           <div class="stat-cambio-verde">
-            <i class="fas fa-arrow-trend-up"></i> +8 esta semana
+            <i class="fas fa-check-circle"></i> Cuentas de aprendiz habilitadas
           </div>
         </div>
 
@@ -87,19 +87,19 @@
           </div>
           <div class="stat-valor-premium"><?= $totalXP >= 1000 ? round($totalXP/1000,1).'K' : $totalXP ?></div>
           <div class="stat-cambio-naranja">
-            <i class="fas fa-fire" style="color:#EF4444;"></i> Racha global activa
+            <i class="fas fa-fire" style="color:#EF4444;"></i> Puntos acumulados en la plataforma
           </div>
         </div>
 
         <!-- CARD 4 -->
         <div class="tarjeta-premium card-lila">
           <div class="tarjeta-premium-header">
-            <span class="stat-etiqueta-lila">Quizzes Listos</span>
+            <span class="stat-etiqueta-lila">Quizzes Aprobados</span>
             <div class="stat-icono stat-icono-lila"><i class="fas fa-file-invoice"></i></div>
           </div>
           <div class="stat-valor-premium"><?= $quizzesCompletos ?></div>
           <div class="stat-cambio-lila">
-            <i class="fas fa-check-double"></i> 100% de integridad
+            <i class="fas fa-check-double"></i> Intentos con resultado aprobado
           </div>
         </div>
 
