@@ -80,7 +80,10 @@ class VocabularioController extends Controller {
             $actual=$editar ? $this->vocabularioModel->obtenerPorId($id) : null;
             if ($editar && (!$actual || $actual['rap_id']!==$rapId)) throw new \DomainException('La palabra no pertenece al RAP.');
             $datos=['id'=>$id,'rap_id'=>$rapId,'audio_url'=>$actual['audio_url'] ?? null,'imagen_url'=>$actual['imagen_url'] ?? null];
-            foreach (['termino_en','termino_es','categoria_id','area_clinica_id','transcripcion_ipa','oracion_ejemplo','traduccion_ejemplo','nivel_dificultad'] as $campo) {
+            // 'etiquetas' (RF-16) queda fuera de camposFaltantes a propósito: es un
+            // apoyo de búsqueda, no contenido pedagógico, y exigirlo invalidaría las
+            // palabras ya cargadas.
+            foreach (['termino_en','termino_es','categoria_id','area_clinica_id','transcripcion_ipa','oracion_ejemplo','traduccion_ejemplo','nivel_dificultad','etiquetas'] as $campo) {
                 $datos[$campo]=\App\Models\ValidacionUsuario::entrada($_POST[$campo] ?? '');
             }
             $faltantes=$this->camposFaltantes($datos);

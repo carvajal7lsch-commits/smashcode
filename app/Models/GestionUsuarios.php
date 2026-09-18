@@ -105,13 +105,18 @@ class GestionUsuarios extends Model {
     /**
      * Crea una cuenta con credenciales temporales.
      * Establece debe_cambiar_clave = 1 para forzar el cambio en el primer login.
+     *
+     * correo_verificado = 1 a propósito (RF-01): la activación por correo es para
+     * el auto-registro. Aquí el administrador ya responde por la persona y la clave
+     * temporal viaja a esa misma dirección, así que exigir activación solo dejaría
+     * fuera a los instructores que él mismo dio de alta.
      */
     public function crearConClaveTemporal(string $id, string $nombre, string $correo, string $hash, string $rol, ?string $programaId, ?string $ficha): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
             "INSERT INTO usuarios
              (id, nombre_completo, correo, contrasena, rol, programa_id, ficha_sena, activo, correo_verificado, debe_cambiar_clave)
-             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, 1)"
+             VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1, 1)"
         );
         return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $programaId, $ficha]);
     }

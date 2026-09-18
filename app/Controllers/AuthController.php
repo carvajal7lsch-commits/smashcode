@@ -113,8 +113,19 @@ class AuthController extends Controller {
                     } else {
                         $error = 'Contraseña incorrecta. Intento ' . $intentos . ' de 5.';
                     }
+                } elseif (!$usuario['correo_verificado']) {
+                    // RF-01: se avisa solo después de acertar la contraseña, para no
+                    // revelarle a un tercero qué correos tienen cuenta sin activar.
+                    $this->userModel->resetearIntentosFallidos($usuario['id']);
+                    $_SESSION['activacion_pendiente'] = [
+                        'id'     => $usuario['id'],
+                        'correo' => $correo,
+                        'nombre' => $usuario['nombre_completo']
+                    ];
+                    $error = 'Tu cuenta todavía no está activada. Revisa el correo que te enviamos y confirma el enlace.';
                 } else {
                     // Autenticación exitosa
+                    unset($_SESSION['activacion_pendiente']);
                     $this->userModel->resetearIntentosFallidos($usuario['id']);
                     session_regenerate_id(true);
                     $_SESSION['usuario_id'] = $usuario['id'];
@@ -212,10 +223,12 @@ class AuthController extends Controller {
                         $id = generarUUID();
                     
                         if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
-                            // HU16: correo de confirmación. Si el servidor de correo falla, la cuenta
-                            // igual queda creada y activa, y el aviso no promete un correo que no salió.
-                            $exito = $this->enviarCorreoBienvenida($correo, $nombre)
-                                ? '¡Cuenta creada! Te enviamos un correo de bienvenida. Ya puedes iniciar sesión.'
+                            // RF-01: la cuenta nace sin verificar y se habilita con el enlace del
+                            // correo. Si el correo no sale (servidor caído o MAIL_ENABLED=false) se
+                            // habilita igual: es la misma regla que ya seguía la bienvenida, y sin
+                            // ella una instalación sin SMTP no dejaría entrar a nadie jamás.
+                            $exito = $this->enviarCorreoActivacion($id, $correo, $nombre)
+                                ? '¡Cuenta creada! Te enviamos un correo para activarla. Revisa tu bandeja y confirma el enlace antes de iniciar sesión.'
                                 : '¡Cuenta creada! Ya puedes iniciar sesión.';
                             $accion = 'ingresar';
                         
@@ -245,6 +258,80 @@ class AuthController extends Controller {
             'programas' => $programas,
             'csrf' => $csrf
         ]);
+    }
+
+    /**
+     * RF-01: emite el token de activación y manda el enlace. Devuelve si el correo
+     * salió; el llamador decide qué hacer cuando no. Si no sale, la cuenta se marca
+     * verificada para no dejarla en un limbo del que nadie puede rescatarla.
+     */
+    private function enviarCorreoActivacion(string $usuarioId, string $correo, string $nombre): bool {
+        $rutaCorreo = dirname(__DIR__, 2) . '/includes/correo.php';
+        if (!file_exists($rutaCorreo)) {
+            $this->userModel->marcarCorreoVerificado($usuarioId);
+            return false;
+        }
+        require_once $rutaCorreo;
+
+        try {
+            $token  = bin2hex(random_bytes(32));
+            $expira = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            if (!$this->userModel->crearTokenActivacion($usuarioId, $token, $expira)) {
+                throw new \RuntimeException('No se pudo registrar el token de activación.');
+            }
+
+            $mensaje = CorreoPlantillas::activacion($nombre, CorreoPlantillas::urlAplicacion('activar?token=' . $token));
+            if (enviarCorreo($correo, $mensaje['asunto'], $mensaje['html'])) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            error_log('[Activacion] No se pudo preparar el correo: ' . $e->getMessage());
+        }
+
+        $this->userModel->marcarCorreoVerificado($usuarioId);
+        return false;
+    }
+
+    /**
+     * RF-01: consume el enlace de activación. No revela si el token existió o solo
+     * venció, y siempre devuelve al login con un mensaje claro.
+     */
+    public function activar(): void {
+        $token = is_string($_GET['token'] ?? null) ? trim($_GET['token']) : '';
+
+        if ($token !== '' && $this->userModel->activarCuenta($token)) {
+            $this->redirect('login?exito=' . urlencode('¡Cuenta activada! Ya puedes iniciar sesión.'));
+            return;
+        }
+
+        $this->redirect('login?error=' . urlencode('El enlace de activación es inválido o ya venció. Inicia sesión para pedir uno nuevo.'));
+    }
+
+    /**
+     * RF-01: reenvía el enlace de activación. Solo atiende a quien acaba de acertar
+     * su contraseña en esta misma sesión, así que no sirve para averiguar correos
+     * ajenos ni para inundar de mensajes a nadie.
+     */
+    public function reenviarActivacion(): void {
+        iniciarSesion();
+
+        if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+            $this->redirect('login?error=' . urlencode('Solicitud inválida. Recarga la página.'));
+            return;
+        }
+
+        $pendiente = $_SESSION['activacion_pendiente'] ?? null;
+        if (!is_array($pendiente) || empty($pendiente['id'])) {
+            $this->redirect('login?error=' . urlencode('Inicia sesión de nuevo para reenviar el enlace de activación.'));
+            return;
+        }
+
+        $enviado = $this->enviarCorreoActivacion($pendiente['id'], $pendiente['correo'], $pendiente['nombre']);
+        unset($_SESSION['activacion_pendiente']);
+
+        $this->redirect('login?' . ($enviado
+            ? 'exito=' . urlencode('Te reenviamos el enlace de activación. Revisa tu correo.')
+            : 'exito=' . urlencode('No pudimos enviar el correo, así que habilitamos tu cuenta. Ya puedes iniciar sesión.')));
     }
 
     /**

@@ -1,6 +1,6 @@
 # Desarrollo local en Windows
 
-Requisitos: Git, Composer, PHP 8.2 o posterior en PATH y MySQL de Wamp instalado. El lanzador usa una instancia aislada en 127.0.0.1:3308; no cambia los servicios de Wamp. No usarlo contra producción.
+Requisitos: Git, Composer, PHP 8.2 o posterior en PATH y MySQL de Wamp o MariaDB de XAMPP instalado. El lanzador detecta cuál hay: busca primero `C:\wamp64` y si no, `C:\xampp`; ambas rutas se pueden cambiar con `-WampPath` y `-XamppPath`. Usa una instancia aislada en 127.0.0.1:3308 con su propio directorio de datos, así que no toca los servicios ni las bases de Wamp o XAMPP. No usarlo contra producción.
 
 1. Ejecutar `composer install` desde la raíz del repositorio.
 2. Crear `.env` (ignorado por Git) con estos valores:
@@ -29,7 +29,7 @@ El correo y Google OAuth requieren credenciales propias; no están habilitados e
 
 ## Verificación
 
-Con el servidor local arrancado, Python y Node disponibles:
+Con el servidor local arrancado, Node y Python 3.9 o posterior disponibles (`tests/additional-regression.py` usa `Path.is_relative_to()`, que no existe en 3.8 y aborta la limpieza final dejando archivos de prueba en `assets/uploads`):
 
 ```powershell
 python tests/regression.py --base-url http://127.0.0.1:8097

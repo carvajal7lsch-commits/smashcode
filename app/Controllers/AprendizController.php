@@ -110,6 +110,28 @@ class AprendizController extends Controller {
             $stmtOpc = $pdo->prepare('SELECT id, texto, es_correcta, retroalimentacion FROM ejercicio_opcion WHERE ejercicio_id = ?');
             $stmtOpc->execute([$ej['id']]);
             $ej['opciones'] = $stmtOpc->fetchAll();
+            $ej['ayuda'] = null;
+        }
+        unset($ej);
+
+        // RF-34: recurso de ayuda de cada ejercicio. Se resuelve en una sola consulta
+        // para no pegarle a la base una vez por ejercicio.
+        $idsAyuda = array_values(array_filter(array_column($ejercicios, 'vocab_ayuda_id')));
+        if ($idsAyuda) {
+            $inAyuda = implode(',', array_fill(0, count($idsAyuda), '?'));
+            $stmtAyuda = $pdo->prepare(
+                "SELECT id, termino_en, termino_es, transcripcion_ipa, oracion_ejemplo, traduccion_ejemplo
+                 FROM vocabulario WHERE id IN ($inAyuda) AND activo = 1"
+            );
+            $stmtAyuda->execute($idsAyuda);
+            $ayudas = [];
+            foreach ($stmtAyuda->fetchAll() as $fila) {
+                $ayudas[$fila['id']] = $fila;
+            }
+            foreach ($ejercicios as &$ej) {
+                $ej['ayuda'] = $ayudas[$ej['vocab_ayuda_id'] ?? ''] ?? null;
+            }
+            unset($ej);
         }
 
         // Obtener Quizzes y Preguntas unificados. El quiz de cierre reúne las preguntas
@@ -1042,7 +1064,10 @@ class AprendizController extends Controller {
             $params[] = $nivelId;
         }
         if ($busqueda) {
-            $sql .= " AND (v.termino_en LIKE ? OR v.termino_es LIKE ?)";
+            // RF-16: las etiquetas existen para encontrar la palabra, así que entran
+            // en la búsqueda junto al término en inglés y su traducción.
+            $sql .= " AND (v.termino_en LIKE ? OR v.termino_es LIKE ? OR v.etiquetas LIKE ?)";
+            $params[] = "%$busqueda%";
             $params[] = "%$busqueda%";
             $params[] = "%$busqueda%";
         }
@@ -1054,9 +1079,33 @@ class AprendizController extends Controller {
 
         // Obtener filtros
         // Solo catálogos activos: desactivar un área o categoría la quita de los filtros (HU18)
-        $areas = $pdo->query("SELECT id, nombre FROM area_clinica WHERE activo = 1 ORDER BY nombre")->fetchAll();
-        $categorias = $pdo->query("SELECT id, nombre FROM categoria_vocabulario WHERE activo = 1 ORDER BY nombre")->fetchAll();
-        $niveles = $pdo->query("SELECT id, nombre FROM nivel ORDER BY orden")->fetchAll();
+        //
+        // RF-20: cada opción trae cuántos términos consultables tiene. Sin ese número,
+        // filtrar por un área todavía sin vocabulario devuelve una lista vacía sin
+        // explicación y parece un error de la plataforma.
+        $areas = $pdo->query(
+            "SELECT a.id, a.nombre, COUNT(v.id) AS total
+             FROM area_clinica a
+             LEFT JOIN vocabulario v ON v.area_clinica_id = a.id AND v.activo = 1
+             LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
+             WHERE a.activo = 1
+             GROUP BY a.id, a.nombre ORDER BY a.nombre"
+        )->fetchAll();
+        $categorias = $pdo->query(
+            "SELECT c.id, c.nombre, COUNT(v.id) AS total
+             FROM categoria_vocabulario c
+             LEFT JOIN vocabulario v ON v.categoria_id = c.id AND v.activo = 1
+             LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
+             WHERE c.activo = 1
+             GROUP BY c.id, c.nombre ORDER BY c.nombre"
+        )->fetchAll();
+        $niveles = $pdo->query(
+            "SELECT n.id, n.nombre, COUNT(v.id) AS total
+             FROM nivel n
+             LEFT JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
+             LEFT JOIN vocabulario v ON v.rap_id = r.id AND v.activo = 1
+             GROUP BY n.id, n.nombre, n.orden ORDER BY n.orden"
+        )->fetchAll();
 
         // Obtener vocabulario marcado por el usuario para las estrellas
         $uid = $_SESSION['usuario_id'] ?? null;

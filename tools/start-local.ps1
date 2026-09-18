@@ -1,4 +1,4 @@
-param([int]$WebPort = 8097, [string]$WampPath = 'C:\wamp64')
+param([int]$WebPort = 8097, [string]$WampPath = 'C:\wamp64', [string]$XamppPath = 'C:\xampp')
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot
 Set-Location $root
@@ -17,22 +17,38 @@ $sessions = Join-Path $local 'sessions'
 New-Item -ItemType Directory -Force $logs,$sessions | Out-Null
 $data = $settings['LOCAL_MYSQL_DATADIR']
 if (!$data) { $data = Join-Path $local 'mysql' }
-$mysqlVersion = Get-ChildItem (Join-Path $WampPath 'bin\mysql') -Directory | Sort-Object Name -Descending | Select-Object -First 1
-if (!$mysqlVersion) { throw 'No se encontró MySQL de Wamp.' }
-$mysqlExe = Join-Path $mysqlVersion.FullName 'bin\mysqld.exe'
+
+# Motor de base de datos: Wamp (MySQL 8) o XAMPP (MariaDB). El primero que exista.
+# Ambos arrancan igual; solo cambian el basedir y la forma de inicializar el datadir.
+$basedir = $null
+if (Test-Path (Join-Path $WampPath 'bin\mysql')) {
+    $version = Get-ChildItem (Join-Path $WampPath 'bin\mysql') -Directory | Sort-Object Name -Descending | Select-Object -First 1
+    if ($version) { $basedir = $version.FullName }
+}
+if (!$basedir -and (Test-Path (Join-Path $XamppPath 'mysql\bin\mysqld.exe'))) { $basedir = Join-Path $XamppPath 'mysql' }
+if (!$basedir) { throw 'No se encontró MySQL de Wamp ni MariaDB de XAMPP.' }
+$mysqlExe = Join-Path $basedir 'bin\mysqld.exe'
+$instalador = Join-Path $basedir 'bin\mysql_install_db.exe'
+# MariaDB no admite --initialize-insecure ni --mysqlx; trae su propio instalador de datadir.
+$esMariaDB = Test-Path $instalador
 $phpExe = (Get-Command php).Source
 function PortOpen([int]$Port) {
     $socket = [Net.Sockets.TcpClient]::new()
     try { $socket.Connect('127.0.0.1',$Port); return $true } catch { return $false } finally { $socket.Dispose() }
 }
-$fresh = !(Test-Path (Join-Path $data 'auto.cnf'))
+$fresh = !(Test-Path (Join-Path $data 'auto.cnf')) -and !(Test-Path (Join-Path $data 'mysql\user.frm')) -and !(Test-Path (Join-Path $data 'mysql\user.MAI'))
 if (!(PortOpen 3308)) {
     New-Item -ItemType Directory -Force $data | Out-Null
     if ($fresh) {
-        & $mysqlExe --no-defaults --initialize-insecure "--basedir=$($mysqlVersion.FullName)" "--datadir=$data" --console
+        if ($esMariaDB) {
+            & $instalador "--datadir=$data" --port=3308 --default-user --silent
+        } else {
+            & $mysqlExe --no-defaults --initialize-insecure "--basedir=$basedir" "--datadir=$data" --console
+        }
         if ($LASTEXITCODE -ne 0) { throw 'No se pudo inicializar MySQL local.' }
     }
-    $mysqlArgs = @('--no-defaults', "--basedir=`"$($mysqlVersion.FullName)`"", "--datadir=`"$data`"", '--port=3308','--bind-address=127.0.0.1','--mysqlx=OFF','--console')
+    $mysqlArgs = @('--no-defaults', "--basedir=`"$basedir`"", "--datadir=`"$data`"", '--port=3308','--bind-address=127.0.0.1','--console')
+    if (!$esMariaDB) { $mysqlArgs += '--mysqlx=OFF' }
     Start-Process -FilePath $mysqlExe -ArgumentList $mysqlArgs -WindowStyle Hidden -RedirectStandardOutput (Join-Path $logs 'mysql.out.log') -RedirectStandardError (Join-Path $logs 'mysql.err.log')
     for ($i=0; $i -lt 30 -and !(PortOpen 3308); $i++) { Start-Sleep -Milliseconds 500 }
     if (!(PortOpen 3308)) { throw 'MySQL no arrancó. Consulta .local/logs/mysql.err.log.' }

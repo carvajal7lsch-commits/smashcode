@@ -42,6 +42,11 @@ $app->get('/login', 'AuthController@showLogin');
 $app->post('/login/ingresar', 'AuthController@ingresar');
 $app->post('/login/registrar', 'AuthController@registrar');
 $app->get('/logout', 'AuthController@logout');
+
+// --- Activación de Cuenta por Correo (RF-01) ---
+$app->get('/activar', 'AuthController@activar');
+$app->post('/activar/reenviar', 'AuthController@reenviarActivacion');
+
 $app->get('/sesion/csrf', 'AuthController@csrf');
 
 // --- Inicio de Sesión con Google (OAuth 2.0) ---

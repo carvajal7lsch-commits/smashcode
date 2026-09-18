@@ -25,3 +25,9 @@ Desktop.ini
 # Configuraciones del IDE
 .vscode/
 
+
+# Credenciales locales: conexion.php usa credenciales.example.php si no existe
+/config/credenciales.php
+
+# Entregables generados (presentaciones, guiones, video)
+/Claude outputs/

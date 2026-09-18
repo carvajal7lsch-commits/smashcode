@@ -28,6 +28,15 @@ class CorreoPlantillas {
             'Iniciar sesión',$url,'Si no creaste esta cuenta, ignora este correo.');
     }
 
+    /** RF-01: confirmación que habilita la cuenta recién auto-registrada. */
+    public static function activacion(string $nombre,string $url): array {
+        return self::plantilla('Activa tu cuenta en SmashCode','Confirma tu correo',$nombre,
+            '<p>Ya casi. Para habilitar tu cuenta de aprendiz solo falta confirmar que este correo es tuyo.</p>'
+            .'<p><strong>El enlace vence en 24 horas y solo se puede usar una vez.</strong></p>'
+            .'<p>Hasta que lo confirmes no podrás iniciar sesión. Si el enlace vence, pide uno nuevo desde la pantalla de acceso.</p>',
+            'Activar mi cuenta',$url,'Si no creaste esta cuenta, ignora este correo y no se activará nada.');
+    }
+
     public static function recuperacion(string $nombre,string $url): array {
         return self::plantilla('Restablece tu contraseña de SmashCode','Crea una nueva contraseña',$nombre,
             '<p>Recibimos una solicitud para restablecer la contraseña de tu cuenta. Usa el botón para elegir una nueva.</p>'

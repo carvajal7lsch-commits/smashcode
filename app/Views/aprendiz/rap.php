@@ -431,7 +431,8 @@
         <?php else: ?>
           <div id="exercises-carousel">
             <?php foreach ($ejercicios as $idx => $ej): ?>
-              <div class="exercise-box" id="exercise-box-<?= $idx ?>" data-type="<?= $ej['tipo'] ?>" data-id="<?= $ej['id'] ?>" data-puntos="<?= (int)$ej['puntos'] ?>" data-max-intentos="<?= (int)$ej['max_intentos'] ?>">
+              <div class="exercise-box" id="exercise-box-<?= $idx ?>" data-type="<?= $ej['tipo'] ?>" data-id="<?= $ej['id'] ?>" data-puntos="<?= (int)$ej['puntos'] ?>" data-max-intentos="<?= (int)$ej['max_intentos'] ?>"
+                   data-ayuda="<?= empty($ej['ayuda']) ? '' : htmlspecialchars(json_encode($ej['ayuda'], JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>">
                 <?php if ($ej['tipo'] !== 'completar_frase'): ?>
                   <div class="exercise-title"><?= limpiar($ej['enunciado']) ?></div>
                 <?php endif; ?>
@@ -571,6 +572,8 @@
                     <div>
                       <div style="font-size:1.15rem; font-weight:800;" id="val-title-<?= $idx ?>">¡Correcto!</div>
                       <div class="vb-expl" id="val-expl-<?= $idx ?>">Explicación corta aquí.</div>
+                      <!-- RF-34: recurso de ayuda, solo al fallar y solo si el admin lo enlazó -->
+                      <div id="val-ayuda-<?= $idx ?>" style="display:none; margin-top:10px; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(0,0,0,0.08); text-align:left;"></div>
                     </div>
                   </div>
                 </div>
@@ -1647,6 +1650,8 @@
     let title = document.getElementById('val-title-' + exIdx);
     let expl = document.getElementById('val-expl-' + exIdx);
 
+    pintarAyudaEjercicio(exIdx, box, ans.isCorrect);
+
     if (ans.isCorrect) {
       banner.className = 'validation-banner correct';
       icon.className = 'fas fa-check-circle';
@@ -1682,6 +1687,69 @@
     updateExerciseHeader();
   }
 
+  // RF-34: al fallar, ofrecer la palabra del módulo que el administrador enlazó al
+  // ejercicio, con su pronunciación y un ejemplo clínico. Al acertar se oculta.
+  function pintarAyudaEjercicio(exIdx, box, esCorrecta) {
+    const caja = document.getElementById('val-ayuda-' + exIdx);
+    if (!caja) return;
+
+    if (esCorrecta || !box.dataset.ayuda) {
+      caja.style.display = 'none';
+      caja.innerHTML = '';
+      return;
+    }
+
+    let ayuda;
+    try {
+      ayuda = JSON.parse(box.dataset.ayuda);
+    } catch (e) {
+      caja.style.display = 'none';
+      return;
+    }
+    if (!ayuda || !ayuda.termino_en) { caja.style.display = 'none'; return; }
+
+    const esc = (t) => String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    let html = `<div style="font-size:0.72rem; font-weight:900; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75; margin-bottom:6px;">
+        <i class="fas fa-book-open"></i> Repasa esta palabra
+      </div>
+      <div style="font-weight:800; font-size:1rem;">${esc(ayuda.termino_en)} — ${esc(ayuda.termino_es)}</div>`;
+
+    if (ayuda.transcripcion_ipa) {
+      html += `<div style="font-weight:600; font-size:0.85rem; opacity:0.85;">${esc(ayuda.transcripcion_ipa)}</div>`;
+    }
+    if (ayuda.oracion_ejemplo) {
+      html += `<div style="font-weight:600; font-size:0.85rem; margin-top:6px;">“${esc(ayuda.oracion_ejemplo)}”</div>`;
+    }
+    if (ayuda.traduccion_ejemplo) {
+      html += `<div style="font-weight:600; font-size:0.82rem; opacity:0.8;">${esc(ayuda.traduccion_ejemplo)}</div>`;
+    }
+
+    html += `<button type="button" class="btn-escuchar-ayuda" onclick="escucharAyuda(this)" data-termino="${esc(ayuda.termino_en)}"
+               style="margin-top:10px; border:none; cursor:pointer; border-radius:10px; padding:6px 14px; font-weight:800; font-size:0.8rem; background:var(--azul); color:#fff;">
+               <i class="fas fa-volume-high" style="margin-right:6px;"></i>Escuchar
+             </button>`;
+
+    caja.innerHTML = html;
+    caja.style.display = 'block';
+  }
+
+  // Misma síntesis del navegador que usan el vocabulario y el glosario.
+  function escucharAyuda(boton) {
+    const texto = boton.dataset.termino || '';
+    if (!texto || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    const enVoice = window.speechSynthesis.getVoices()
+      .find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+    if (enVoice) utterance.voice = enVoice;
+    window.speechSynthesis.speak(utterance);
+  }
+
   // Conserva la identidad de la petición si hay que reintentar su envío.
   function registrarIntentoEjercicio(ejercicioId, ans) {
     if (!ejercicioId || !ans) return;
@@ -1702,6 +1770,8 @@
     delete answersObj[exIdx]; matchedPairs[exIdx]=[]; selectedOrderSeq=[];
     selectedColumnText={en:'',es:'',enNode:null,esNode:null};
     document.getElementById('val-banner-'+exIdx).className='validation-banner';
+    const ayuda=document.getElementById('val-ayuda-'+exIdx);
+    if(ayuda){ ayuda.style.display='none'; ayuda.innerHTML=''; }
     document.getElementById('btn-next-exercise-'+exIdx).style.display='none';
     document.getElementById('retry-exercise-'+exIdx).style.display='none';
     box.querySelectorAll('.option-item,.word-chip,.matching-card').forEach(node=>{

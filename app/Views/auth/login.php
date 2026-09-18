@@ -84,6 +84,15 @@
 
       <?php if ($error): ?>
         <div class="alerta alerta-error"><i class="fas fa-circle-exclamation"></i><?= $error ?></div>
+        <?php if (!empty($_SESSION['activacion_pendiente'])): ?>
+          <!-- RF-01: salida para quien no recibió o dejó vencer el enlace -->
+          <form method="POST" action="<?= PROYECTO_PATH ?>/activar/reenviar" style="margin:-8px 0 16px 0; text-align:center;">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+            <button type="submit" class="btn-enlace" style="background:none; border:none; cursor:pointer; text-decoration:underline; font-weight:700; font-size:0.85rem; color:var(--azul);">
+              Reenviar el enlace de activación
+            </button>
+          </form>
+        <?php endif; ?>
       <?php endif; ?>
       <?php if ($exito): ?>
         <div class="alerta alerta-exito"><i class="fas fa-circle-check"></i><?= $exito ?></div>

@@ -204,6 +204,7 @@
                             data-categoria_id="<?= $v['categoria_id'] ?>"
                             data-area_clinica_id="<?= $v['area_clinica_id'] ?>"
                             data-nivel_dificultad="<?= $v['nivel_dificultad'] ?>"
+                            data-etiquetas="<?= limpiar((string) ($v['etiquetas'] ?? '')) ?>"
                             data-audio_url="<?= $v['audio_url'] ?>"
                             data-imagen_url="<?= $v['imagen_url'] ?>"
                             onclick="abrirModalVocabulario(this)">
@@ -344,6 +345,14 @@
                 <option value="avanzado">Avanzado</option>
               </select>
             </div>
+
+            <!-- RF-16: etiquetas de búsqueda -->
+            <div class="grupo-input mb-0" style="margin-top: 16px;">
+              <label class="label-input" for="etiquetas">Etiquetas de Búsqueda</label>
+              <input type="text" name="etiquetas" id="vocab-etiquetas" class="input-base" maxlength="255"
+                     placeholder="Ej: signos vitales, triage, urgencias">
+              <small class="form-hint">Opcional. Sepáralas con comas. Sirven para encontrar la palabra en el glosario.</small>
+            </div>
           </div>
         </div>
 
@@ -401,6 +410,7 @@
       document.getElementById('vocab-ipa').value = btn.dataset.transcripcion_ipa || '';
       document.getElementById('vocab-oracion').value = btn.dataset.oracion_ejemplo || '';
       document.getElementById('vocab-traduccion-ejemplo').value = btn.dataset.traduccion_ejemplo || '';
+      document.getElementById('vocab-etiquetas').value = btn.dataset.etiquetas || '';
       soloCatalogosActivos(document.getElementById('vocab-categoria'), btn.dataset.categoria_id || '');
       soloCatalogosActivos(document.getElementById('vocab-area'), btn.dataset.area_clinica_id || '');
 
