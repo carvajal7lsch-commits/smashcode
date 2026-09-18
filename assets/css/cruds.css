@@ -231,7 +231,7 @@
 }
 .card-nivel {
   --theme-color: var(--verde);
-  --glow-color: rgba(88,204,2,0.25);
+  --glow-color: rgba(88,204,2,0.10);
   background: rgba(31, 47, 54, 0.65) !important;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -239,7 +239,7 @@
   border-top: 4px solid var(--theme-color) !important;
   border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 8px 24px var(--glow-color) !important;
+  box-shadow: 0 4px 12px var(--glow-color) !important;
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s;
   position: relative;
   display: flex;
@@ -248,11 +248,11 @@
 [data-theme="light"] .card-nivel {
   background: rgba(255, 255, 255, 0.75) !important;
   border: 2px solid rgba(0, 0, 0, 0.08) !important;
-  box-shadow: 0 8px 24px var(--glow-color) !important;
+  box-shadow: 0 4px 12px var(--glow-color) !important;
 }
 .card-nivel:hover {
   transform: translateY(-6px);
-  box-shadow: 0 16px 36px var(--glow-color) !important;
+  box-shadow: 0 8px 20px var(--glow-color) !important;
   border-color: var(--theme-color) !important;
 }
 .card-nivel.inactivo {
@@ -517,14 +517,32 @@ a.comp-badge:hover {
   text-decoration: none;
 }
 .btn-prever-nivel {
-  padding: 10px 12px;
+  padding: 10px 16px;
   font-size: 0.78rem;
-  border: none;
+  font-weight: 700;
+  font-family: var(--fuente);
+  border: 2px solid var(--gris-claro);
+  border-radius: var(--radio-sm);
+  background: var(--blanco);
+  color: var(--gris-texto);
+  cursor: pointer;
   text-align: center;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   text-decoration: none;
+  box-shadow: 0 3px 0 var(--gris-claro);
+  transition: all 0.15s;
+}
+.btn-prever-nivel:hover {
+  border-color: var(--azul);
+  color: var(--azul);
+  transform: translateY(-1px);
+}
+.btn-prever-nivel:active {
+  transform: translateY(3px);
+  box-shadow: none;
 }
 .btn-toggle-nivel { width: 42px; height: 42px; flex-shrink: 0; }
 .disabled-toggle { opacity: 0.35; cursor: not-allowed; }

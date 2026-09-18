@@ -5,7 +5,7 @@ Set-Location $root
 if (!(Test-Path .env)) { throw 'Crea .env siguiendo docs/local.md antes de arrancar.' }
 $settings = @{}
 Get-Content .env | ForEach-Object {
-    if ($_ -match '^([A-Z_]+)=(.*)$') { $settings[$matches[1]] = $matches[2].Trim('"').Trim("'") }
+    if ($_ -match '^([A-Z_]+)=(.*)$') { $settings[$matches[1]] = $matches[2].Trim().Trim('"').Trim("'").Trim() }
 }
 if ($settings['APP_ENV'] -ne 'local' -or $settings['DB_HOST'] -ne '127.0.0.1' -or $settings['DB_PUERTO'] -ne '3308' -or $settings['DB_NOMBRE'] -ne 'smash_code') {
     throw 'Este lanzador exige APP_ENV=local, DB_HOST=127.0.0.1, DB_PUERTO=3308 y DB_NOMBRE=smash_code.'

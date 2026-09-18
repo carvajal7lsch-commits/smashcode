@@ -407,7 +407,11 @@ class AprendizController extends Controller {
         if ($respuesta==='') return 0;
         if ($tipo === 'escucha_escribe') {
             $correctas = array_values(array_filter($opciones,static fn($opcion)=>(int)$opcion['es_correcta']===1));
-            return count($correctas)===1 && $normalizar($correctas[0]['texto'])===$normalizar($respuesta) ? 1 : 0;
+            if (count($correctas) !== 1) return 0;
+            $limpiarTexto = static fn($t) => preg_replace('/[^a-z0-9]/u', '', $normalizar($t));
+            $limpEsperado = $limpiarTexto($correctas[0]['texto']);
+            $limpRecibido = $limpiarTexto($respuesta);
+            return ($normalizar($correctas[0]['texto']) === $normalizar($respuesta) || ($limpRecibido !== '' && $limpEsperado === $limpRecibido)) ? 1 : 0;
         }
         foreach($opciones as $op) if((int)$op['es_correcta']===1 && $normalizar($op['texto'])===$normalizar($respuesta)) return 1;
         return 0;
@@ -1300,6 +1304,12 @@ class AprendizController extends Controller {
 
             if (empty($ficha)) {
                 $this->redirect('aprendiz/perfil?error=ficha' . $sufijo);
+                return;
+            }
+
+            // Validación de formato numérico y pertenencia al catálogo (W11 / W12)
+            if (!preg_match('/^[0-9]+$/', $ficha) || mb_strlen($ficha) > 20 || !\App\Models\ValidacionUsuario::fichaPermitida($ficha, $programaId, $usuario['ficha_sena'] ?? null)) {
+                $this->redirect('aprendiz/perfil?error=ficha_invalida' . $sufijo);
                 return;
             }
 

@@ -110,14 +110,16 @@
             </div>
 
             <!-- Ficha SENA -->
-            <div class="grupo-campo">
-              <label class="etiqueta-campo" for="ficha_sena">Ficha SENA <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+            <div class="grupo-campo" id="grupo-ficha-sena">
+              <label class="etiqueta-campo" for="ficha_sena">Ficha SENA <span id="label-ficha-tag" style="color:var(--texto-tenue); font-weight:400;"><?= ($usuario['rol'] ?? 'aprendiz') === 'aprendiz' ? '*' : '(Opcional)' ?></span></label>
               <div class="contenedor-input">
                 <i class="fas fa-id-card icono-input"></i>
                 <input type="text" id="ficha_sena" name="ficha_sena" class="campo-input"
-                       placeholder="Ej: 2877650" maxlength="20"
+                       placeholder="Ej: 3142784" maxlength="20"
+                       inputmode="numeric" pattern="[0-9]+" autocomplete="off"
                        value="<?= limpiar($usuario['ficha_sena'] ?? '') ?>">
               </div>
+              <span id="error-ficha-form" style="color:var(--rojo); font-size:0.75rem; font-weight:700; display:none; margin-top:4px;"></span>
             </div>
 
             <!-- Programa de Formación -->
@@ -173,6 +175,65 @@
     </div><!-- /pagina-contenido -->
   </main>
 </div>
-</body>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
+<script>
+  (function() {
+    const inputFicha = document.getElementById('ficha_sena');
+    const errFicha   = document.getElementById('error-ficha-form');
+    const selRol     = document.getElementById('rol');
+    const tagFicha   = document.getElementById('label-ficha-tag');
+    const form       = inputFicha ? inputFicha.closest('form') : null;
+
+    if (selRol && tagFicha) {
+      selRol.addEventListener('change', function() {
+        const rol = this.value;
+        const grupoFicha = document.getElementById('grupo-ficha-sena');
+        if (grupoFicha) grupoFicha.style.display = (rol === 'admin') ? 'none' : 'block';
+        if (rol === 'aprendiz') {
+          tagFicha.textContent = '*';
+        } else {
+          tagFicha.textContent = '(Opcional)';
+        }
+      });
+    }
+
+    if (inputFicha && errFicha) {
+      inputFicha.addEventListener('input', function() {
+        const original = this.value;
+        if (/[^0-9]/.test(original)) {
+          errFicha.textContent = 'Solo se admiten números (sin letras ni caracteres especiales).';
+          errFicha.style.display = 'block';
+          this.value = original.replace(/[^0-9]/g, '');
+        } else {
+          errFicha.textContent = '';
+          errFicha.style.display = 'none';
+        }
+      });
+    }
+
+    if (form && inputFicha && errFicha) {
+      form.addEventListener('submit', function(e) {
+        const rol = selRol ? selRol.value : 'aprendiz';
+        if (rol === 'aprendiz') {
+          const val = inputFicha.value.trim();
+          if (!val) {
+            e.preventDefault();
+            errFicha.textContent = 'La ficha SENA es obligatoria para aprendices.';
+            errFicha.style.display = 'block';
+            inputFicha.focus();
+            return false;
+          }
+          if (!/^[0-9]+$/.test(val)) {
+            e.preventDefault();
+            errFicha.textContent = 'La ficha SENA debe contener únicamente dígitos numéricos.';
+            errFicha.style.display = 'block';
+            inputFicha.focus();
+            return false;
+          }
+        }
+      });
+    }
+  })();
+</script>
+</body>
 </html>

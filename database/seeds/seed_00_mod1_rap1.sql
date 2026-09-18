@@ -104,7 +104,7 @@ INSERT INTO ejercicio_opcion (id, ejercicio_id, texto, es_correcta, retroaliment
 
 SET @ej5 = UUID();
 INSERT INTO ejercicio (id, rap_id, tipo, enunciado, max_intentos, puntos, activo) VALUES
-(@ej5, @RAP1, 'escucha_escribe', '🎧 Listening Exercise: Press the play button and listen carefully. The nurse is spelling her last name. Type exactly what you hear letter by letter. (Expected answer: RAMIREZ)', 3, 10, 1);
+(@ej5, @RAP1, 'escucha_escribe', '🎧 Listening Exercise: Press the play button and listen carefully. The nurse is spelling her last name. Type exactly what you hear letter by letter.', 3, 10, 1);
 INSERT INTO ejercicio_opcion (id, ejercicio_id, texto, es_correcta, retroalimentacion) VALUES
 (UUID(), @ej5, 'RAMIREZ', 1, '✅ Excellent! R-A-M-I-R-E-Z. You correctly identified each letter of the last name.'),
 (UUID(), @ej5, 'RAMIRÉZ', 0, '❌ Close! Remember, when spelling in English we do not use accent marks. The answer is RAMIREZ.'),

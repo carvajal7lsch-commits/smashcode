@@ -553,16 +553,32 @@
 
                   <?php elseif ($ej['tipo'] === 'escucha_escribe'): ?>
                     <?php
-                      // Buscar respuesta correcta en las opciones
+                      // Buscar respuesta correcta en las opciones y recolectar retroalimentaciones
                       $correctWord = '';
+                      $feedbackMap = [];
                       foreach ($ej['opciones'] as $opcion) {
-                          if ((int)$opcion['es_correcta'] === 1) { $correctWord = $opcion['texto']; break; }
+                          if ((int)$opcion['es_correcta'] === 1 && $correctWord === '') {
+                              $correctWord = $opcion['texto'];
+                          }
+                          if (!empty($opcion['retroalimentacion'])) {
+                              $feedbackMap[mb_strtolower(trim($opcion['texto']))] = $opcion['retroalimentacion'];
+                          }
+                      }
+                      $audioText = $correctWord;
+                      $esDeletreo = stripos($ej['enunciado'], 'spelling') !== false
+                                 || stripos($ej['enunciado'], 'spell') !== false
+                                 || stripos($ej['enunciado'], 'letter by letter') !== false
+                                 || strtoupper(trim($correctWord)) === 'RAMIREZ';
+                      if ($esDeletreo) {
+                          // Deletreo en inglés claro con comas para pausar y pronunciar cada letra individualmente
+                          $letras = str_split(preg_replace('/[^a-zA-Z0-9]/', '', $correctWord));
+                          $audioText = implode(', ', $letras) . '.';
                       }
                     ?>
-                    <button class="dictation-play-btn" data-value="<?= limpiar($correctWord) ?>" onclick="speakText(this.dataset.value)" title="Escuchar Dictado">
+                    <button class="dictation-play-btn" data-value="<?= limpiar($audioText) ?>" onclick="speakText(this.dataset.value)" title="Escuchar Dictado">
                       <i class="fas fa-volume-up"></i>
                     </button>
-                    <input type="text" class="dictation-input" id="dictation-input-<?= $idx ?>" placeholder="Type what you hear..." data-correct="<?= limpiar($correctWord) ?>" autocomplete="off">
+                    <input type="text" class="dictation-input" id="dictation-input-<?= $idx ?>" placeholder="Type what you hear..." data-correct="<?= limpiar($correctWord) ?>" data-feedbacks="<?= htmlspecialchars(json_encode($feedbackMap, JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>" onkeydown="if(event.key==='Enter') validateExercise('<?= $idx ?>')" autocomplete="off">
                   <?php endif; ?>
                 </div>
 
@@ -674,7 +690,7 @@
 
         <div style="display:flex; justify-content:space-between; margin-top:28px; align-items:center;">
           <small style="color:var(--gris-medio); font-weight:700;">Recuerda responder todas las preguntas.</small>
-          <button class="btn-morado" id="btn-next-quiz-question" onclick="nextQuizQuestion()" disabled>Continuar</button>
+          <button class="btn btn-morado" id="btn-next-quiz-question" onclick="nextQuizQuestion()" disabled>Continuar</button>
         </div>
       </div>
 
@@ -1587,12 +1603,32 @@
     // Para dictado, recolectar la respuesta de la caja
     if (type === 'escucha_escribe') {
       let input = document.getElementById('dictation-input-' + exIdx);
-      let text = input.value.trim().toLowerCase();
-      let correct = input.dataset.correct.toLowerCase().trim();
-      let isCorrect = text === correct;
+      let text = input.value.trim();
+      let lower = text.toLowerCase();
+      let cleanText = text.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      let correct = (input.dataset.correct || '').trim();
+      let lowerCorrect = correct.toLowerCase();
+      let cleanCorrect = correct.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+      let isCorrect = (lower === lowerCorrect) || (cleanText !== '' && cleanText === cleanCorrect);
+
+      let retro = '';
+      if (input.dataset.feedbacks) {
+        try {
+          let fbMap = JSON.parse(input.dataset.feedbacks);
+          if (fbMap[lower]) {
+            retro = fbMap[lower];
+          } else if (cleanText && fbMap[cleanText]) {
+            retro = fbMap[cleanText];
+          }
+        } catch(e) {}
+      }
+      if (!retro) {
+        retro = isCorrect ? '¡Correcto! Has registrado la palabra en las Notas de Enfermería.' : `La respuesta correcta es: "${correct}".`;
+      }
+
       ans = {
         isCorrect: isCorrect,
-        retro: isCorrect ? '¡Correcto! Has registrado la palabra en las Notas de Enfermería.' : `La respuesta correcta es: "${correct}".`,
+        retro: retro,
         text: text,
         solicitudId: ans && ans.text === text ? ans.solicitudId : undefined
       };

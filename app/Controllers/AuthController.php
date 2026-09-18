@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\Programa;
+use App\Models\Ficha;
 use App\Models\ValidacionUsuario;
 use App\Services\CorreoPlantillas;
 use Firebase\JWT\JWT;
@@ -24,11 +25,13 @@ class AuthController extends Controller {
 
     private User $userModel;
     private Programa $programaModel;
+    private Ficha $fichaModel;
 
     public function __construct() {
         parent::__construct();
         $this->userModel = new User();
         $this->programaModel = new Programa();
+        $this->fichaModel = new Ficha();
         iniciarSesion();
     }
 
@@ -45,6 +48,7 @@ class AuthController extends Controller {
         $error = limpiar($_GET['error'] ?? '');
         $exito = limpiar($_GET['exito'] ?? '');
         $programas = $this->programaModel->obtenerTodos();
+        $fichas = $this->fichaModel->obtenerTodas();
         $csrf = generarTokenCSRF();
 
         $this->render('auth/login', [
@@ -52,6 +56,7 @@ class AuthController extends Controller {
             'error' => $error,
             'exito' => $exito,
             'programas' => $programas,
+            'fichas' => $fichas,
             'csrf' => $csrf
         ]);
     }
@@ -176,6 +181,7 @@ class AuthController extends Controller {
             'error' => $error,
             'exito' => $exito,
             'programas' => $programas,
+            'fichas' => $this->fichaModel->obtenerTodas(),
             'csrf' => $csrf
         ]);
     }
@@ -206,7 +212,7 @@ class AuthController extends Controller {
             $programa = ValidacionUsuario::entrada($_POST['programa_id'] ?? '');
             $contrasena = is_string($_POST['contrasena'] ?? null) ? $_POST['contrasena'] : '';
             try {
-                $errores=ValidacionUsuario::errores($nombre,$correo,$ficha,'aprendiz',$_POST);
+                $errores = ValidacionUsuario::errores($nombre, $correo, $ficha, 'aprendiz', $_POST, null, $programa);
 
                 if ($errores) {
                     $error=implode(' ',$errores);
@@ -241,6 +247,7 @@ class AuthController extends Controller {
                                 'error' => '',
                                 'exito' => $exito,
                                 'programas' => $programas,
+                                'fichas' => $this->fichaModel->obtenerTodas(),
                                 'csrf' => $csrf
                             ]);
                             return;
@@ -260,6 +267,7 @@ class AuthController extends Controller {
             'error' => $error,
             'exito' => $exito,
             'programas' => $programas,
+            'fichas' => $this->fichaModel->obtenerTodas(),
             'csrf' => $csrf
         ]);
     }
@@ -896,10 +904,9 @@ class AuthController extends Controller {
         ];
 
         $ch = curl_init(self::GOOGLE_TOKEN_URL);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->aplicarOpcionesCurlSeguro($ch);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -929,9 +936,8 @@ class AuthController extends Controller {
      */
     private function obtenerPerfilGoogle(string $accessToken): array {
         $ch = curl_init(self::GOOGLE_USERINFO_URL);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->aplicarOpcionesCurlSeguro($ch);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -944,6 +950,33 @@ class AuthController extends Controller {
         }
 
         return json_decode((string) $response, true) ?: [];
+    }
+
+    /**
+     * Aplica opciones seguras de conexión HTTPS para cURL, asegurando
+     * que en entornos Windows / XAMPP / WAMP sin CA bundle configurado en php.ini
+     * se localice un almacén de certificados válido y no falle con error 60.
+     */
+    private function aplicarOpcionesCurlSeguro($ch): void {
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+        if (empty(ini_get('curl.cainfo')) && empty(ini_get('openssl.cafile'))) {
+            $rutasCA = [
+                dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'cacert.pem',
+                'C:\Program Files\Git\usr\ssl\certs\ca-bundle.crt',
+                'C:\Program Files\Git\mingw64\ssl\certs\ca-bundle.crt',
+                'C:\xampp\apache\bin\curl-ca-bundle.crt',
+                'C:\xampp\perl\vendor\lib\Mozilla\CA\cacert.pem',
+                'C:\php\extras\ssl\cacert.pem',
+            ];
+            foreach ($rutasCA as $ruta) {
+                if (file_exists($ruta)) {
+                    curl_setopt($ch, CURLOPT_CAINFO, $ruta);
+                    break;
+                }
+            }
+        }
     }
 
     /**

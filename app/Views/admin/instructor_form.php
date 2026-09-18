@@ -106,9 +106,11 @@
               <div class="contenedor-input">
                 <i class="fas fa-id-card icono-input"></i>
                 <input type="text" id="ficha_sena" name="ficha_sena" class="campo-input"
-                       placeholder="Ej: 2877650" maxlength="20"
+                       placeholder="Ej: 3142784" maxlength="20"
+                       inputmode="numeric" pattern="[0-9]+" autocomplete="off"
                        value="<?= htmlspecialchars($datos['ficha'] ?? '') ?>">
               </div>
+              <span id="error-ficha-instructor" style="color:var(--rojo); font-size:0.75rem; font-weight:700; display:none; margin-top:4px;"></span>
             </div>
 
             <!-- Programa Asignado -->
@@ -154,4 +156,24 @@
 </div>
 </body>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
+<script>
+  (function() {
+    const inputFicha = document.getElementById('ficha_sena');
+    const errFicha   = document.getElementById('error-ficha-instructor');
+    if (inputFicha && errFicha) {
+      inputFicha.addEventListener('input', function() {
+        const original = this.value;
+        if (/[^0-9]/.test(original)) {
+          errFicha.textContent = 'Solo se admiten números (sin letras ni caracteres especiales).';
+          errFicha.style.display = 'block';
+          this.value = original.replace(/[^0-9]/g, '');
+        } else {
+          errFicha.textContent = '';
+          errFicha.style.display = 'none';
+        }
+      });
+    }
+  })();
+</script>
+</body>
 </html>

@@ -28,16 +28,16 @@
         </div>
 
         <!-- FORMULARIO DE FILTROS -->
-        <form class="filtros-card" method="GET" action="<?= PROYECTO_PATH ?>/aprendiz/glosario" style="background: var(--bg-fondo); padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid rgba(0,0,0,0.05);">
+        <form class="filtros-card" method="GET" action="<?= PROYECTO_PATH ?>/aprendiz/glosario" style="background: var(--blanco); padding: 20px; border-radius: 12px; margin-bottom: 24px; border: 1px solid var(--borde-sutil);">
           <div class="filtros-row" style="display:flex; gap:16px; margin-bottom: 16px; flex-wrap:wrap;">
             
             <div style="flex: 2; position: relative;">
               <i class="fas fa-search" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--gris-medio);"></i>
-              <input type="text" name="q" placeholder="Buscar término..." value="<?= htmlspecialchars($busqueda) ?>" style="width: 100%; padding: 12px 12px 12px 40px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
+              <input type="text" name="q" placeholder="Buscar término..." value="<?= htmlspecialchars($busqueda) ?>" style="width: 100%; padding: 12px 12px 12px 40px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--blanco); color: var(--gris-texto);">
             </div>
 
             <div style="flex: 1;">
-              <select name="area" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
+              <select name="area" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--blanco); color: var(--gris-texto);">
                 <option value="">Todas las Áreas</option>
                 <?php foreach ($areas as $a): ?>
                   <option value="<?= $a['id'] ?>" <?= $areaId === $a['id'] ? 'selected' : '' ?>><?= htmlspecialchars($a['nombre']) ?> (<?= (int) $a['total'] ?>)</option>
@@ -46,7 +46,7 @@
             </div>
 
             <div style="flex: 1;">
-              <select name="categoria" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
+              <select name="categoria" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--blanco); color: var(--gris-texto);">
                 <option value="">Todas las Categorías</option>
                 <?php foreach ($categorias as $c): ?>
                   <option value="<?= $c['id'] ?>" <?= $categoriaId === $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?> (<?= (int) $c['total'] ?>)</option>
@@ -55,7 +55,7 @@
             </div>
 
             <div style="flex: 1;">
-              <select name="nivel" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
+              <select name="nivel" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--blanco); color: var(--gris-texto);">
                 <option value="">Todos los Niveles</option>
                 <?php foreach ($niveles as $n): ?>
                   <option value="<?= $n['id'] ?>" <?= $nivelId === $n['id'] ? 'selected' : '' ?>><?= htmlspecialchars($n['nombre']) ?> (<?= (int) $n['total'] ?>)</option>

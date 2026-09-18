@@ -228,11 +228,14 @@
                     </button>
                     
                     <?php if ($u['activo'] && in_array($u['rol'],['aprendiz','instructor'],true)): ?>
-                    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/clave-temporal" onsubmit="return confirm('Se reemplazará la contraseña y el usuario deberá cambiarla al ingresar. ¿Continuar?')">
-                      <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
-                      <input type="hidden" name="id" value="<?= htmlspecialchars($u['id'],ENT_QUOTES,'UTF-8') ?>">
-                      <button type="submit" class="btn-accion-premium btn-premium-edit" title="Generar clave temporal" aria-label="Generar clave temporal"><i class="fas fa-key"></i></button>
-                    </form>
+                    <button type="button"
+                      class="btn-accion-premium btn-premium-edit"
+                      style="padding:0; border-radius:10px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;"
+                      title="Generar clave temporal"
+                      aria-label="Generar clave temporal"
+                      onclick="abrirModalClaveTemporal('<?= htmlspecialchars($u['id'],ENT_QUOTES,'UTF-8') ?>', '<?= htmlspecialchars(limpiar($u['nombre_completo']),ENT_QUOTES,'UTF-8') ?>')">
+                      <i class="fas fa-key" style="font-size:0.8rem;"></i>
+                    </button>
                     <?php endif; ?>
                   <button type="button" class="btn-accion-premium btn-premium-del"
                       style="padding:0; border-radius:10px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;"
@@ -253,18 +256,18 @@
       <!-- Vista de Cuadrícula (Cards) -->
       <div id="vista-cuadricula" class="vista-contenedor" style="display:none; margin-bottom: 24px; margin-top: 16px;">
         <?php if (empty($lista)): ?>
-          <div class="tabla-premium-wrap" style="background:var(--blanco); border-radius:16px; border:2px solid #354952; padding:50px; text-align:center;">
+          <div class="tabla-premium-wrap" style="background:var(--blanco); border-radius:16px; border:2px solid var(--borde-sutil); padding:50px; text-align:center;">
             <i class="fas fa-ghost" style="font-size:2.5rem; display:block; margin-bottom:12px; color:var(--gris-medio);"></i>
             <span style="color:var(--texto-tenue);">No se encontraron usuarios con los filtros aplicados.</span>
           </div>
         <?php else: ?>
           <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 24px; padding: 24px;">
             <?php foreach ($lista as $u): ?>
-              <div class="tarjeta-premium" style="background: var(--blanco) !important; border: 2px solid #354952 !important; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; transition: border-color 0.2s;">
+              <div class="tarjeta-premium" style="background: var(--blanco) !important; border: 2px solid var(--borde-sutil) !important; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px; transition: border-color 0.2s;">
                 
                 <!-- Avatar Circular Grande -->
                 <div style="position: relative;">
-                  <div class="avatar-usuario" style="width: 72px; height: 72px; font-size: 1.8rem; background: linear-gradient(135deg, #60A5FA, #2563EB); font-weight: 900; color: #fff; border: 3px solid #354952; margin: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                  <div class="avatar-usuario" style="width: 72px; height: 72px; font-size: 1.8rem; background: linear-gradient(135deg, #60A5FA, #2563EB); font-weight: 900; color: #fff; border: 3px solid var(--borde-sutil); margin: 0; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
                     <?= strtoupper(substr($u['nombre_completo'], 0, 1)) ?>
                   </div>
                   <!-- Indicador de Activo (Green dot) -->
@@ -275,7 +278,7 @@
 
                 <!-- Info de Identificación -->
                 <div>
-                  <span style="font-weight: 800; font-size: 1.05rem; color: #fff; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;" title="<?= limpiar($u['nombre_completo']) ?>">
+                  <span style="font-weight: 800; font-size: 1.05rem; color: var(--gris-texto); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;" title="<?= limpiar($u['nombre_completo']) ?>">
                     <?= limpiar($u['nombre_completo']) ?>
                   </span>
                   <span style="color: var(--texto-tenue); font-family: monospace; font-size: 0.78rem; display: block; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px;" title="<?= limpiar($u['correo']) ?>">
@@ -298,7 +301,7 @@
                 </div>
 
                 <!-- Detalles Extras (Ficha / XP / Registro) -->
-                <div style="width: 100%; border-top: 2px solid #2B3E46; padding-top: 14px; margin-top: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; text-align: left;">
+                <div style="width: 100%; border-top: 2px solid var(--borde-sutil); padding-top: 14px; margin-top: 4px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.8rem; text-align: left;">
                   <div>
                     <span style="color: var(--texto-tenue); display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.02em;">Ficha SENA</span>
                     <strong style="color: var(--texto-secundario); font-size: 0.82rem; font-weight: 700;">
@@ -327,7 +330,7 @@
                 </div>
 
                 <!-- Botones de Acción Horizontal -->
-                <div style="width: 100%; border-top: 2px solid #2B3E46; padding-top: 14px; display: flex; gap: 8px; justify-content: center; margin-top: auto;">
+                <div style="width: 100%; border-top: 2px solid var(--borde-sutil); padding-top: 14px; display: flex; gap: 8px; justify-content: center; margin-top: auto;">
                   <button type="button" 
                      class="btn-accion-premium btn-premium-edit" 
                      style="padding:0; border-radius:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;" 
@@ -353,11 +356,14 @@
                   </button>
                   
                     <?php if ($u['activo'] && in_array($u['rol'],['aprendiz','instructor'],true)): ?>
-                    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/clave-temporal" onsubmit="return confirm('Se reemplazará la contraseña y el usuario deberá cambiarla al ingresar. ¿Continuar?')">
-                      <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
-                      <input type="hidden" name="id" value="<?= htmlspecialchars($u['id'],ENT_QUOTES,'UTF-8') ?>">
-                      <button type="submit" class="btn-accion-premium btn-premium-edit" title="Generar clave temporal" aria-label="Generar clave temporal"><i class="fas fa-key"></i></button>
-                    </form>
+                    <button type="button"
+                      class="btn-accion-premium btn-premium-edit"
+                      style="padding:0; border-radius:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;"
+                      title="Generar clave temporal"
+                      aria-label="Generar clave temporal"
+                      onclick="abrirModalClaveTemporal('<?= htmlspecialchars($u['id'],ENT_QUOTES,'UTF-8') ?>', '<?= htmlspecialchars(limpiar($u['nombre_completo']),ENT_QUOTES,'UTF-8') ?>')">
+                      <i class="fas fa-key" style="font-size:0.85rem;"></i>
+                    </button>
                     <?php endif; ?>
                   <button type="button" class="btn-accion-premium btn-premium-del"
                      style="padding:0; border-radius:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;"
@@ -431,6 +437,28 @@
   </div>
 </div>
 
+<!-- Modal: Confirmar Clave Temporal -->
+<div class="modal-fondo" id="modal-clave-temporal" role="dialog" aria-modal="true" aria-labelledby="modal-clave-titulo">
+  <div class="modal-caja-premium" style="max-width: 480px;">
+    <p class="modal-titulo" id="modal-clave-titulo" style="font-size:1.3rem; font-weight:800; color:var(--texto-principal); margin-bottom:12px; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-key" style="color:var(--azul);"></i> Generar Clave Temporal
+    </p>
+    <p class="modal-desc" style="font-size:0.875rem; color:var(--texto-secundario); line-height:1.6; margin-bottom:24px;">
+      Se reemplazará la contraseña actual de <strong id="modal-clave-nombre" style="color:var(--texto-principal);"></strong>. El usuario deberá cambiarla obligatoriamente al ingresar a la plataforma. ¿Deseas continuar?
+    </p>
+    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/clave-temporal" id="form-clave-temporal" onsubmit="prevenirDobleSubmitClave(this)">
+      <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
+      <input type="hidden" name="id" id="clave-temporal-id">
+      <div class="modal-acciones" style="gap:12px;">
+        <button type="button" class="btn-premium btn-premium-blanco" onclick="cerrarModal('modal-clave-temporal')">Cancelar</button>
+        <button type="submit" class="btn-premium btn-premium-azul" id="btn-confirmar-clave-temporal">
+          <i class="fas fa-key"></i> Confirmar y Generar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal: Crear Usuario (Unificado Inteligente) -->
 <div class="modal-fondo" id="modal-crear-usuario">
   <div class="modal-caja-premium" style="max-width: 540px;">
@@ -493,11 +521,12 @@
 
       <!-- Ficha SENA (oculta para admin) -->
       <div class="grupo-campo" id="crear-grupo-ficha" style="margin-bottom:16px;">
-        <label class="etiqueta-campo" for="crear_ficha" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+        <label class="etiqueta-campo" for="crear_ficha" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA <span id="crear-label-ficha-tag" style="color:var(--texto-tenue); font-weight:400;">*</span></label>
         <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-id-card icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="text" id="crear_ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 2877650" maxlength="20">
+          <input type="text" id="crear_ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 3142784" maxlength="20" inputmode="numeric" pattern="[0-9]+" autocomplete="off">
         </div>
+        <span id="crear-error-ficha" style="color:var(--rojo); font-size:0.75rem; font-weight:700; display:none; margin-top:4px;"></span>
       </div>
 
       <!-- Programa de Formación (oculto para admin) -->
@@ -567,11 +596,12 @@
 
       <!-- Ficha SENA -->
       <div class="grupo-campo" id="editar-grupo-ficha" style="margin-bottom:16px;">
-        <label class="etiqueta-campo" for="editar-ficha" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA <span style="color:var(--texto-tenue); font-weight:400;">(Opcional)</span></label>
+        <label class="etiqueta-campo" for="editar-ficha" style="font-size:0.78rem; font-weight:700; color:var(--texto-secundario); display:block; margin-bottom:6px;">Ficha SENA <span id="editar-label-ficha-tag" style="color:var(--texto-tenue); font-weight:400;">*</span></label>
         <div class="contenedor-input" style="margin:0; position:relative;">
           <i class="fas fa-id-card icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue);"></i>
-          <input type="text" id="editar-ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 2877650" maxlength="20">
+          <input type="text" id="editar-ficha" name="ficha_sena" class="input-premium" style="width:100%; padding-left:38px;" placeholder="Ej: 3142784" maxlength="20" inputmode="numeric" pattern="[0-9]+" autocomplete="off">
         </div>
+        <span id="editar-error-ficha" style="color:var(--rojo); font-size:0.75rem; font-weight:700; display:none; margin-top:4px;"></span>
       </div>
 
       <!-- Programa de Formación -->
@@ -666,10 +696,16 @@
         titulo.textContent = 'Crear Cuenta de Instructor';
         desc.textContent   = 'Se generará una contraseña temporal y se enviará automáticamente al correo del instructor.';
         document.getElementById('crear-texto-aviso').textContent = 'Se generará una contraseña temporal segura y se enviará automáticamente al correo del instructor.';
+        const tagFicha = document.getElementById('crear-label-ficha-tag');
+        if (tagFicha) tagFicha.textContent = '(Opcional)';
+        document.getElementById('crear_ficha')?.removeAttribute('required');
       } else {
         titulo.textContent = 'Crear Nuevo Aprendiz';
         desc.textContent   = 'Se generará una contraseña temporal y se enviará automáticamente al correo del aprendiz.';
         document.getElementById('crear-texto-aviso').textContent = 'Se generará una contraseña temporal segura y se enviará automáticamente al correo del aprendiz.';
+        const tagFicha = document.getElementById('crear-label-ficha-tag');
+        if (tagFicha) tagFicha.textContent = '*';
+        document.getElementById('crear_ficha')?.setAttribute('required', 'required');
       }
     } else if (rol === 'admin') {
       grupoContrasena.style.display = 'block';
@@ -706,8 +742,91 @@
   function adaptarModalEditar(rol) {
     const grupoFicha    = document.getElementById('editar-grupo-ficha');
     const grupoPrograma = document.getElementById('editar-grupo-programa');
+    const tagFicha      = document.getElementById('editar-label-ficha-tag');
+    const inputFicha    = document.getElementById('editar-ficha');
     if (grupoFicha)    grupoFicha.style.display    = (rol === 'admin') ? 'none' : 'block';
     if (grupoPrograma) grupoPrograma.style.display = (rol === 'admin') ? 'none' : 'block';
+
+    if (rol === 'instructor') {
+      if (tagFicha) tagFicha.textContent = '(Opcional)';
+      inputFicha?.removeAttribute('required');
+    } else if (rol === 'aprendiz') {
+      if (tagFicha) tagFicha.textContent = '*';
+      inputFicha?.setAttribute('required', 'required');
+    }
+  }
+
+  // Validación numérica de Ficha SENA en vivo (W11)
+  ['crear_ficha', 'editar-ficha'].forEach(id => {
+    const input = document.getElementById(id);
+    const errId = id === 'crear_ficha' ? 'crear-error-ficha' : 'editar-error-ficha';
+    const err = document.getElementById(errId);
+    if (input && err) {
+      input.addEventListener('input', function() {
+        const original = this.value;
+        if (/[^0-9]/.test(original)) {
+          err.textContent = 'La ficha solo admite números (sin letras ni caracteres especiales).';
+          err.style.display = 'block';
+          this.value = original.replace(/[^0-9]/g, '');
+        } else {
+          err.textContent = '';
+          err.style.display = 'none';
+        }
+      });
+    }
+  });
+
+  // Prevención de envío inválido en modales
+  const formCrear = document.querySelector('#modal-crear-usuario form');
+  if (formCrear) {
+    formCrear.addEventListener('submit', function(e) {
+      const rol = document.getElementById('crear_rol')?.value;
+      const fichaInput = document.getElementById('crear_ficha');
+      const err = document.getElementById('crear-error-ficha');
+      if (rol === 'aprendiz' && fichaInput && err) {
+        const val = fichaInput.value.trim();
+        if (!val) {
+          e.preventDefault();
+          err.textContent = 'La ficha SENA es obligatoria para aprendices.';
+          err.style.display = 'block';
+          fichaInput.focus();
+          return false;
+        }
+        if (!/^[0-9]+$/.test(val)) {
+          e.preventDefault();
+          err.textContent = 'La ficha SENA debe contener únicamente dígitos numéricos.';
+          err.style.display = 'block';
+          fichaInput.focus();
+          return false;
+        }
+      }
+    });
+  }
+
+  const formEditar = document.querySelector('#modal-editar-usuario form');
+  if (formEditar) {
+    formEditar.addEventListener('submit', function(e) {
+      const rol = document.getElementById('editar-rol')?.value;
+      const fichaInput = document.getElementById('editar-ficha');
+      const err = document.getElementById('editar-error-ficha');
+      if (rol === 'aprendiz' && fichaInput && err) {
+        const val = fichaInput.value.trim();
+        if (!val) {
+          e.preventDefault();
+          err.textContent = 'La ficha SENA es obligatoria para aprendices.';
+          err.style.display = 'block';
+          fichaInput.focus();
+          return false;
+        }
+        if (!/^[0-9]+$/.test(val)) {
+          e.preventDefault();
+          err.textContent = 'La ficha SENA debe contener únicamente dígitos numéricos.';
+          err.style.display = 'block';
+          fichaInput.focus();
+          return false;
+        }
+      }
+    });
   }
 
   function abrirModalLogs(id, nombre) {
@@ -838,6 +957,31 @@
     document.getElementById('modal-eliminar-desc').textContent =
       'Estás a punto de eliminar al usuario "' + nombre + '". Su cuenta se marcará como inactiva (Soft-Delete) y no aparecerá en el listado, pero todo su progreso académico, XP acumulado y logs históricos se preservarán para auditoría.';
     document.getElementById('modal-eliminar').classList.add('visible');
+  }
+
+  let triggerBtnClaveTemporal = null;
+  function abrirModalClaveTemporal(id, nombre) {
+    triggerBtnClaveTemporal = document.activeElement;
+    document.getElementById('clave-temporal-id').value = id;
+    document.getElementById('modal-clave-nombre').textContent = nombre;
+    const modal = document.getElementById('modal-clave-temporal');
+    modal.classList.add('visible');
+    const btnConfirm = document.getElementById('btn-confirmar-clave-temporal');
+    if (btnConfirm) {
+      btnConfirm.removeAttribute('disabled');
+      btnConfirm.innerHTML = '<i class="fas fa-key"></i> Confirmar y Generar';
+      btnConfirm.focus();
+    }
+  }
+
+  function prevenirDobleSubmitClave(form) {
+    const btn = form.querySelector('button[type="submit"]');
+    if (btn) {
+      if (btn.disabled) return false;
+      btn.setAttribute('disabled', 'true');
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+    }
+    return true;
   }
 
   // Funciones cerrarModal y eventos modal-fondo se manejan en admin_cruds.js

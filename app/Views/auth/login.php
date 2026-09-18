@@ -152,18 +152,25 @@
           </div>
         </div>
         <div class="grupo-campo">
-          <label class="etiqueta-campo" for="ficha-registro">Ficha SENA</label>
+          <label class="etiqueta-campo" for="ficha-registro">Ficha SENA <span style="color:var(--rojo);">*</span></label>
           <div class="contenedor-input">
             <i class="fas fa-id-card icono-input"></i>
-            <input type="text" id="ficha-registro" name="ficha_sena" class="campo-input" placeholder="p. ej. 2234891">
+            <input type="text" id="ficha-registro" name="ficha_sena" class="campo-input" placeholder="p. ej. 3142784"
+                   inputmode="numeric" pattern="[0-9]+" maxlength="20" required list="lista-fichas-registro" autocomplete="off">
           </div>
-          <span class="ayuda-campo">Número de ficha del programa técnico de enfermería</span>
+          <datalist id="lista-fichas-registro">
+            <?php foreach (($fichas ?? []) as $f): ?>
+              <option value="<?= limpiar($f['codigo']) ?>" data-programa="<?= limpiar($f['programa_id']) ?>"><?= limpiar($f['codigo']) ?> — <?= limpiar($f['programa_nombre']) ?></option>
+            <?php endforeach; ?>
+          </datalist>
+          <span class="ayuda-campo" id="ayuda-ficha-registro">Número de ficha del programa (solo dígitos numéricos)</span>
+          <span id="error-ficha-registro" class="ayuda-campo" style="color:var(--rojo); font-weight:700; display:none; margin-top:4px;"></span>
         </div>
         <div class="grupo-campo">
-          <label class="etiqueta-campo" for="programa-registro">Programa</label>
+          <label class="etiqueta-campo" for="programa-registro">Programa <span style="color:var(--rojo);">*</span></label>
           <div class="contenedor-input">
             <i class="fas fa-graduation-cap icono-input"></i>
-            <select id="programa-registro" name="programa_id" class="campo-input campo-input-select">
+            <select id="programa-registro" name="programa_id" class="campo-input campo-input-select" required>
               <option value="">Selecciona tu programa</option>
               <?php foreach ($programas as $p): ?>
                 <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>
@@ -172,13 +179,14 @@
           </div>
         </div>
         <div class="grupo-campo">
-          <label class="etiqueta-campo" for="clave-registro">Contraseña</label>
+          <label class="etiqueta-campo" for="clave-registro">Contraseña <span style="color:var(--rojo);">*</span></label>
           <div class="contenedor-input contenedor-input-relativo">
             <i class="fas fa-lock icono-input"></i>
             <input type="password" id="clave-registro" name="contrasena" class="campo-input campo-input-password" placeholder="Mín. 8 caracteres" required>
             <i class="fas fa-eye toggle-password toggle-password-icon" data-target="clave-registro"></i>
           </div>
           <span class="ayuda-campo">Incluye al menos 1 mayúscula y 1 número</span>
+          <span id="error-clave-registro" class="ayuda-campo" style="color:var(--rojo); font-weight:700; display:none; margin-top:4px;"></span>
         </div>
 
         <button type="submit" class="btn btn-verde btn-block">
