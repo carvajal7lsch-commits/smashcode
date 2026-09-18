@@ -33,6 +33,12 @@ class HomeController extends Controller {
         $usuario = null;
         $progreso = [];
         $mapaProgreso = [];
+        $racha = 0;
+        $rango = ['nombre' => 'Novato Clínico', 'nivel' => 1];
+        $insigniasGanadas = [];
+        $totalInsignias = 0;
+        $leaderboard = [];
+        $inicioSemana = '';
 
         if ($autenticado) {
             $rol = obtenerRolSesion();
@@ -53,6 +59,16 @@ class HomeController extends Controller {
             foreach ($progreso as $p) {
                 $mapaProgreso[$p['rap_id']] = $p;
             }
+
+            // Panel lateral: racha, rango, insignias y ranking de la semana. Antes
+            // mostraba cifras fijas de una maqueta (vidas, gemas, "ligas" bloqueadas)
+            // que no correspondían a ninguna funcionalidad del sistema.
+            $racha           = $this->userModel->calcularRachaDias($uid);
+            $rango           = $this->userModel->calcularRangoClinico((int) ($usuario['xp_puntos'] ?? 0));
+            $insigniasGanadas = $this->userModel->obtenerInsigniasGanadas($uid);
+            $totalInsignias   = count($this->userModel->obtenerTodasInsignias());
+            $leaderboard      = $this->userModel->obtenerLeaderboardSemanal($usuario['programa_id'] ?? null);
+            $inicioSemana     = $this->userModel->obtenerInicioSemana();
         }
 
         // Obtener todos los niveles y RAPs activos
@@ -63,7 +79,13 @@ class HomeController extends Controller {
             'usuario' => $usuario,
             'progreso' => $progreso,
             'mapaProgreso' => $mapaProgreso,
-            'niveles' => $niveles
+            'niveles' => $niveles,
+            'racha' => $racha,
+            'rango' => $rango,
+            'insigniasGanadas' => $insigniasGanadas,
+            'totalInsignias' => $totalInsignias,
+            'leaderboard' => $leaderboard,
+            'inicioSemana' => $inicioSemana
         ]);
     }
 }

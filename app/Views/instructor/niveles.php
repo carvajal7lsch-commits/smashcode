@@ -2,6 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="<?= PROYECTO_PATH ?>/assets/img/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestión de Niveles — Instructor SmashCode</title>
   <meta name="description" content="Panel del instructor: consulta los niveles y actividades del programa de inglés médico.">
