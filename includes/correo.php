@@ -1,7 +1,7 @@
 <?php
 /** Envío SMTP con contenido HTML y alternativa legible en texto plano. */
 require_once __DIR__.'/../vendor/autoload.php';
-if (!defined('SMTP_HOST')) require_once __DIR__.'/../config/credenciales.php';
+if (!defined('SMTP_HOST')) require_once __DIR__.'/../config/bootstrap.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;

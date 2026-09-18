@@ -1728,7 +1728,7 @@
       html += `<div style="font-weight:600; font-size:0.82rem; opacity:0.8;">${esc(ayuda.traduccion_ejemplo)}</div>`;
     }
 
-    html += `<button type="button" class="btn-escuchar-ayuda" onclick="escucharAyuda(this)" data-termino="${esc(ayuda.termino_en)}"
+    html += `<button type="button" class="btn-escuchar-ayuda" onclick="escucharAyuda(this)" data-termino="${esc(ayuda.termino_en)}" data-audio="${esc(ayuda.audio_url)}"
                style="margin-top:10px; border:none; cursor:pointer; border-radius:10px; padding:6px 14px; font-weight:800; font-size:0.8rem; background:var(--azul); color:#fff;">
                <i class="fas fa-volume-high" style="margin-right:6px;"></i>Escuchar
              </button>`;
@@ -1737,18 +1737,24 @@
     caja.style.display = 'block';
   }
 
-  // Misma síntesis del navegador que usan el vocabulario y el glosario.
+  // Como en el vocabulario: archivo propio primero y síntesis como alternativa.
   function escucharAyuda(boton) {
     const texto = boton.dataset.termino || '';
-    if (!texto || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(texto);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.9;
-    const enVoice = window.speechSynthesis.getVoices()
-      .find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
-    if (enVoice) utterance.voice = enVoice;
-    window.speechSynthesis.speak(utterance);
+    if (!texto) return;
+    let usoVoz = false;
+    const usarVoz = () => {
+      if (usoVoz || !('speechSynthesis' in window)) return;
+      usoVoz = true;
+      speakText(texto, 'female');
+    };
+    if (!boton.dataset.audio || typeof Audio === 'undefined') { usarVoz(); return; }
+    if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+    const audio = new Audio(<?= json_encode(PROYECTO_PATH) ?> + boton.dataset.audio);
+    audio.onerror = usarVoz;
+    try {
+      const reproduccion = audio.play();
+      if (reproduccion && typeof reproduccion.catch === 'function') reproduccion.catch(usarVoz);
+    } catch (e) { usarVoz(); }
   }
 
   // Conserva la identidad de la petición si hay que reintentar su envío.

@@ -41,16 +41,16 @@ La decisión evita depender de una producción de audio que no está contratada,
 
 La activación por correo ya se exige: el auto-registro crea la cuenta sin verificar, manda un enlace de 24 horas de un solo uso, y el login la rechaza hasta que se confirme.
 
-Con una salvedad deliberada: **si el correo no sale, la cuenta se habilita igual**. Aplica cuando `MAIL_ENABLED=false` o cuando el servidor SMTP falla. Sin esa salida, una instalación sin SMTP configurado —el entorno local, por ejemplo— no dejaría entrar a nadie nunca, y no habría forma de recuperarse desde la propia aplicación. Es la misma regla que ya seguía el correo de bienvenida y la que usa la entrega de claves temporales.
+Solo hay una excepción de demostración: **`APP_ENV=local` y `MAIL_ENABLED=false`** permiten habilitar la cuenta sin correo. En producción, o cuando se intenta enviar correo real en local, un fallo SMTP conserva la cuenta pendiente de activación. El usuario puede volver a autenticarse para reenviar el enlace; el reenvío exige una cuenta vigente, prueba reciente de la contraseña y un minuto de espera entre emisiones.
 
 Dos consecuencias que conviene tener presentes:
 
 - Las cuentas que crea el administrador **no** pasan por activación. Él responde por la persona y la clave temporal viaja a esa misma dirección, así que exigirla solo dejaría fuera a los instructores que él mismo dio de alta.
-- La migración marca como verificadas todas las cuentas anteriores. Sin eso, activar la comprobación habría bloqueado a todos los usuarios existentes, porque `correo_verificado` nace en 0.
+- En la primera instalación de la activación, la migración preserva el acceso de las cuentas anteriores. Registra esa aplicación y sus ejecuciones posteriores nunca verifican automáticamente las cuentas pendientes. Una instalación que ya tenía tokens tampoco se vuelve a habilitar en bloque.
 
 ## Pendientes reales de código
 
-- Ninguno. Los tres huecos detectados (RF-16 etiquetas, RF-34 recurso de ayuda, RF-01 activación) están implementados.
+- RF-16, RF-34 y RF-01 están implementados, con las correcciones de activación y configuración descritas arriba. La implementación no sustituye pruebas reales de Gmail/Google, concurrencia en Apache ni validación del contenido por el instructor.
 
 ## Pendiente de contenido, no de código (RF-20)
 

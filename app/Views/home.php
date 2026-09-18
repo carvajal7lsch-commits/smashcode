@@ -226,7 +226,7 @@
       </div>
       <div class="stat-racha">
         <i class="fas fa-fire"></i>
-        Racha: 0 días
+        Racha: <?= (int) $racha ?> <?= (int) $racha === 1 ? 'día' : 'días' ?>
       </div>
 
       <div style="margin-left: auto; display:flex; align-items:center; gap:16px;">
@@ -532,9 +532,9 @@
                 <a href="<?= PROYECTO_PATH ?>/aprendiz/perfil">VER PERFIL</a>
             </div>
             <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
-                <div class="rango-medalla"><i class="fas fa-user-nurse"></i></div>
+                <div class="rango-medalla"><i class="fas <?= htmlspecialchars($rango['rango_icono'], ENT_QUOTES) ?>"></i></div>
                 <div style="flex:1;">
-                    <p style="font-size:15px; font-weight:800; margin-bottom:2px;"><?= htmlspecialchars($rango['nombre']) ?></p>
+                    <p style="font-size:15px; font-weight:800; margin-bottom:2px;"><?= htmlspecialchars($rango['rango_nombre']) ?></p>
                     <p style="font-size:12px; color:var(--texto-tenue);">Nivel <?= (int) $rango['nivel'] ?> · <?= formatearXP($usuario['xp_puntos']) ?> XP</p>
                 </div>
             </div>
@@ -565,7 +565,7 @@
         <div class="card">
             <div class="card-header">
                 <h3>Ranking de la semana</h3>
-                <a href="<?= PROYECTO_PATH ?>/aprendiz/leaderboard">VER TODO</a>
+                <a href="<?= PROYECTO_PATH ?>/aprendiz/perfil#leaderboard-lista">VER TODO</a>
             </div>
             <p style="font-size:12px; color:var(--texto-tenue); margin:8px 0 12px;">
                 Cuenta desde el lunes <?= htmlspecialchars($inicioSemana) ?>

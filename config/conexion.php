@@ -5,11 +5,7 @@
  * @return PDO Instancia de la conexión
  */
 
-if (file_exists(__DIR__ . '/credenciales.php')) {
-    require_once __DIR__ . '/credenciales.php';
-} else {
-    require_once __DIR__ . '/credenciales.example.php';
-}
+require_once __DIR__.'/bootstrap.php';
 
 // Definir la ruta base del proyecto de manera dinámica (funciona en raíz del dominio/puerto o en subcarpetas)
 if (!defined('PROYECTO_PATH')) {

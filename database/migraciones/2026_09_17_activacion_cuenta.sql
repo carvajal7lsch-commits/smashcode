@@ -12,12 +12,14 @@
 --          subían a 1 el alta con Google y el restablecimiento de contraseña.
 --          La exigencia aplica únicamente de aquí en adelante.
 --
--- IDEMPOTENTE: CREATE TABLE IF NOT EXISTS y un UPDATE que solo toca las filas
---              que siguen en 0.
+-- IDEMPOTENTE: registra la aplicación inicial. Repetirla nunca activa cuentas
+--              pendientes creadas después, ni instalaciones que ya tenían tokens.
 -- =============================================================
 
 SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE smash_code;
+
+SET @activacion_ya_instalada := (SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='token_activacion');
 
 CREATE TABLE IF NOT EXISTS token_activacion (
     id         VARCHAR(36)  NOT NULL PRIMARY KEY DEFAULT (UUID()),
@@ -32,7 +34,16 @@ CREATE TABLE IF NOT EXISTS token_activacion (
 
 -- Ninguna cuenta anterior a esta migración debe quedar bloqueada por algo que
 -- todavía no se le podía pedir.
-UPDATE usuarios SET correo_verificado = 1 WHERE correo_verificado = 0;
+CREATE TABLE IF NOT EXISTS migracion_aplicada (
+    nombre VARCHAR(191) NOT NULL PRIMARY KEY,
+    aplicada_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+START TRANSACTION;
+INSERT IGNORE INTO migracion_aplicada(nombre) VALUES ('2026_09_17_activacion_cuenta');
+SET @primera_activacion := ROW_COUNT();
+UPDATE usuarios SET correo_verificado = 1
+WHERE correo_verificado = 0 AND @primera_activacion = 1 AND @activacion_ya_instalada = 0;
+COMMIT;
 
 -- Verificación
 SELECT

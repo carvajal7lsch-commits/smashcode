@@ -120,7 +120,7 @@ class AprendizController extends Controller {
         if ($idsAyuda) {
             $inAyuda = implode(',', array_fill(0, count($idsAyuda), '?'));
             $stmtAyuda = $pdo->prepare(
-                "SELECT id, termino_en, termino_es, transcripcion_ipa, oracion_ejemplo, traduccion_ejemplo
+                "SELECT id, termino_en, termino_es, transcripcion_ipa, oracion_ejemplo, traduccion_ejemplo, audio_url
                  FROM vocabulario WHERE id IN ($inAyuda) AND activo = 1"
             );
             $stmtAyuda->execute($idsAyuda);
@@ -1084,7 +1084,7 @@ class AprendizController extends Controller {
         // filtrar por un área todavía sin vocabulario devuelve una lista vacía sin
         // explicación y parece un error de la plataforma.
         $areas = $pdo->query(
-            "SELECT a.id, a.nombre, COUNT(v.id) AS total
+            "SELECT a.id, a.nombre, COUNT(r.id) AS total
              FROM area_clinica a
              LEFT JOIN vocabulario v ON v.area_clinica_id = a.id AND v.activo = 1
              LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
@@ -1092,7 +1092,7 @@ class AprendizController extends Controller {
              GROUP BY a.id, a.nombre ORDER BY a.nombre"
         )->fetchAll();
         $categorias = $pdo->query(
-            "SELECT c.id, c.nombre, COUNT(v.id) AS total
+            "SELECT c.id, c.nombre, COUNT(r.id) AS total
              FROM categoria_vocabulario c
              LEFT JOIN vocabulario v ON v.categoria_id = c.id AND v.activo = 1
              LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
