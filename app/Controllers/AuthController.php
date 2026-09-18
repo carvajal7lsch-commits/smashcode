@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\Programa;
+use App\Models\Ficha;
 use App\Models\ValidacionUsuario;
 use App\Services\CorreoPlantillas;
 use Firebase\JWT\JWT;
@@ -24,11 +25,13 @@ class AuthController extends Controller {
 
     private User $userModel;
     private Programa $programaModel;
+    private Ficha $fichaModel;
 
     public function __construct() {
         parent::__construct();
         $this->userModel = new User();
         $this->programaModel = new Programa();
+        $this->fichaModel = new Ficha();
         iniciarSesion();
     }
 
@@ -45,6 +48,7 @@ class AuthController extends Controller {
         $error = limpiar($_GET['error'] ?? '');
         $exito = limpiar($_GET['exito'] ?? '');
         $programas = $this->programaModel->obtenerTodos();
+        $fichas = $this->fichaModel->obtenerTodas();
         $csrf = generarTokenCSRF();
 
         $this->render('auth/login', [
@@ -52,6 +56,7 @@ class AuthController extends Controller {
             'error' => $error,
             'exito' => $exito,
             'programas' => $programas,
+            'fichas' => $fichas,
             'csrf' => $csrf
         ]);
     }
@@ -120,7 +125,10 @@ class AuthController extends Controller {
                     $_SESSION['activacion_pendiente'] = [
                         'id'     => $usuario['id'],
                         'correo' => $correo,
-                        'nombre' => $usuario['nombre_completo']
+                        'nombre' => $usuario['nombre_completo'],
+                        'rol' => $usuario['rol'],
+                        'creado' => time(),
+                        'huella' => hash('sha256',$usuario['contrasena'])
                     ];
                     $error = 'Tu cuenta todavía no está activada. Revisa el correo que te enviamos y confirma el enlace.';
                 } else {
@@ -173,6 +181,7 @@ class AuthController extends Controller {
             'error' => $error,
             'exito' => $exito,
             'programas' => $programas,
+            'fichas' => $this->fichaModel->obtenerTodas(),
             'csrf' => $csrf
         ]);
     }
@@ -203,7 +212,7 @@ class AuthController extends Controller {
             $programa = ValidacionUsuario::entrada($_POST['programa_id'] ?? '');
             $contrasena = is_string($_POST['contrasena'] ?? null) ? $_POST['contrasena'] : '';
             try {
-                $errores=ValidacionUsuario::errores($nombre,$correo,$ficha,'aprendiz',$_POST);
+                $errores = ValidacionUsuario::errores($nombre, $correo, $ficha, 'aprendiz', $_POST, null, $programa);
 
                 if ($errores) {
                     $error=implode(' ',$errores);
@@ -224,12 +233,13 @@ class AuthController extends Controller {
                     
                         if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
                             // RF-01: la cuenta nace sin verificar y se habilita con el enlace del
-                            // correo. Si el correo no sale (servidor caído o MAIL_ENABLED=false) se
-                            // habilita igual: es la misma regla que ya seguía la bienvenida, y sin
-                            // ella una instalación sin SMTP no dejaría entrar a nadie jamás.
-                            $exito = $this->enviarCorreoActivacion($id, $correo, $nombre)
+                            // correo. Un fallo SMTP conserva la activación pendiente; únicamente
+                            // la demostración local con correo desactivado permite omitirla.
+                            $enviado = $this->enviarCorreoActivacion($id, $correo, $nombre);
+                            $habilitada = !empty($this->userModel->obtenerParaActivacion($id)['correo_verificado']);
+                            $exito = $enviado
                                 ? '¡Cuenta creada! Te enviamos un correo para activarla. Revisa tu bandeja y confirma el enlace antes de iniciar sesión.'
-                                : '¡Cuenta creada! Ya puedes iniciar sesión.';
+                                : ($habilitada ? '¡Cuenta creada! Ya puedes iniciar sesión.' : 'Cuenta creada, pendiente de activación. No pudimos enviar el enlace. Inicia sesión con tu contraseña para reenviarlo o contacta al administrador.');
                             $accion = 'ingresar';
                         
                             $this->render('auth/login', [
@@ -237,6 +247,7 @@ class AuthController extends Controller {
                                 'error' => '',
                                 'exito' => $exito,
                                 'programas' => $programas,
+                                'fichas' => $this->fichaModel->obtenerTodas(),
                                 'csrf' => $csrf
                             ]);
                             return;
@@ -256,19 +267,20 @@ class AuthController extends Controller {
             'error' => $error,
             'exito' => $exito,
             'programas' => $programas,
+            'fichas' => $this->fichaModel->obtenerTodas(),
             'csrf' => $csrf
         ]);
     }
 
     /**
      * RF-01: emite el token de activación y manda el enlace. Devuelve si el correo
-     * salió; el llamador decide qué hacer cuando no. Si no sale, la cuenta se marca
-     * verificada para no dejarla en un limbo del que nadie puede rescatarla.
+     * salió; un fallo conserva la cuenta pendiente. Solo local con correo desactivado
+     * permite acceder con una cuenta de demostración.
      */
     private function enviarCorreoActivacion(string $usuarioId, string $correo, string $nombre): bool {
         $rutaCorreo = dirname(__DIR__, 2) . '/includes/correo.php';
         if (!file_exists($rutaCorreo)) {
-            $this->userModel->marcarCorreoVerificado($usuarioId);
+            $this->habilitarCuentaDemoLocal($usuarioId);
             return false;
         }
         require_once $rutaCorreo;
@@ -288,8 +300,15 @@ class AuthController extends Controller {
             error_log('[Activacion] No se pudo preparar el correo: ' . $e->getMessage());
         }
 
-        $this->userModel->marcarCorreoVerificado($usuarioId);
+        $this->habilitarCuentaDemoLocal($usuarioId);
         return false;
+    }
+
+    /** Solo el entorno local con correo explícitamente desactivado omite la activación. */
+    private function habilitarCuentaDemoLocal(string $usuarioId): void {
+        if (($_ENV['APP_ENV'] ?? '')==='local' && filter_var($_ENV['MAIL_ENABLED'] ?? 'true',FILTER_VALIDATE_BOOLEAN,FILTER_NULL_ON_FAILURE)===false) {
+            $this->userModel->marcarCorreoVerificado($usuarioId);
+        }
     }
 
     /**
@@ -326,12 +345,27 @@ class AuthController extends Controller {
             return;
         }
 
+        $usuario=$this->userModel->obtenerParaActivacion($pendiente['id']);
+        if (!$usuario || !$usuario['activo'] || !empty($usuario['eliminado']) || !empty($usuario['bloqueado']) || !empty($usuario['correo_verificado'])
+            || ($usuario['rol'] ?? '')!==($pendiente['rol'] ?? '')
+            || strcasecmp((string)$usuario['correo'],(string)$pendiente['correo'])!==0
+            || time()-(int)($pendiente['creado'] ?? 0)>900
+            || !hash_equals((string)($pendiente['huella'] ?? ''),(string)$usuario['huella_clave'])) {
+            unset($_SESSION['activacion_pendiente']);
+            $this->redirect('login?error='.urlencode('Tu solicitud venció o la cuenta cambió. Inicia sesión de nuevo.'));
+            return;
+        }
+        if (!$this->userModel->puedeReenviarActivacion($pendiente['id'])) {
+            $this->redirect('login?error='.urlencode('Espera un minuto antes de pedir otro enlace de activación.'));
+            return;
+        }
         $enviado = $this->enviarCorreoActivacion($pendiente['id'], $pendiente['correo'], $pendiente['nombre']);
+        $habilitada=!empty($this->userModel->obtenerParaActivacion($pendiente['id'])['correo_verificado']);
         unset($_SESSION['activacion_pendiente']);
 
         $this->redirect('login?' . ($enviado
             ? 'exito=' . urlencode('Te reenviamos el enlace de activación. Revisa tu correo.')
-            : 'exito=' . urlencode('No pudimos enviar el correo, así que habilitamos tu cuenta. Ya puedes iniciar sesión.')));
+            : ($habilitada ? 'exito=' . urlencode('Cuenta habilitada para el entorno local. Ya puedes iniciar sesión.') : 'error=' . urlencode('No pudimos enviar el enlace. Tu cuenta sigue pendiente de activación. Inténtalo más tarde o contacta al administrador.'))));
     }
 
     /**
@@ -870,10 +904,9 @@ class AuthController extends Controller {
         ];
 
         $ch = curl_init(self::GOOGLE_TOKEN_URL);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->aplicarOpcionesCurlSeguro($ch);
         curl_setopt($ch, CURLOPT_POST, true);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -903,9 +936,8 @@ class AuthController extends Controller {
      */
     private function obtenerPerfilGoogle(string $accessToken): array {
         $ch = curl_init(self::GOOGLE_USERINFO_URL);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $this->aplicarOpcionesCurlSeguro($ch);
         curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Bearer ' . $accessToken]);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
 
         $response  = curl_exec($ch);
         $httpCode  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -918,6 +950,33 @@ class AuthController extends Controller {
         }
 
         return json_decode((string) $response, true) ?: [];
+    }
+
+    /**
+     * Aplica opciones seguras de conexión HTTPS para cURL, asegurando
+     * que en entornos Windows / XAMPP / WAMP sin CA bundle configurado en php.ini
+     * se localice un almacén de certificados válido y no falle con error 60.
+     */
+    private function aplicarOpcionesCurlSeguro($ch): void {
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 15);
+
+        if (empty(ini_get('curl.cainfo')) && empty(ini_get('openssl.cafile'))) {
+            $rutasCA = [
+                dirname(__DIR__, 2) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'cacert.pem',
+                'C:\Program Files\Git\usr\ssl\certs\ca-bundle.crt',
+                'C:\Program Files\Git\mingw64\ssl\certs\ca-bundle.crt',
+                'C:\xampp\apache\bin\curl-ca-bundle.crt',
+                'C:\xampp\perl\vendor\lib\Mozilla\CA\cacert.pem',
+                'C:\php\extras\ssl\cacert.pem',
+            ];
+            foreach ($rutasCA as $ruta) {
+                if (file_exists($ruta)) {
+                    curl_setopt($ch, CURLOPT_CAINFO, $ruta);
+                    break;
+                }
+            }
+        }
     }
 
     /**

@@ -19,7 +19,7 @@
     '.aviso-capa{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;',
     'justify-content:center;z-index:9998;padding:20px;opacity:0;transition:opacity .16s ease}',
     '.aviso-capa.visible{opacity:1}',
-    '.aviso-modal{background:var(--bg-tarjeta,#1F2C33);color:var(--texto-principal,#fff);',
+    '.aviso-modal{background:var(--bg-card,var(--fondo,#1F2C33));color:var(--texto-principal,#fff);',
     'border:2px solid var(--borde-sutil,#2B3E46);border-radius:18px;max-width:440px;width:100%;',
     'padding:26px;text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.4);',
     'transform:translateY(10px) scale(.98);transition:transform .16s ease;max-height:85vh;overflow-y:auto}',
@@ -37,7 +37,7 @@
     '.aviso-pila{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9999;',
     'display:flex;flex-direction:column;gap:10px;pointer-events:none;width:min(420px,calc(100% - 32px))}',
     '.aviso-toast{display:flex;align-items:flex-start;gap:11px;padding:13px 16px;border-radius:14px;',
-    'background:var(--bg-tarjeta,#1F2C33);color:var(--texto-principal,#fff);border:2px solid var(--borde-sutil,#2B3E46);',
+    'background:var(--bg-card,var(--fondo,#1F2C33));color:var(--texto-principal,#fff);border:2px solid var(--borde-sutil,#2B3E46);',
     'border-left-width:6px;box-shadow:0 6px 22px rgba(0,0,0,.28);font-size:.88rem;font-weight:700;',
     'opacity:0;transform:translateY(-10px);transition:opacity .18s ease,transform .18s ease;pointer-events:auto}',
     '.aviso-toast.visible{opacity:1;transform:none}',
@@ -99,10 +99,12 @@
     inyectarCss();
     opciones = opciones || {};
 
+    var focoAnterior=document.activeElement;
     var capa = document.createElement('div');
     capa.className = 'aviso-capa';
     capa.setAttribute('role', 'dialog');
     capa.setAttribute('aria-modal', 'true');
+    capa.setAttribute('aria-label', opciones.titulo || 'Aviso de SmashCode');
 
     var cuerpo = opciones.html
       ? '<div class="aviso-texto">' + opciones.html + '</div>'
@@ -126,9 +128,18 @@
     function cerrar() {
       capa.classList.remove('visible');
       document.removeEventListener('keydown', alPulsar);
+      if (focoAnterior && focoAnterior.isConnected) focoAnterior.focus();
       setTimeout(function () { if (capa.parentNode) capa.parentNode.removeChild(capa); }, 180);
     }
-    function alPulsar(e) { if (e.key === 'Escape') cerrar(); }
+    function alPulsar(e) {
+      if (e.key === 'Escape') cerrar();
+      if (e.key === 'Tab') {
+        var nodos=Array.from(capa.querySelectorAll('a[href],button,input,select,textarea,[tabindex]')).filter(function(n){return !n.disabled && n.tabIndex>=0;});
+        var primero=nodos[0],ultimo=nodos[nodos.length-1];
+        if(e.shiftKey && document.activeElement===primero){e.preventDefault();ultimo.focus();}
+        else if(!e.shiftKey && document.activeElement===ultimo){e.preventDefault();primero.focus();}
+      }
+    }
 
     capa.querySelector('.aviso-btn').addEventListener('click', cerrar);
     capa.addEventListener('click', function (e) { if (e.target === capa) cerrar(); });

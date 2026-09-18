@@ -118,7 +118,7 @@ class AdminController extends Controller {
         try {
 
             // Validaciones comunes
-            $errores = ValidacionUsuario::errores($nombre,$correo,$ficha,$rol,$_POST);
+            $errores = ValidacionUsuario::errores($nombre, $correo, $ficha, $rol, $_POST, null, $programaId);
             if (!ValidacionUsuario::programaPermitido($programaId)) $errores[]='Selecciona un programa activo válido.';
 
             // La contraseña solo es obligatoria para el administrador
@@ -205,7 +205,7 @@ class AdminController extends Controller {
 
         try {
             $actual = $this->usuarioModel->obtenerPorId($id);
-            $errores = ValidacionUsuario::errores($nombre,$correo,$ficha,$rol,$_POST);
+            $errores = ValidacionUsuario::errores($nombre, $correo, $ficha, $rol, $_POST, $actual['ficha_sena'] ?? null, $programaId);
             if (!$actual) $errores[]='No se encontró el usuario.';
             if (!ValidacionUsuario::programaPermitido($programaId,$actual['programa_id'] ?? null)) $errores[]='Selecciona un programa activo válido.';
             if ($errores) $this->redirect('admin/usuarios?error='.urlencode(implode(' ',$errores)));

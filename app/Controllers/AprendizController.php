@@ -120,7 +120,7 @@ class AprendizController extends Controller {
         if ($idsAyuda) {
             $inAyuda = implode(',', array_fill(0, count($idsAyuda), '?'));
             $stmtAyuda = $pdo->prepare(
-                "SELECT id, termino_en, termino_es, transcripcion_ipa, oracion_ejemplo, traduccion_ejemplo
+                "SELECT id, termino_en, termino_es, transcripcion_ipa, oracion_ejemplo, traduccion_ejemplo, audio_url
                  FROM vocabulario WHERE id IN ($inAyuda) AND activo = 1"
             );
             $stmtAyuda->execute($idsAyuda);
@@ -407,7 +407,11 @@ class AprendizController extends Controller {
         if ($respuesta==='') return 0;
         if ($tipo === 'escucha_escribe') {
             $correctas = array_values(array_filter($opciones,static fn($opcion)=>(int)$opcion['es_correcta']===1));
-            return count($correctas)===1 && $normalizar($correctas[0]['texto'])===$normalizar($respuesta) ? 1 : 0;
+            if (count($correctas) !== 1) return 0;
+            $limpiarTexto = static fn($t) => preg_replace('/[^a-z0-9]/u', '', $normalizar($t));
+            $limpEsperado = $limpiarTexto($correctas[0]['texto']);
+            $limpRecibido = $limpiarTexto($respuesta);
+            return ($normalizar($correctas[0]['texto']) === $normalizar($respuesta) || ($limpRecibido !== '' && $limpEsperado === $limpRecibido)) ? 1 : 0;
         }
         foreach($opciones as $op) if((int)$op['es_correcta']===1 && $normalizar($op['texto'])===$normalizar($respuesta)) return 1;
         return 0;
@@ -1084,7 +1088,7 @@ class AprendizController extends Controller {
         // filtrar por un área todavía sin vocabulario devuelve una lista vacía sin
         // explicación y parece un error de la plataforma.
         $areas = $pdo->query(
-            "SELECT a.id, a.nombre, COUNT(v.id) AS total
+            "SELECT a.id, a.nombre, COUNT(r.id) AS total
              FROM area_clinica a
              LEFT JOIN vocabulario v ON v.area_clinica_id = a.id AND v.activo = 1
              LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
@@ -1092,7 +1096,7 @@ class AprendizController extends Controller {
              GROUP BY a.id, a.nombre ORDER BY a.nombre"
         )->fetchAll();
         $categorias = $pdo->query(
-            "SELECT c.id, c.nombre, COUNT(v.id) AS total
+            "SELECT c.id, c.nombre, COUNT(r.id) AS total
              FROM categoria_vocabulario c
              LEFT JOIN vocabulario v ON v.categoria_id = c.id AND v.activo = 1
              LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
@@ -1300,6 +1304,12 @@ class AprendizController extends Controller {
 
             if (empty($ficha)) {
                 $this->redirect('aprendiz/perfil?error=ficha' . $sufijo);
+                return;
+            }
+
+            // Validación de formato numérico y pertenencia al catálogo (W11 / W12)
+            if (!preg_match('/^[0-9]+$/', $ficha) || mb_strlen($ficha) > 20 || !\App\Models\ValidacionUsuario::fichaPermitida($ficha, $programaId, $usuario['ficha_sena'] ?? null)) {
+                $this->redirect('aprendiz/perfil?error=ficha_invalida' . $sufijo);
                 return;
             }
 

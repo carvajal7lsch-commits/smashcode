@@ -4,16 +4,18 @@ import argparse, base64, html, io, wave
 import json, re, subprocess, uuid
 from urllib.request import build_opener, Request, HTTPCookieProcessor, HTTPRedirectHandler
 from urllib.error import HTTPError
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlsplit
 from http.cookiejar import CookieJar
 
 parser=argparse.ArgumentParser()
 parser.add_argument('--php',default='php')
+parser.add_argument('--base-url',default='http://127.0.0.1:8097')
 parser.add_argument('--artifact-root',type=Path,required=True)
 args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
 php=args.php
-base='http://127.0.0.1:8097'
+base=args.base_url
+if urlsplit(args.base_url).hostname not in ('localhost','127.0.0.1'): raise SystemExit('Solo servidor local')
 args.artifact_root.mkdir(parents=True,exist_ok=True)
 evidence=[]
 def db(sql=None,params=None,action=None):
@@ -59,7 +61,7 @@ def track_word_files(word):
 
 # The helper requires the explicit isolated datadir, obtained from the local environment.
 datadir=re.search(r'^LOCAL_MYSQL_DATADIR=(.*)$',(root/'.env').read_text(),re.M).group(1).strip().strip('"\'')
-subprocess.run([php,'-d','xdebug.mode=off',str(root/'tools/verify-local-db.php'),datadir],capture_output=True,text=True,check=True)
+subprocess.run([php,'-d','xdebug.mode=off',str(root/'tools/verify-local-db.php'),datadir,re.search(r'^DB_PUERTO=(.*)$',(root/'.env').read_text(),re.M).group(1).strip()],capture_output=True,text=True,check=True)
 fixture=db(action='init');users=fixture['users'];emails=[];word_ids=[];programs=[];new_files=set()
 initial_files=uploads()
 try:

@@ -169,7 +169,7 @@
     .insignia-chip i { color: var(--naranja); }
     .ranking-fila {
       display: flex; align-items: center; gap: 10px;
-      padding: 7px 0; font-size: 13px; font-weight: 700;
+      padding: 8px 0; font-size: 13px; font-weight: 700; color: var(--gris-texto);
     }
     .ranking-fila + .ranking-fila { border-top: 1px solid var(--borde-sutil); }
     .ranking-puesto {
@@ -189,13 +189,14 @@
     .stat.gem { color: var(--duo-blue); }
     .stat.heart { color: #ff4b4b; }
 
-    .card { border: 2px solid var(--gris-claro); border-radius: 15px; padding: 15px; margin-bottom: 20px; background: var(--blanco); }
-    .card h3 { font-size: 18px; font-weight: 800; margin-bottom: 15px; color: var(--gris-texto); }
+    .card { border: 2px solid var(--gris-claro); border-radius: 15px; padding: 16px 18px; margin-bottom: 20px; background: var(--blanco); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .card h3 { font-size: 16px; font-weight: 800; margin: 0; color: var(--gris-texto); }
     .promo-content { display: flex; align-items: center; gap: 15px; }
     .lock-icon { width: 50px; height: 50px; background: var(--gris-claro); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--gris-medio); font-size: 20px; }
 
-    .daily-card .card-header { display: flex; justify-content: space-between; align-items: center; }
-    .daily-card a { color: var(--duo-blue); text-decoration: none; font-weight: 800; font-size: 12px; }
+    .card .card-header, .daily-card .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .card .card-header a, .daily-card a { color: var(--azul); text-decoration: none; font-weight: 800; font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase; transition: opacity 0.2s; }
+    .card .card-header a:hover, .daily-card a:hover { opacity: 0.8; text-decoration: underline; }
     .challenge-item { display: flex; align-items: center; gap: 15px; margin-top: 10px; }
     .challenge-item i { color: #ff9600; font-size: 24px; }
     .mini-progress-bar { width: 200px; height: 12px; background: var(--gris-claro); border-radius: 10px; position: relative; margin-top: 5px; }
@@ -226,7 +227,7 @@
       </div>
       <div class="stat-racha">
         <i class="fas fa-fire"></i>
-        Racha: 0 días
+        Racha: <?= (int) $racha ?> <?= (int) $racha === 1 ? 'día' : 'días' ?>
       </div>
 
       <div style="margin-left: auto; display:flex; align-items:center; gap:16px;">
@@ -532,9 +533,9 @@
                 <a href="<?= PROYECTO_PATH ?>/aprendiz/perfil">VER PERFIL</a>
             </div>
             <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
-                <div class="rango-medalla"><i class="fas fa-user-nurse"></i></div>
+                <div class="rango-medalla"><i class="fas <?= htmlspecialchars($rango['rango_icono'], ENT_QUOTES) ?>"></i></div>
                 <div style="flex:1;">
-                    <p style="font-size:15px; font-weight:800; margin-bottom:2px;"><?= htmlspecialchars($rango['nombre']) ?></p>
+                    <p style="font-size:15px; font-weight:800; margin-bottom:2px; color:var(--gris-texto);"><?= htmlspecialchars($rango['rango_nombre']) ?></p>
                     <p style="font-size:12px; color:var(--texto-tenue);">Nivel <?= (int) $rango['nivel'] ?> · <?= formatearXP($usuario['xp_puntos']) ?> XP</p>
                 </div>
             </div>
@@ -565,7 +566,7 @@
         <div class="card">
             <div class="card-header">
                 <h3>Ranking de la semana</h3>
-                <a href="<?= PROYECTO_PATH ?>/aprendiz/leaderboard">VER TODO</a>
+                <a href="<?= PROYECTO_PATH ?>/aprendiz/perfil#leaderboard-lista">VER TODO</a>
             </div>
             <p style="font-size:12px; color:var(--texto-tenue); margin:8px 0 12px;">
                 Cuenta desde el lunes <?= htmlspecialchars($inicioSemana) ?>

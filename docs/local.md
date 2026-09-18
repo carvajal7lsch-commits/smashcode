@@ -63,7 +63,7 @@ Los correos de bienvenida, recuperación, clave temporal y bloqueo comparten una
 
 Para Gmail: configurar `SMTP_HOST=smtp.gmail.com`, `SMTP_PORT=587`, `SMTP_USER` y `SMTP_PASS` con una contraseña de aplicación; después activar `MAIL_ENABLED=true`. No guardar secretos en Git. La recuperación muestra un aviso global cuando faltan configuración o credenciales, sin revelar si una cuenta existe.
 
-`php tools/preview-mails.php --output=.local/mail-previews` genera cuatro ejemplos ficticios. Añadir `--send-to=tu-cuenta-de-prueba@gmail.com` envía únicamente las tres pruebas de bienvenida, recuperación y clave temporal. Los ejemplos no crean usuarios ni modifican contraseñas; el enlace de recuperación y la clave de ejemplo no son válidos. Un resultado `enviado=true` confirma aceptación SMTP, no llegada a la bandeja de entrada.
+`php tools/preview-mails.php --output=.local/mail-previews` genera cinco ejemplos ficticios, incluida la activación. Añadir `--send-to=tu-cuenta-de-prueba@gmail.com` envía únicamente las tres pruebas de bienvenida, recuperación y clave temporal. Los ejemplos no crean usuarios ni modifican contraseñas; los enlaces de activación/recuperación y la clave de ejemplo no son válidos. Un resultado `enviado=true` confirma aceptación SMTP, no llegada a la bandeja de entrada.
 
 `python tests/mail-regression.py --artifact-root .local/mail-test-results` comprueba PHPMailer contra SMTP de loopback sin enviar mensajes a Internet. El transporte `MAIL_TRANSPORT=local` se permite exclusivamente con `APP_ENV=local` y SMTP en loopback. La aplicación usa `MAIL_TRANSPORT=smtp` para Gmail o cualquier proveedor real.
 
@@ -74,3 +74,18 @@ El acceso con Google necesita su cliente OAuth web, `GOOGLE_CLIENT_ID`, `GOOGLE_
 ## Iconografía
 
 Los iconos que antes usaban emojis se sirven desde `assets/icons/smashcode.svg`, mediante `icono_svg()`, y un SVG independiente para el indicador de progreso. Se conserva la mascota vectorial y los iconos de Font Awesome existentes. Los SVG decorativos se ocultan a los lectores de pantalla y mantienen el texto de cada acción.
+
+### Regresión de la actualización de septiembre
+
+Con correo desactivado y la instancia local verificada:
+
+```powershell
+php -d xdebug.mode=off tests/update-regression.php
+python tests/activation-http-regression.py --base-url http://127.0.0.1:8097 --artifact-root .local/test-activation
+python tests/update-interface-http-regression.py --base-url http://127.0.0.1:8097 --artifact-root .local/test-interface
+node tests/help-audio-regression.js
+python tests/additional-regression.py --artifact-root .local/test-additional
+python tests/integrations-http-regression.py --artifact-root .local/test-integrations
+```
+
+Los scripts HTTP solo admiten localhost o 127.0.0.1. Las pruebas de activación verifican la repetición de migraciones, los tokens de un solo uso, los fallos SMTP y la invalidación de sesiones pendientes. No envían mensajes reales. `tools/verify-local-db.php` permite indicar como segundo argumento un puerto de prueba; omitirlo conserva la comprobación del puerto 3308.

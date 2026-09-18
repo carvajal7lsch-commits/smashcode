@@ -100,7 +100,7 @@
       </div>
 
       <!-- ── ESTADÍSTICAS RÁPIDAS (HU05 / HU15) ── -->
-      <div class="config-card" style="padding: 20px 28px;">
+      <div class="config-card" style="padding: 14px 18px;">
         <div class="config-card-titulo"><i class="fas fa-chart-line" style="color:var(--azul);"></i>Mis Métricas Clínicas</div>
         <div class="stats-quick">
           <div class="stat-q">
@@ -142,10 +142,10 @@
               $pctMod = (float) $mod['porcentaje'];
               $colorMod = $pctMod >= 100 ? 'var(--verde)' : ($pctMod > 0 ? 'var(--azul)' : 'var(--gris-medio)');
             ?>
-              <div style="margin-bottom:18px;">
-                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:6px;">
-                  <span style="font-weight:800; font-size:0.9rem;"><?= limpiar($mod['nombre']) ?></span>
-                  <span style="font-weight:900; font-size:0.9rem; color:<?= $colorMod ?>;">
+              <div style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:4px;">
+                  <span style="font-weight:800; font-size:0.88rem;"><?= limpiar($mod['nombre']) ?></span>
+                  <span style="font-weight:900; font-size:0.88rem; color:<?= $colorMod ?>;">
                     <?= number_format($pctMod, 0) ?>%
                     <span style="font-weight:700; font-size:0.72rem; color:var(--gris-medio);">
                       (<?= (int) $mod['raps_completados'] ?>/<?= (int) $mod['total_raps'] ?> RAPs<?= $mod['tiempo_seg'] > 0 ? ' · ' . formatearDuracion((int) $mod['tiempo_seg']) : '' ?>)
@@ -153,11 +153,11 @@
                   </span>
                 </div>
 
-                <div class="xp-barra" style="height:12px;">
+                <div class="xp-barra" style="height:8px;">
                   <div class="xp-fill" style="width: <?= min(100, $pctMod) ?>%; background: <?= $colorMod ?>;"></div>
                 </div>
 
-                <div style="margin-top:8px; display:flex; flex-direction:column; gap:6px;">
+                <div style="margin-top:6px; display:flex; flex-direction:column; gap:4px;">
                   <?php foreach ($mod['raps'] as $rap):
                     $pctRap = (float) $rap['porcentaje'];
                     $colorRap = $rap['completado'] ? 'var(--verde)' : ($pctRap > 0 ? 'var(--naranja)' : 'var(--gris-claro)');
@@ -267,7 +267,7 @@
         <!-- Colección de Insignias y Logros (HU07) -->
         <div class="config-card" style="grid-column: span 2;">
           <div class="config-card-titulo"><i class="fas fa-medal" style="color:var(--naranja);"></i>Colección de Insignias y Logros Clínicos</div>
-          <div style="display:flex; gap:24px; flex-wrap:wrap; margin-top:14px; justify-content:center;">
+          <div style="display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; justify-content:center;">
             <?php 
               $descInsigniasMap = [
                 'Primer Nivel' => 'Aprobaste el Módulo 1 con 90% o más',
@@ -298,8 +298,8 @@
 
                   $cleanDesc = $descInsigniasMap[$cleanNombre] ?? htmlspecialchars($insig['descripcion']);
             ?>
-              <div style="display:flex; flex-direction:column; align-items:center; width:120px; text-align:center; opacity: <?= $hasEarned ? '1' : '0.35' ?>; filter: <?= $hasEarned ? 'none' : 'grayscale(100%)' ?>; transition:all 0.2s;">
-                <div style="width:68px; height:68px; border-radius:50%; background:var(--fondo); border:3px solid <?= $hasEarned ? 'var(--naranja)' : 'var(--gris-claro)' ?>; display:flex; align-items:center; justify-content:center; font-size:1.8rem; color:var(--naranja); box-shadow: <?= $hasEarned ? '0 4px 12px rgba(255,150,0,0.25)' : 'none' ?>;">
+              <div style="display:flex; flex-direction:column; align-items:center; width:95px; text-align:center; opacity: <?= $hasEarned ? '1' : '0.35' ?>; filter: <?= $hasEarned ? 'none' : 'grayscale(100%)' ?>; transition:all 0.2s;">
+                <div style="width:50px; height:50px; border-radius:50%; background:var(--fondo); border:2px solid <?= $hasEarned ? 'var(--naranja)' : 'var(--gris-claro)' ?>; display:flex; align-items:center; justify-content:center; font-size:1.35rem; color:var(--naranja); box-shadow: <?= $hasEarned ? '0 3px 10px rgba(255,150,0,0.2)' : 'none' ?>;">
                   <?php if ($cleanNombre === 'Quiz Perfecto'): ?>
                     <i class="fas fa-trophy"></i>
                   <?php elseif ($cleanNombre === 'Primer Nivel'): ?>
@@ -348,8 +348,8 @@
           <?php else: ?>
             <?php
               // Lienzo en coordenadas fijas; el SVG escala solo con viewBox
-              $ancho = 640; $alto = 220;
-              $margenIzq = 38; $margenDer = 12; $margenSup = 14; $margenInf = 34;
+              $ancho = 640; $alto = 160;
+              $margenIzq = 38; $margenDer = 12; $margenSup = 10; $margenInf = 28;
               $areaAncho = $ancho - $margenIzq - $margenDer;
               $areaAlto  = $alto - $margenSup - $margenInf;
               $n = count($serie);
@@ -383,7 +383,7 @@
             </div>
 
             <div style="overflow-x:auto;">
-              <svg viewBox="0 0 <?= $ancho ?> <?= $alto ?>" width="100%" height="220" role="img"
+              <svg viewBox="0 0 <?= $ancho ?> <?= $alto ?>" width="100%" height="160" role="img"
                    aria-label="Gráfica de la evolución de los puntajes de quiz entre sesiones">
                 <!-- Rejilla horizontal cada 25% -->
                 <?php foreach ([0, 25, 50, 75, 100] as $marca):
@@ -439,15 +439,15 @@
           <?php if (empty($historialQuizzes)): ?>
             <p style="color:var(--texto-tenue); text-align:center; padding: 24px; font-size:0.88rem;">No has completado ninguna evaluación final de RAP todavía.</p>
           <?php else: ?>
-            <div style="overflow-x:auto;">
+            <div style="overflow-x:auto; max-height:280px; overflow-y:auto;">
               <table class="vocab-table" style="width:100%; border:none;">
                 <thead>
                   <tr>
-                    <th style="padding:12px;">Módulo / Resultado de Aprendizaje</th>
-                    <th style="padding:12px; text-align:center;">Puntaje</th>
-                    <th style="padding:12px; text-align:center;">Resultado</th>
-                    <th style="padding:12px; text-align:center;">Intento</th>
-                    <th style="padding:12px; text-align:right;">Fecha</th>
+                    <th style="padding:8px 12px; position:sticky; top:0; background:var(--blanco); z-index:2;">Módulo / Resultado de Aprendizaje</th>
+                    <th style="padding:8px 12px; text-align:center; position:sticky; top:0; background:var(--blanco); z-index:2;">Puntaje</th>
+                    <th style="padding:8px 12px; text-align:center; position:sticky; top:0; background:var(--blanco); z-index:2;">Resultado</th>
+                    <th style="padding:8px 12px; text-align:center; position:sticky; top:0; background:var(--blanco); z-index:2;">Intento</th>
+                    <th style="padding:8px 12px; text-align:right; position:sticky; top:0; background:var(--blanco); z-index:2;">Fecha</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -462,18 +462,18 @@
                       $subtexto = $rapsSubtextMap[$moduloOrden] ?? limpiar($q['rap_titulo']);
                   ?>
                     <tr>
-                      <td style="padding:12px; font-weight:700;">
+                      <td style="padding:8px 12px; font-weight:700;">
                         <div><?= !empty($q['modulo_nombre']) ? limpiar($q['modulo_nombre']) : limpiar($q['rap_titulo']) ?></div>
                         <div style="font-size:0.75rem; font-weight:600; color:var(--texto-tenue); margin-top:2px;"><?= $subtexto ?></div>
                       </td>
-                      <td style="padding:12px; text-align:center; font-weight:800; font-size:1rem; color:<?= $q['aprobado'] ? 'var(--verde)' : 'var(--rojo)' ?>;"><?= (int)$q['puntaje'] ?>%</td>
-                      <td style="padding:12px; text-align:center;">
-                        <span class="tag-badge <?= $q['aprobado'] ? 'nivel' : 'cat' ?>" style="font-size:0.7rem; display:inline-block; padding:4px 10px; font-weight:800;">
+                      <td style="padding:8px 12px; text-align:center; font-weight:800; font-size:0.95rem; color:<?= $q['aprobado'] ? 'var(--verde)' : 'var(--rojo)' ?>;"><?= (int)$q['puntaje'] ?>%</td>
+                      <td style="padding:8px 12px; text-align:center;">
+                        <span class="tag-badge <?= $q['aprobado'] ? 'nivel' : 'cat' ?>" style="font-size:0.68rem; display:inline-block; padding:3px 8px; font-weight:800;">
                           <?= $q['aprobado'] ? 'APROBADO' : 'REPROBADO' ?>
                         </span>
                       </td>
-                      <td style="padding:12px; text-align:center; font-weight:700;">#<?= $q['numero_intento'] ?></td>
-                      <td style="padding:12px; text-align:right; font-size:0.82rem; color:var(--texto-tenue);"><?= date('d/m/Y H:i', strtotime($q['creado_en'])) ?></td>
+                      <td style="padding:8px 12px; text-align:center; font-weight:700;">#<?= $q['numero_intento'] ?></td>
+                      <td style="padding:8px 12px; text-align:right; font-size:0.78rem; color:var(--texto-tenue);"><?= date('d/m/Y H:i', strtotime($q['creado_en'])) ?></td>
                     </tr>
                   <?php endforeach; ?>
                 </tbody>
@@ -535,6 +535,9 @@
           <?php if ($error === 'ficha'): ?>
             <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>La ficha SENA no puede estar vacía.</div>
           <?php endif; ?>
+          <?php if ($error === 'ficha_invalida'): ?>
+            <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>La ficha SENA debe contener únicamente dígitos numéricos y pertenecer al programa seleccionado.</div>
+          <?php endif; ?>
           <?php if ($error === 'programa'): ?>
             <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>Selecciona un programa de formación válido.</div>
           <?php endif; ?>
@@ -542,7 +545,7 @@
             <div class="alerta-perfil alerta-err"><i class="fas fa-exclamation-circle"></i>No pudimos guardar tus datos de formación. Intenta de nuevo.</div>
           <?php endif; ?>
 
-          <form method="POST" action="<?= PROYECTO_PATH ?>/aprendiz/perfil/actualizar">
+          <form method="POST" action="<?= PROYECTO_PATH ?>/aprendiz/perfil/actualizar" id="form-perfil-formacion">
             <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
             <input type="hidden" name="accion" value="ficha">
             <?php if ($completar): ?>
@@ -550,14 +553,16 @@
             <?php endif; ?>
 
             <div class="campo-grupo">
-              <label class="campo-label" for="ficha_sena">Ficha SENA</label>
+              <label class="campo-label" for="ficha_sena">Ficha SENA <span style="color:var(--rojo);">*</span></label>
               <div class="campo-wrap">
                 <i class="fas fa-id-card campo-ico"></i>
                 <input type="text" id="ficha_sena" name="ficha_sena" class="campo-input-perfil"
-                       value="<?= limpiar($fichaSena ?? '') ?>" placeholder="p. ej. 2234891" required maxlength="50">
+                       value="<?= limpiar($fichaSena ?? '') ?>" placeholder="p. ej. 3142784" required maxlength="20"
+                       inputmode="numeric" pattern="[0-9]+" autocomplete="off">
               </div>
+              <span id="error-ficha-perfil" style="color:var(--rojo); font-size:0.75rem; display:none; margin-top:4px; font-weight:700;"></span>
               <small style="color:var(--gris-medio); font-size:0.72rem; margin-top:4px; display:block;">
-                Número de la ficha en la que estás matriculado.
+                Número de la ficha en la que estás matriculado (solo dígitos numéricos).
               </small>
             </div>
 
@@ -897,6 +902,47 @@
     });
 
     arrancar();
+  })();
+
+  // Validación numérica y en tiempo real de Ficha SENA (W11 / W12)
+  (function() {
+    const inputFicha = document.getElementById('ficha_sena');
+    const errFicha   = document.getElementById('error-ficha-perfil');
+    const formFicha  = document.getElementById('form-perfil-formacion');
+
+    if (inputFicha && errFicha) {
+      inputFicha.addEventListener('input', function() {
+        const original = this.value;
+        if (/[^0-9]/.test(original)) {
+          errFicha.textContent = 'Solo se admiten números (sin letras ni caracteres especiales).';
+          errFicha.style.display = 'block';
+          this.value = original.replace(/[^0-9]/g, '');
+        } else {
+          errFicha.textContent = '';
+          errFicha.style.display = 'none';
+        }
+      });
+
+      if (formFicha) {
+        formFicha.addEventListener('submit', function(e) {
+          const val = inputFicha.value.trim();
+          if (!val) {
+            e.preventDefault();
+            errFicha.textContent = 'La ficha SENA no puede estar vacía.';
+            errFicha.style.display = 'block';
+            inputFicha.focus();
+            return false;
+          }
+          if (!/^[0-9]+$/.test(val)) {
+            e.preventDefault();
+            errFicha.textContent = 'La ficha SENA debe contener únicamente dígitos numéricos.';
+            errFicha.style.display = 'block';
+            inputFicha.focus();
+            return false;
+          }
+        });
+      }
+    }
   })();
 </script>
 </body>

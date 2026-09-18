@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\User;
 use App\Models\Nivel;
 use App\Models\Progreso;
+use App\Models\GamificacionConfig;
 
 /**
  * HomeController.php
@@ -34,7 +35,7 @@ class HomeController extends Controller {
         $progreso = [];
         $mapaProgreso = [];
         $racha = 0;
-        $rango = ['nombre' => 'Novato Clínico', 'nivel' => 1];
+        $rango = $this->userModel->calcularRangoClinico(0);
         $insigniasGanadas = [];
         $totalInsignias = 0;
         $leaderboard = [];
@@ -64,7 +65,8 @@ class HomeController extends Controller {
             // mostraba cifras fijas de una maqueta (vidas, gemas, "ligas" bloqueadas)
             // que no correspondían a ninguna funcionalidad del sistema.
             $racha           = $this->userModel->calcularRachaDias($uid);
-            $rango           = $this->userModel->calcularRangoClinico((int) ($usuario['xp_puntos'] ?? 0));
+            $xpPorNivel      = (new GamificacionConfig())->obtenerValor('xp_por_nivel', 500);
+            $rango           = $this->userModel->calcularRangoClinico((int) ($usuario['xp_puntos'] ?? 0), $xpPorNivel);
             $insigniasGanadas = $this->userModel->obtenerInsigniasGanadas($uid);
             $totalInsignias   = count($this->userModel->obtenerTodasInsignias());
             $leaderboard      = $this->userModel->obtenerLeaderboardSemanal($usuario['programa_id'] ?? null);

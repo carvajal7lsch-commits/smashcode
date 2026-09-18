@@ -78,7 +78,7 @@ class AdminEjercicioController extends Controller {
         $puntos        = max(1, min(100, (int) ($_POST['puntos'] ?? 10)));
 
         // RF-34: palabra de vocabulario que se ofrece como ayuda al fallar. Opcional.
-        $vocabAyuda = trim((string) ($_POST['vocab_ayuda_id'] ?? ''));
+        $vocabAyuda = \App\Models\ValidacionUsuario::entrada($_POST['vocab_ayuda_id'] ?? '');
 
         if (empty($rapId) || empty($tipo) || empty($enunciado)) {
             http_response_code(400);
@@ -100,9 +100,9 @@ class AdminEjercicioController extends Controller {
             ContenidoCurso::validarEjercicio($tipo,$opciones,$enunciado);
             if ($ejercicioId && ($ejercicioModel->obtenerPorId($ejercicioId)['rap_id'] ?? null) !== $rapId) throw new \DomainException('El ejercicio no pertenece al RAP.');
 
-            // Se descarta en silencio la palabra que no exista o sea de otro módulo:
-            // el ejercicio se guarda igual, solo se queda sin recurso de ayuda.
+            // Una ayuda inválida rechaza la edición para conservar el contenido anterior.
             $vocabAyudaId = $ejercicioModel->ayudaValida($vocabAyuda, $rapId);
+            if (!is_string($_POST['vocab_ayuda_id'] ?? '') || ($vocabAyuda!=='' && $vocabAyudaId===null)) throw new \DomainException('Selecciona una ayuda activa del mismo módulo.');
 
             if (empty($ejercicioId)) {
                 // Crear

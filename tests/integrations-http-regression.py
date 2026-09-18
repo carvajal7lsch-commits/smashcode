@@ -7,12 +7,13 @@ from urllib.parse import urlencode, parse_qs, urlsplit
 from http.cookiejar import CookieJar
 from xml.etree import ElementTree
 
-p=argparse.ArgumentParser();p.add_argument('--php',default='php');p.add_argument('--artifact-root',type=Path,required=True);args=p.parse_args()
-root=Path(__file__).resolve().parents[1];base='http://127.0.0.1:8097';results=[]
+p=argparse.ArgumentParser();p.add_argument('--php',default='php');p.add_argument('--base-url',default='http://127.0.0.1:8097');p.add_argument('--artifact-root',type=Path,required=True);args=p.parse_args()
+root=Path(__file__).resolve().parents[1];base=args.base_url;results=[]
+if urlsplit(args.base_url).hostname not in ('localhost','127.0.0.1'): raise SystemExit('Solo servidor local')
 env=dict(re.findall(r'^([A-Z_]+)=(.*)$',(root/'.env').read_text(encoding='utf-8'),re.M))
 if env.get('APP_ENV')!='local' or env.get('MAIL_ENABLED')!='false' or env.get('GOOGLE_CLIENT_ID','').strip(): raise SystemExit('Esta prueba exige local, correo deshabilitado y OAuth sin configurar.')
 datadir=env['LOCAL_MYSQL_DATADIR'].strip().strip('"\'')
-subprocess.run([args.php,'-d','xdebug.mode=off',str(root/'tools/verify-local-db.php'),datadir],capture_output=True,text=True,check=True)
+subprocess.run([args.php,'-d','xdebug.mode=off',str(root/'tools/verify-local-db.php'),datadir,re.search(r'^DB_PUERTO=(.*)$',(root/'.env').read_text(),re.M).group(1).strip()],capture_output=True,text=True,check=True)
 args.artifact_root.mkdir(parents=True,exist_ok=True)
 def db(sql,params=None):
     r=subprocess.run([args.php,'-d','xdebug.mode=off',str(root/'tests/db-fixtures.php'),str(root)],input=json.dumps({'sql':sql,'params':params or []}),text=True,capture_output=True,check=True)

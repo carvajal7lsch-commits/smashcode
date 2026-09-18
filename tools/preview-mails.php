@@ -1,7 +1,7 @@
 <?php
 /** Vista previa y envío explícito de mensajes ficticios. Exclusivamente CLI/local. */
 if (PHP_SAPI!=='cli') { http_response_code(404); exit; }
-require_once dirname(__DIR__).'/config/credenciales.php';
+require_once dirname(__DIR__).'/config/bootstrap.php';
 require_once dirname(__DIR__).'/includes/funciones.php';
 require_once dirname(__DIR__).'/includes/correo.php';
 require_once dirname(__DIR__).'/app/Services/CorreoPlantillas.php';
@@ -12,6 +12,7 @@ if (isset($opciones['send-to']) && !filter_var($opciones['send-to'],FILTER_VALID
 use App\Services\CorreoPlantillas;
 $login=CorreoPlantillas::urlAplicacion('login');
 $mensajes=[
+    'activacion'=>CorreoPlantillas::activacion('Cuenta de prueba',CorreoPlantillas::urlAplicacion('activar?token=ejemplo-no-valido')),
     'bienvenida'=>CorreoPlantillas::bienvenida('Cuenta de prueba',$login),
     'recuperacion'=>CorreoPlantillas::recuperacion('Cuenta de prueba',CorreoPlantillas::urlAplicacion('restablecer?token=ejemplo-no-valido')),
     'credenciales'=>CorreoPlantillas::credenciales('Cuenta de prueba','cuenta@smashcode.test','aprendiz','EjemploTemporal2026!','Programa de demostración',$login),
@@ -28,7 +29,7 @@ foreach ($mensajes as $tipo=>$mensaje) {
     }
     $fila=['tipo'=>$tipo,'asunto'=>$mensaje['asunto']];
     // El aviso de bloqueo se previsualiza; no se envía una falsa alerta de seguridad.
-    if (isset($opciones['send-to']) && $tipo!=='bloqueo') $fila['enviado']=enviarCorreo($opciones['send-to'],'[Prueba SmashCode] '.$mensaje['asunto'],$html);
+    if (isset($opciones['send-to']) && !in_array($tipo,['bloqueo','activacion'],true)) $fila['enviado']=enviarCorreo($opciones['send-to'],'[Prueba SmashCode] '.$mensaje['asunto'],$html);
     $resultados[]=$fila;
 }
 echo json_encode($resultados,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT)."\n";

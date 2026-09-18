@@ -1,7 +1,7 @@
 <?php
 /** Envío SMTP con contenido HTML y alternativa legible en texto plano. */
 require_once __DIR__.'/../vendor/autoload.php';
-if (!defined('SMTP_HOST')) require_once __DIR__.'/../config/credenciales.php';
+if (!defined('SMTP_HOST')) require_once __DIR__.'/../config/bootstrap.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -39,6 +39,16 @@ function enviarCorreo(string $destinatario,string $asunto,string $cuerpo): bool 
             if (SMTP_USER==='' || SMTP_PASS==='') throw new Exception('Faltan credenciales SMTP.');
             $mail->SMTPAuth=true;$mail->Username=SMTP_USER;$mail->Password=SMTP_PASS;
             $mail->SMTPSecure=(int)SMTP_PORT===465?PHPMailer::ENCRYPTION_SMTPS:PHPMailer::ENCRYPTION_STARTTLS;
+            $caPath = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'config' . DIRECTORY_SEPARATOR . 'cacert.pem';
+            if (empty(ini_get('openssl.cafile')) && file_exists($caPath)) {
+                $mail->SMTPOptions = [
+                    'ssl' => [
+                        'cafile' => realpath($caPath),
+                        'verify_peer' => true,
+                        'verify_peer_name' => true,
+                    ]
+                ];
+            }
         }
         $mail->CharSet=PHPMailer::CHARSET_UTF8;$mail->Timeout=10;
         $from=trim((string)($_ENV['SMTP_FROM_EMAIL'] ?? ''));

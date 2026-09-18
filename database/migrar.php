@@ -54,6 +54,8 @@ const MIGRACIONES = [
     '2026_09_17_historial_quiz.sql',
     '2026_09_17_vocabulario_etiquetas.sql',
     '2026_09_17_activacion_cuenta.sql',
+    '2026_09_18_fichas_catalogo.sql',
+    '2026_09_18_escucha_ramirez.sql',
 ];
 
 const INTENTOS_CONEXION = 30;

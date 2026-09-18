@@ -12,7 +12,7 @@ $_ENV['SMTP_PASS']='';
 $_ENV['SMTP_FROM_EMAIL']='';
 $_ENV['SMTP_FROM_NAME']='SmashCode';
 $_ENV['APP_URL']='https://smashcode.test/campus';
-require_once dirname(__DIR__).'/config/credenciales.php';
+require_once dirname(__DIR__).'/config/bootstrap.php';
 require_once dirname(__DIR__).'/includes/funciones.php';
 require_once dirname(__DIR__).'/includes/correo.php';
 require_once dirname(__DIR__).'/app/Services/CorreoPlantillas.php';

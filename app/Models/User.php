@@ -70,9 +70,29 @@ class User extends Model {
      */
     public function crearTokenActivacion(string $usuarioId, string $token, string $expiraEn): bool {
         $pdo = self::obtenerConexion();
-        $pdo->prepare('UPDATE token_activacion SET usado = 1 WHERE usuario_id = ?')->execute([$usuarioId]);
-        $stmt = $pdo->prepare('INSERT INTO token_activacion (id, usuario_id, token, expira_en) VALUES (?, ?, ?, ?)');
-        return $stmt->execute([generarUUID(), $usuarioId, $token, $expiraEn]);
+        try {
+            $pdo->beginTransaction();
+            $lock=$pdo->prepare('SELECT id FROM usuarios WHERE id=? FOR UPDATE');$lock->execute([$usuarioId]);
+            if (!$lock->fetchColumn()) throw new \RuntimeException('Cuenta no disponible.');
+            $pdo->prepare('UPDATE token_activacion SET usado = 1 WHERE usuario_id = ?')->execute([$usuarioId]);
+            $stmt = $pdo->prepare('INSERT INTO token_activacion (id, usuario_id, token, expira_en) VALUES (?, ?, ?, ?)');
+            $stmt->execute([generarUUID(), $usuarioId, hash('sha256',$token), $expiraEn]);
+            $pdo->commit();return true;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public function puedeReenviarActivacion(string $usuarioId): bool {
+        $stmt=self::obtenerConexion()->prepare('SELECT COUNT(*) FROM token_activacion WHERE usuario_id=? AND creado_en>DATE_SUB(NOW(),INTERVAL 60 SECOND)');
+        $stmt->execute([$usuarioId]);return (int)$stmt->fetchColumn()===0;
+    }
+
+    /** Estado mínimo del flujo de activación; no expone el hash de contraseña. */
+    public function obtenerParaActivacion(string $usuarioId): ?array {
+        $stmt=self::obtenerConexion()->prepare('SELECT id,correo,nombre_completo,rol,activo,bloqueado,eliminado,correo_verificado,SHA2(contrasena,256) AS huella_clave FROM usuarios WHERE id=?');
+        $stmt->execute([$usuarioId]);return $stmt->fetch() ?: null;
     }
 
     /**
@@ -81,18 +101,19 @@ class User extends Model {
      * Devuelve false si el token no existe, ya se usó o venció.
      */
     public function activarCuenta(string $token): bool {
+        if (!preg_match('/^[a-f0-9]{64}$/',$token)) return false;
         $pdo = self::obtenerConexion();
         try {
             $pdo->beginTransaction();
-            $stmt = $pdo->prepare('SELECT usuario_id FROM token_activacion WHERE token = ? AND usado = 0 AND expira_en > NOW() LIMIT 1');
-            $stmt->execute([$token]);
+            $stmt = $pdo->prepare('SELECT t.usuario_id FROM token_activacion t JOIN usuarios u ON u.id=t.usuario_id WHERE t.token IN (?,?) AND t.usado=0 AND t.expira_en>NOW() AND u.activo=1 AND u.eliminado=0 AND u.bloqueado=0 LIMIT 1 FOR UPDATE');
+            $stmt->execute([hash('sha256',$token),$token]);
             $usuarioId = $stmt->fetchColumn();
             if (!$usuarioId) {
                 $pdo->rollBack();
                 return false;
             }
             $pdo->prepare('UPDATE usuarios SET correo_verificado = 1 WHERE id = ?')->execute([$usuarioId]);
-            $pdo->prepare('UPDATE token_activacion SET usado = 1 WHERE token = ?')->execute([$token]);
+            $pdo->prepare('UPDATE token_activacion SET usado = 1 WHERE token IN (?,?)')->execute([hash('sha256',$token),$token]);
             $pdo->commit();
             return true;
         } catch (\Throwable $e) {
