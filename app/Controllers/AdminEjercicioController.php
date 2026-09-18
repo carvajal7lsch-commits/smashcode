@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\Ejercicio;
 use App\Models\EjercicioOpcion;
 use App\Models\Rap;
+use App\Models\ContenidoCurso;
 
 class AdminEjercicioController extends Controller {
 
@@ -38,7 +39,9 @@ class AdminEjercicioController extends Controller {
 
         $this->render('admin/ejercicios', [
             'rap' => $rap,
-            'ejercicios' => $ejercicios
+            'ejercicios' => $ejercicios,
+            // RF-34: opciones para enlazar un recurso de ayuda a cada ejercicio
+            'vocabularioAyuda' => $ejercicioModel->vocabularioDelModulo($rapId)
         ]);
     }
 
@@ -74,6 +77,9 @@ class AdminEjercicioController extends Controller {
         $maxIntentos   = max(1, min(10, (int) ($_POST['max_intentos'] ?? 3)));
         $puntos        = max(1, min(100, (int) ($_POST['puntos'] ?? 10)));
 
+        // RF-34: palabra de vocabulario que se ofrece como ayuda al fallar. Opcional.
+        $vocabAyuda = trim((string) ($_POST['vocab_ayuda_id'] ?? ''));
+
         if (empty($rapId) || empty($tipo) || empty($enunciado)) {
             http_response_code(400);
             echo json_encode(['error' => 'Datos incompletos']);
@@ -86,6 +92,17 @@ class AdminEjercicioController extends Controller {
         try {
             $pdo = \App\Core\Model::obtenerConexion();
             $pdo->beginTransaction();
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($rapId);
+
+            $opciones = $_POST['opciones'] ?? [];
+            if (!is_array($opciones)) throw new \DomainException('Opciones inválidas.');
+            ContenidoCurso::validarEjercicio($tipo,$opciones,$enunciado);
+            if ($ejercicioId && ($ejercicioModel->obtenerPorId($ejercicioId)['rap_id'] ?? null) !== $rapId) throw new \DomainException('El ejercicio no pertenece al RAP.');
+
+            // Se descarta en silencio la palabra que no exista o sea de otro módulo:
+            // el ejercicio se guarda igual, solo se queda sin recurso de ayuda.
+            $vocabAyudaId = $ejercicioModel->ayudaValida($vocabAyuda, $rapId);
 
             if (empty($ejercicioId)) {
                 // Crear
@@ -95,7 +112,8 @@ class AdminEjercicioController extends Controller {
                     'enunciado' => $enunciado,
                     'instrucciones' => $instrucciones,
                     'max_intentos' => $maxIntentos,
-                    'puntos' => $puntos
+                    'puntos' => $puntos,
+                    'vocab_ayuda_id' => $vocabAyudaId
                 ]);
             } else {
                 // Actualizar
@@ -104,7 +122,8 @@ class AdminEjercicioController extends Controller {
                     'enunciado' => $enunciado,
                     'instrucciones' => $instrucciones,
                     'max_intentos' => $maxIntentos,
-                    'puntos' => $puntos
+                    'puntos' => $puntos,
+                    'vocab_ayuda_id' => $vocabAyudaId
                 ]);
                 // Eliminar opciones antiguas para recrearlas
                 $opcionModel->eliminarPorEjercicio($ejercicioId);
@@ -125,10 +144,15 @@ class AdminEjercicioController extends Controller {
                 }
             }
 
+            $contenido->validarPublicado($rapId);
             $pdo->commit();
             echo json_encode(['success' => true]);
 
-        } catch (\Exception $e) {
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422);
+            echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
             $pdo->rollBack();
             http_response_code(500);
             echo json_encode(['error' => 'Error al guardar: ' . $e->getMessage()]);
@@ -162,12 +186,25 @@ class AdminEjercicioController extends Controller {
             exit;
         }
 
-        $ejercicioModel = new Ejercicio();
-        if ($ejercicioModel->eliminar($id)) {
+        $pdo = \App\Core\Model::obtenerConexion();
+        try {
+            $pdo->beginTransaction();
+            $ejercicioModel = new Ejercicio();
+            $registro = $ejercicioModel->obtenerPorId($id);
+            if (!$registro) throw new \DomainException('No se encontró el ejercicio.');
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($registro['rap_id']);
+            $ejercicioModel->eliminar($id);
+            $contenido->validarPublicado($registro['rap_id']);
+            $pdo->commit();
             echo json_encode(['success' => true]);
-        } else {
-            http_response_code(500);
-            echo json_encode(['error' => 'No se pudo eliminar el ejercicio']);
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422); echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log($e->getMessage());
+            http_response_code(500); echo json_encode(['error' => 'No se pudo eliminar el contenido.']);
         }
     }
 }

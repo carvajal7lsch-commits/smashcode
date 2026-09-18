@@ -202,9 +202,9 @@
             <?php foreach ($leaderboard as $pos => $uRank):
                 $isMe = ($uRank['id'] === $_SESSION['usuario_id']);
                 $medalla = '';
-                if ($pos === 0) $medalla = '🥇';
-                elseif ($pos === 1) $medalla = '🥈';
-                elseif ($pos === 2) $medalla = '🥉';
+                if ($pos === 0) $medalla = icono_svg('medal','medalla-oro');
+                elseif ($pos === 1) $medalla = icono_svg('medal','medalla-plata');
+                elseif ($pos === 2) $medalla = icono_svg('medal','medalla-bronce');
               ?>
                 <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:12px; border:2px solid <?= $isMe ? 'var(--verde)' : 'var(--gris-claro)' ?>; background: <?= $isMe ? 'rgba(88,204,2,0.1)' : 'var(--fondo)' ?>; transition:all 0.2s;">
                   <div style="display:flex; align-items:center; gap:10px;">
@@ -253,7 +253,7 @@
           </div>
 
           <div style="display:flex; align-items:center; justify-content:space-between; margin-top:14px; font-size:0.75rem; color:var(--gris-medio);">
-            <span>🔥 Racha actual: <strong style="color:var(--rojo);"><?= $racha ?> días consecutivos</strong></span>
+            <span><?= icono_svg('flame') ?> Racha actual: <strong style="color:var(--rojo);"><?= $racha ?> días consecutivos</strong></span>
             <div style="display:flex; align-items:center; gap:6px;">
               <span>Menos</span>
               <div style="width:10px; height:10px; border-radius:2px; background:var(--gris-claro);"></div>
@@ -812,9 +812,9 @@
     }
 
     function medallaDe(posicion) {
-      if (posicion === 1) return '🥇';
-      if (posicion === 2) return '🥈';
-      if (posicion === 3) return '🥉';
+      if (posicion === 1) return <?= json_encode(icono_svg('medal','medalla-oro'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+      if (posicion === 2) return <?= json_encode(icono_svg('medal','medalla-plata'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
+      if (posicion === 3) return <?= json_encode(icono_svg('medal','medalla-bronce'),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT) ?>;
       return '#' + posicion;
     }
 

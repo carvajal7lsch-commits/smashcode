@@ -24,7 +24,12 @@ ini_set('session.use_strict_mode', 1);        // Solo IDs de sesión generados p
 ini_set('session.gc_maxlifetime', 1800);      // 30 minutos de inactividad
 
 // Obligar HTTPS para cookies si estamos sobre protocolo seguro
-if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+// Solo confiar en el proxy declarado por el despliegue, nunca en un header arbitrario.
+$proxies = array_filter(array_map('trim', explode(',', $_ENV['TRUSTED_PROXIES'] ?? (getenv('TRUSTED_PROXIES') ?: ''))));
+$httpsProxy = in_array($_SERVER['REMOTE_ADDR'] ?? '', $proxies, true)
+    && strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+if ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || $httpsProxy
+    || filter_var($_ENV['SESSION_COOKIE_SECURE'] ?? (getenv('SESSION_COOKIE_SECURE') ?: 'false'), FILTER_VALIDATE_BOOLEAN)) {
     ini_set('session.cookie_secure', 1);
 }
 
@@ -67,7 +72,7 @@ function cerrarSesion(): void {
             $params['secure'], $params['httponly']
         );
     }
-    session_destroy();
+    if (session_status() === PHP_SESSION_ACTIVE) session_destroy();
 }
 
 /**
@@ -75,7 +80,31 @@ function cerrarSesion(): void {
  */
 function estaAutenticado(): bool {
     iniciarSesion();
-    return isset($_SESSION['usuario_id']);
+    if (empty($_SESSION['usuario_id'])) return false;
+    static $identidadVerificada = null;
+    $identidad = $_SESSION['usuario_id'] . ':' . ($_SESSION['huella_clave'] ?? '');
+    if ($identidadVerificada === $identidad) return true;
+    $stmt = obtenerConexion()->prepare('SELECT rol, activo, eliminado, bloqueado, contrasena, debe_cambiar_clave FROM usuarios WHERE id = ?');
+    $stmt->execute([$_SESSION['usuario_id']]);
+    $usuario = $stmt->fetch();
+    if (!$usuario || !$usuario['activo'] || $usuario['eliminado'] || $usuario['bloqueado']
+        || $usuario['rol'] !== ($_SESSION['rol'] ?? '')
+        || !hash_equals(hash('sha256', (string) $usuario['contrasena']), $_SESSION['huella_clave'] ?? '')) {
+        cerrarSesion();
+        return false;
+    }
+    $_SESSION['debe_cambiar_clave'] = (bool) $usuario['debe_cambiar_clave'];
+    $identidadVerificada = $identidad;
+    return true;
+}
+
+// Llamar tras autenticar o cambiar la clave propia; otras sesiones se revocan.
+function actualizarHuellaSesion(): void {
+    $stmt = obtenerConexion()->prepare('SELECT contrasena, debe_cambiar_clave FROM usuarios WHERE id = ?');
+    $stmt->execute([$_SESSION['usuario_id']]);
+    $usuario = $stmt->fetch();
+    $_SESSION['huella_clave'] = hash('sha256', (string) ($usuario['contrasena'] ?? ''));
+    $_SESSION['debe_cambiar_clave'] = (bool) ($usuario['debe_cambiar_clave'] ?? false);
 }
 
 /**
@@ -83,7 +112,7 @@ function estaAutenticado(): bool {
  */
 function requerirAutenticacion(): void {
     if (!estaAutenticado()) {
-        header('Location: ' . PROYECTO_PATH . '/modulos/auth/login.php');
+        header('Location: ' . PROYECTO_PATH . '/login');
         exit;
     }
 }

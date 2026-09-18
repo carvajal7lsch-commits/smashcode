@@ -18,7 +18,7 @@
   // HU14: en modo repaso la visita empieza de cero; la base conserva el avance real
   $modoRepaso    = $modoRepaso ?? false;
   $rapCompletado = $rapCompletado ?? false;
-  $pctSesion     = $modoRepaso ? 0.0 : (float) $progreso['porcentaje'];
+  $pctSesion     = $modoRepaso ? (float)($practica['etapa'] ?? 0) : (float) $progreso['porcentaje'];
   $urlRepetir    = PROYECTO_PATH . '/aprendiz/rap?id=' . urlencode($rap['id']) . '&repetir=1';
   // HU22: intentos del quiz en la ronda actual (null en vista previa o sin quiz)
   $intentosQuiz  = $intentosQuiz ?? null;
@@ -53,13 +53,13 @@
     <div class="moment-tab active" id="tab-moment-1" onclick="switchTab(1)">
       <i class="fas fa-gamepad"></i> Moment 1: Warm-Up
     </div>
-    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || (!$modoRepaso && ($progreso['porcentaje'] >= 25 || $progreso['completado'])) ? '' : 'locked' ?>" id="tab-moment-2" onclick="switchTab(2)">
+    <div class="moment-tab <?= $esPreview || $pctSesion >= 25 ? '' : 'locked' ?>" id="tab-moment-2" onclick="switchTab(2)">
       <i class="fas fa-book-reader"></i> Moment 2: Absorption
     </div>
-    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || (!$modoRepaso && ($progreso['porcentaje'] >= 50 || $progreso['completado'])) ? '' : 'locked' ?>" id="tab-moment-3" onclick="switchTab(3)">
+    <div class="moment-tab <?= $esPreview || $pctSesion >= 50 ? '' : 'locked' ?>" id="tab-moment-3" onclick="switchTab(3)">
       <i class="fas fa-dumbbell"></i> Moment 3: Practice
     </div>
-    <div class="moment-tab <?= (isset($esPreview) && $esPreview) || (!$modoRepaso && ($progreso['porcentaje'] >= 75 || $progreso['completado'])) ? '' : 'locked' ?>" id="tab-moment-4" onclick="switchTab(4)">
+    <div class="moment-tab <?= $esPreview || $pctSesion >= 75 ? '' : 'locked' ?>" id="tab-moment-4" onclick="switchTab(4)">
       <i class="fas fa-award"></i> Moment 4: Quiz
     </div>
   </nav>
@@ -431,7 +431,8 @@
         <?php else: ?>
           <div id="exercises-carousel">
             <?php foreach ($ejercicios as $idx => $ej): ?>
-              <div class="exercise-box" id="exercise-box-<?= $idx ?>" data-type="<?= $ej['tipo'] ?>" data-id="<?= $ej['id'] ?>">
+              <div class="exercise-box" id="exercise-box-<?= $idx ?>" data-type="<?= $ej['tipo'] ?>" data-id="<?= $ej['id'] ?>" data-puntos="<?= (int)$ej['puntos'] ?>" data-max-intentos="<?= (int)$ej['max_intentos'] ?>"
+                   data-ayuda="<?= empty($ej['ayuda']) ? '' : htmlspecialchars(json_encode($ej['ayuda'], JSON_UNESCAPED_UNICODE), ENT_QUOTES) ?>">
                 <?php if ($ej['tipo'] !== 'completar_frase'): ?>
                   <div class="exercise-title"><?= limpiar($ej['enunciado']) ?></div>
                 <?php endif; ?>
@@ -467,7 +468,7 @@
                       
                       // Reemplazar el marcador "___" por el contenedor en blanco. 
                       // Si no hay "___", buscar la palabra correcta exacta (palabra completa)
-                      $enunciadoFormateado = $ej['enunciado'];
+                      $enunciadoFormateado = limpiar($ej['enunciado']);
                       if (strpos($enunciadoFormateado, '___') !== false) {
                           $enunciadoFormateado = preg_replace('/_{3,}/', '<span class="blank-drop" id="blank-drop-'.$idx.'">???</span>', $enunciadoFormateado, 1);
                       } else {
@@ -483,7 +484,7 @@
                     </div>
                     <div class="word-bank">
                       <?php foreach ($chips as $c): ?>
-                        <button class="word-chip" onclick="fillBlank('<?= $idx ?>', '<?= limpiar($c) ?>', this)"><?= limpiar($c) ?></button>
+                        <button class="word-chip" data-value="<?= limpiar($c) ?>" onclick="fillBlank('<?= $idx ?>', this.dataset.value, this)"><?= limpiar($c) ?></button>
                       <?php endforeach; ?>
                     </div>
 
@@ -534,9 +535,9 @@
                       shuffle($shuffledSeq);
                     ?>
                     <p style="color:var(--texto-tenue); font-size:0.85rem; margin-bottom:12px;">Click cards in chronological order to organize the conversation:</p>
-                    <div class="options-list" id="ordered-seq-list-<?= $idx ?>" data-correct-seq="<?= implode('|', $sequence) ?>">
+                    <div class="options-list" id="ordered-seq-list-<?= $idx ?>" data-correct-seq="<?= limpiar(implode('|', $sequence)) ?>">
                       <?php foreach ($shuffledSeq as $seqItem): ?>
-                        <div class="option-item" onclick="addDialogueOrder('<?= $idx ?>', '<?= limpiar($seqItem) ?>', this)">
+                        <div class="option-item" data-value="<?= limpiar($seqItem) ?>" onclick="addDialogueOrder('<?= $idx ?>', this.dataset.value, this)">
                           <span><?= limpiar($seqItem) ?></span>
                         </div>
                       <?php endforeach; ?>
@@ -552,9 +553,12 @@
                   <?php elseif ($ej['tipo'] === 'escucha_escribe'): ?>
                     <?php
                       // Buscar respuesta correcta en las opciones
-                      $correctWord = $ej['opciones'][0]['texto'] ?? '';
+                      $correctWord = '';
+                      foreach ($ej['opciones'] as $opcion) {
+                          if ((int)$opcion['es_correcta'] === 1) { $correctWord = $opcion['texto']; break; }
+                      }
                     ?>
-                    <button class="dictation-play-btn" onclick="speakText('<?= limpiar($correctWord) ?>')" title="Escuchar Dictado">
+                    <button class="dictation-play-btn" data-value="<?= limpiar($correctWord) ?>" onclick="speakText(this.dataset.value)" title="Escuchar Dictado">
                       <i class="fas fa-volume-up"></i>
                     </button>
                     <input type="text" class="dictation-input" id="dictation-input-<?= $idx ?>" placeholder="Type what you hear..." data-correct="<?= limpiar($correctWord) ?>" autocomplete="off">
@@ -568,6 +572,8 @@
                     <div>
                       <div style="font-size:1.15rem; font-weight:800;" id="val-title-<?= $idx ?>">¡Correcto!</div>
                       <div class="vb-expl" id="val-expl-<?= $idx ?>">Explicación corta aquí.</div>
+                      <!-- RF-34: recurso de ayuda, solo al fallar y solo si el admin lo enlazó -->
+                      <div id="val-ayuda-<?= $idx ?>" style="display:none; margin-top:10px; padding:10px 14px; border-radius:12px; background:rgba(255,255,255,0.65); border:1px solid rgba(0,0,0,0.08); text-align:left;"></div>
                     </div>
                   </div>
                 </div>
@@ -655,7 +661,7 @@
                 <?php foreach ($preg['opciones'] as $optIdx => $optText): 
                   $optLetter = chr(65 + $optIdx);
                 ?>
-                  <div class="option-item" onclick="selectQuizAnswer('<?= $pIdx ?>', '<?= limpiar($optText) ?>', this)">
+                  <div class="option-item" data-value="<?= limpiar($optText) ?>" onclick="selectQuizAnswer('<?= $pIdx ?>', this.dataset.value, this)">
                     <span class="option-badge"><?= $optLetter ?></span>
                     <span><?= limpiar($optText) ?></span>
                   </div>
@@ -720,6 +726,16 @@
   const vocabulario = <?= json_encode($vocabulario) ?>;
   const marcados = <?= json_encode($marcados) ?>;
   const rapId = <?= json_encode($rap['id']) ?>;
+  const practicaId = <?= json_encode($practica['id'] ?? null) ?>;
+  const usuarioPagina = <?= json_encode($_SESSION['usuario_id']) ?>;
+  let csrfToken = <?= json_encode(generarTokenCSRF()) ?>;
+  const etapaPractica = <?= (int)($practica['etapa'] ?? 75) ?>;
+  let paresWarmup = [];
+  let sesionQuizId = null;
+  let enviandoQuiz = false;
+  let matchedPairs = {};
+  const quizPreguntasIds = <?= json_encode(array_column($preguntas,'id')) ?>;
+  const totalPuntosPractica = Array.from(document.querySelectorAll('.exercise-box')).reduce((sum,box)=>sum+Number(box.dataset.puntos || 10),0);
   const totalEjercicios = <?= count($ejercicios) ?>;
   // Ejercicios del módulo respondidos en sesiones anteriores (id => acertó), para
   // retomar el Momento 3 donde quedó el aprendiz en lugar de empezar de cero
@@ -733,7 +749,7 @@
   const rapCompletado = <?= $rapCompletado ? 'true' : 'false' ?>;
   // HU22: intentos del quiz en la ronda actual (null en vista previa)
   let intentosQuiz = <?= json_encode($intentosQuiz) ?>;
-  let maxTabUnlocked = <?= (isset($esPreview) && $esPreview) ? 4 : ($modoRepaso ? 1 : ($progreso['porcentaje'] >= 75 || $progreso['completado'] ? 4 : ($progreso['porcentaje'] >= 50 ? 3 : ($progreso['porcentaje'] >= 25 ? 2 : 1)))) ?>;
+  let maxTabUnlocked = <?= $esPreview ? 4 : ((int)($practica['etapa'] ?? 0)>=75 ? 4 : ((int)($practica['etapa'] ?? 0)>=50 ? 3 : ((int)($practica['etapa'] ?? 0)>=25 ? 2 : 1))) ?>;
   let vocabIndex = 0;
   let sessionXp = 0;
 
@@ -760,7 +776,7 @@
   // --- NAVEGACIÓN ENTRE TABS ---
   function switchTab(num) {
     if (num > maxTabUnlocked) {
-      alert("🔒 Este momento está bloqueado. Completa el momento actual para desbloquear el siguiente.");
+      alert("Este momento está bloqueado. Completa el momento actual para desbloquear el siguiente.");
       return;
     }
     document.querySelectorAll('.moment-tab').forEach(el => el.classList.remove('active'));
@@ -778,25 +794,44 @@
   // el avance se perdería sin aviso.
   let peticionesEnEspera = [];
 
+  let colaServidor = Promise.resolve();
+  async function actualizarCsrf() {
+    const response = await fetch('<?= PROYECTO_PATH ?>/sesion/csrf', {headers:{'Accept':'application/json'}});
+    const data = await response.json();
+    if (response.status === 401) return false;
+    if (!data.exito || data.usuario_id !== usuarioPagina) throw new Error('Vuelve a iniciar sesión con la misma cuenta para guardar este avance.');
+    csrfToken = data.csrf_token;
+    return true;
+  }
   function enviarAlServidor(ruta, datos) {
-    return new Promise((resolve, reject) => {
-      const intentar = () => fetch('<?= PROYECTO_PATH ?>' + ruta, {
-        method: 'POST',
-        body: datos,
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
-      })
-      .then(res => {
-        if (res.status === 401) {
-          peticionesEnEspera.push(intentar);
-          avisarSesionExpirada();
-          return;
-        }
-        return res.json().then(resolve);
-      })
-      .catch(reject);
-
+    const operacion = () => new Promise((resolve, reject) => {
+      let csrfRenovado = false;
+      const intentar = () => {
+        datos.set('csrf_token', csrfToken);
+        if (practicaId) datos.set('practica_id', practicaId);
+        fetch('<?= PROYECTO_PATH ?>' + ruta, {
+          method:'POST', body:datos,
+          headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
+        }).then(async res => {
+          if (res.status === 401) {
+            peticionesEnEspera.push(intentar); avisarSesionExpirada(); return;
+          }
+          if (res.status === 419 && !csrfRenovado) {
+            csrfRenovado = true;
+            if (await actualizarCsrf()) intentar();
+            else { peticionesEnEspera.push(intentar); avisarSesionExpirada(); }
+            return;
+          }
+          const data = await res.json();
+          if (data.redirigir) window.location.href = data.redirigir;
+          resolve(data);
+        }).catch(reject);
+      };
       intentar();
     });
+    const result = colaServidor.then(operacion);
+    colaServidor = result.catch(()=>{});
+    return result;
   }
 
   function avisarSesionExpirada() {
@@ -823,7 +858,10 @@
     aviso.style.display = 'flex';
   }
 
-  function reintentarEnEspera() {
+  async function reintentarEnEspera() {
+    try {
+      if (!(await actualizarCsrf())) { alert('Inicia sesión antes de guardar.'); return; }
+    } catch(error) { alert(error.message); return; }
     let pendientes = peticionesEnEspera;
     peticionesEnEspera = [];
     let aviso = document.getElementById('aviso-sesion-expirada');
@@ -847,14 +885,15 @@
   // Guarda el avance y lo refleja en la barra del encabezado. Devuelve la
   // petición para poder esperarla antes de salir de la página.
   function saveProgress(pct) {
-    pintarProgreso(pct);
 
     let formData = new FormData();
     formData.append('rap_id', rapId);
     formData.append('porcentaje', pct);
+    if(pct === 25) formData.append('pares',JSON.stringify(paresWarmup));
 
     return enviarAlServidor('/aprendiz/rap/guardar-progreso', formData)
-      .catch(() => { /* un fallo de red no debe cortar la lección */ });
+      .then(data=>{ if(!data.exito) throw new Error(data.error || 'No se guardó el avance.'); pintarProgreso(data.porcentaje); return data; })
+      .catch(error=>{ alert(error.message || 'No se guardó el avance. Revisa la conexión.'); throw error; });
   }
 
   // --- AUDIO / SPEECH SYNTHESIS CON DIFERENCIACIÓN CLARA HOMBRE / MUJER ---
@@ -927,6 +966,7 @@
     // Elegir hasta 3 vocablos
     let items = vocabulario.slice(0, 3);
     matchedCount = 0;
+    paresWarmup = [];
 
     let colEn = document.getElementById('warmup-col-en');
     let colEs = document.getElementById('warmup-col-es');
@@ -983,6 +1023,7 @@
         selectedEn.className = 'matching-card correct';
         selectedEs.className = 'matching-card correct';
         matchedCount++;
+        paresWarmup.push({en:idEn,es:idEs});
         
         if (window.SonidosApp) SonidosApp.playCorrect();
         speakText(selectedEn.textContent);
@@ -990,10 +1031,10 @@
         selectedEn = null;
         selectedEs = null;
 
-        if (matchedCount === 3) {
+        if (matchedCount === Math.min(3,vocabulario.length)) {
           document.getElementById('warmup-success-msg').style.display = 'block';
           unlockMoment(2);
-          saveProgress(25);
+          saveProgress(25).catch(()=>{});
         }
       } else {
         // MATCH incorrecto
@@ -1291,9 +1332,9 @@
     };
   }
 
-  function unlockMoment3() {
+  async function unlockMoment3() {
+    try { await saveProgress(50); } catch(error) { return; }
     unlockMoment(3);
-    saveProgress(50);
     switchTab(3);
   }
 
@@ -1336,7 +1377,7 @@
     exercisePoints = 0;
     for (let i = 0; i < totalEjercicios; i++) {
       let box = document.getElementById('exercise-box-' + i);
-      if (esRespondido(i) && ejerciciosRespondidos[box.dataset.id]) exercisePoints += 10;
+      if (esRespondido(i) && ejerciciosRespondidos[box.dataset.id]) exercisePoints += Number(box.dataset.puntos || 10);
     }
 
     let inicio = siguientePendiente(0);
@@ -1356,7 +1397,7 @@
     let sc = document.getElementById('exercise-score-indicator');
     if (ind && sc) {
       ind.textContent = `EJERCICIO ${Math.min(currentExerciseIdx + 1, totalEjercicios)} DE ${totalEjercicios}`;
-      sc.textContent = `Total: ${exercisePoints} / ${totalEjercicios * 10} Pts`;
+      sc.textContent = `Total: ${exercisePoints} / ${totalPuntosPractica} Pts`;
     }
   }
 
@@ -1448,6 +1489,8 @@
         nEn.className = 'matching-card correct';
         nEs.className = 'matching-card correct';
         speakText(selectedColumnText.en);
+        if(!matchedPairs[exIdx]) matchedPairs[exIdx]=[];
+        matchedPairs[exIdx].push({en:selectedColumnText.en,es:selectedColumnText.es});
       } else {
         nEn.classList.add('incorrect');
         nEs.classList.add('incorrect');
@@ -1466,7 +1509,7 @@
         answersObj[exIdx] = {
           isCorrect: true,
           retro: '¡Excelente! Emparejaste todos los términos correctamente.',
-          text: 'All matches completed'
+          text: JSON.stringify(matchedPairs[exIdx] || [])
         };
         validateExercise(exIdx);
       }
@@ -1491,7 +1534,7 @@
     bubble.style.cursor = 'pointer';
     bubble.title = 'Haz clic para remover esta opción si te equivocaste';
     bubble.style.transition = 'all 0.2s ease';
-    bubble.innerHTML = `<div>${itemText}</div>`;
+    bubble.textContent = itemText;
 
     bubble.onclick = function() {
       if (displayBox.contains(bubble)) {
@@ -1533,7 +1576,9 @@
   }
 
   // Validador de ejercicio
-  function validateExercise(exIdx) {
+  async function validateExercise(exIdx) {
+    const exerciseBox = document.getElementById('exercise-box-' + exIdx);
+    if (exerciseBox.dataset.saving === '1') return;
     let box = document.getElementById('exercise-box-' + exIdx);
     let type = box.dataset.type;
     let ans = answersObj[exIdx];
@@ -1547,7 +1592,8 @@
       ans = {
         isCorrect: isCorrect,
         retro: isCorrect ? '¡Correcto! Has registrado la palabra en las Notas de Enfermería.' : `La respuesta correcta es: "${correct}".`,
-        text: text
+        text: text,
+        solicitudId: ans && ans.text === text ? ans.solicitudId : undefined
       };
       answersObj[exIdx] = ans;
     }
@@ -1556,6 +1602,43 @@
       alert("Por favor selecciona o ingresa una respuesta primero.");
       return;
     }
+
+    box.dataset.saving = '1';
+    box.querySelectorAll('.option-item,.word-chip,.matching-card').forEach(node=>node.style.pointerEvents='none');
+    const pendingInput=box.querySelector('.dictation-input'); if(pendingInput) pendingInput.disabled=true;
+    let result;
+    try {
+      result = await registrarIntentoEjercicio(box.dataset.id,ans);
+      if (!result.exito) throw new Error(result.error || 'No se pudo guardar la respuesta.');
+      if (!result.preview) {
+        ans.isCorrect = result.es_correcto;
+        if (!ans.isCorrect && !ans.retro) ans.retro = 'Respuesta incorrecta.';
+      }
+    } catch(error) {
+      alert(error.message || 'No se pudo guardar la respuesta. Revisa la conexión.');
+      box.querySelectorAll('.option-item,.word-chip,.matching-card').forEach(node=>node.style.pointerEvents='auto');
+      if(pendingInput) pendingInput.disabled=false;
+      let saveAgain=document.getElementById('save-again-'+exIdx);
+      if(!saveAgain) {
+        saveAgain=document.createElement('button'); saveAgain.id='save-again-'+exIdx;
+        saveAgain.className='btn btn-verde'; saveAgain.textContent='Guardar respuesta de nuevo';
+        saveAgain.onclick=()=>validateExercise(exIdx);
+        document.getElementById('btn-next-exercise-'+exIdx).parentNode.prepend(saveAgain);
+      }
+      saveAgain.style.display='inline-block';
+      box.dataset.saving = '0'; return;
+    }
+    const saveAgain=document.getElementById('save-again-'+exIdx); if(saveAgain) saveAgain.style.display='none';
+    box.dataset.saving = '0';
+    box.dataset.respondido = '1';
+    const retryId = 'retry-exercise-' + exIdx;
+    let retry = document.getElementById(retryId);
+    if (!retry) {
+      retry = document.createElement('button'); retry.id = retryId; retry.className = 'btn btn-verde';
+      retry.textContent = 'Intentar de nuevo'; retry.onclick = ()=>reintentarEjercicio(exIdx);
+      document.getElementById('btn-next-exercise-' + exIdx).parentNode.prepend(retry);
+    }
+    retry.style.display = !ans.isCorrect && (result.intentos_restantes ?? 0)>0 ? 'inline-block' : 'none';
 
     // Ocultar botón validar si existe
     let btnVal = document.getElementById('btn-validate-' + exIdx);
@@ -1567,6 +1650,8 @@
     let title = document.getElementById('val-title-' + exIdx);
     let expl = document.getElementById('val-expl-' + exIdx);
 
+    pintarAyudaEjercicio(exIdx, box, ans.isCorrect);
+
     if (ans.isCorrect) {
       banner.className = 'validation-banner correct';
       icon.className = 'fas fa-check-circle';
@@ -1575,8 +1660,8 @@
       if (window.SonidosApp) SonidosApp.playCorrect();
       
       // Dar puntos XP en caliente para la UI
-      exercisePoints += 10;
-      sessionXp += 10;
+      exercisePoints += Number(box.dataset.puntos || 10);
+      sessionXp += result.xp_ganados || 0;
       document.getElementById('session-xp').textContent = `${sessionXp} XP`;
     } else {
       banner.className = 'validation-banner incorrect';
@@ -1587,7 +1672,7 @@
     }
 
     // Dejar rastro del intento en la base de datos (HU07)
-    registrarIntentoEjercicio(box.dataset.id, ans);
+
 
     // Mostrar continuar
     document.getElementById('btn-next-exercise-' + exIdx).style.display = 'inline-block';
@@ -1602,20 +1687,100 @@
     updateExerciseHeader();
   }
 
-  // Envia el intento del ejercicio sin bloquear la interfaz: el aprendiz ya vio
-  // su retroalimentacion y no debe esperar a la red para continuar.
+  // RF-34: al fallar, ofrecer la palabra del módulo que el administrador enlazó al
+  // ejercicio, con su pronunciación y un ejemplo clínico. Al acertar se oculta.
+  function pintarAyudaEjercicio(exIdx, box, esCorrecta) {
+    const caja = document.getElementById('val-ayuda-' + exIdx);
+    if (!caja) return;
+
+    if (esCorrecta || !box.dataset.ayuda) {
+      caja.style.display = 'none';
+      caja.innerHTML = '';
+      return;
+    }
+
+    let ayuda;
+    try {
+      ayuda = JSON.parse(box.dataset.ayuda);
+    } catch (e) {
+      caja.style.display = 'none';
+      return;
+    }
+    if (!ayuda || !ayuda.termino_en) { caja.style.display = 'none'; return; }
+
+    const esc = (t) => String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    let html = `<div style="font-size:0.72rem; font-weight:900; text-transform:uppercase; letter-spacing:0.05em; opacity:0.75; margin-bottom:6px;">
+        <i class="fas fa-book-open"></i> Repasa esta palabra
+      </div>
+      <div style="font-weight:800; font-size:1rem;">${esc(ayuda.termino_en)} — ${esc(ayuda.termino_es)}</div>`;
+
+    if (ayuda.transcripcion_ipa) {
+      html += `<div style="font-weight:600; font-size:0.85rem; opacity:0.85;">${esc(ayuda.transcripcion_ipa)}</div>`;
+    }
+    if (ayuda.oracion_ejemplo) {
+      html += `<div style="font-weight:600; font-size:0.85rem; margin-top:6px;">“${esc(ayuda.oracion_ejemplo)}”</div>`;
+    }
+    if (ayuda.traduccion_ejemplo) {
+      html += `<div style="font-weight:600; font-size:0.82rem; opacity:0.8;">${esc(ayuda.traduccion_ejemplo)}</div>`;
+    }
+
+    html += `<button type="button" class="btn-escuchar-ayuda" onclick="escucharAyuda(this)" data-termino="${esc(ayuda.termino_en)}"
+               style="margin-top:10px; border:none; cursor:pointer; border-radius:10px; padding:6px 14px; font-weight:800; font-size:0.8rem; background:var(--azul); color:#fff;">
+               <i class="fas fa-volume-high" style="margin-right:6px;"></i>Escuchar
+             </button>`;
+
+    caja.innerHTML = html;
+    caja.style.display = 'block';
+  }
+
+  // Misma síntesis del navegador que usan el vocabulario y el glosario.
+  function escucharAyuda(boton) {
+    const texto = boton.dataset.termino || '';
+    if (!texto || !('speechSynthesis' in window)) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    const enVoice = window.speechSynthesis.getVoices()
+      .find(v => v.lang && v.lang.toLowerCase().startsWith('en'));
+    if (enVoice) utterance.voice = enVoice;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  // Conserva la identidad de la petición si hay que reintentar su envío.
   function registrarIntentoEjercicio(ejercicioId, ans) {
     if (!ejercicioId || !ans) return;
 
     let datos = new FormData();
     datos.append('ejercicio_id', ejercicioId);
-    datos.append('es_correcto', ans.isCorrect ? 1 : 0);
+    if(!ans.solicitudId) ans.solicitudId=crypto.randomUUID();
+    datos.append('solicitud_id',ans.solicitudId);
     datos.append('respuesta', ans.text || '');
     datos.append('tiempo_respuesta_ms', Math.max(0, Date.now() - inicioEjercicioMs));
     if (ans.opcionId) datos.append('opcion_id', ans.opcionId);
 
-    enviarAlServidor('/aprendiz/rap/guardar-ejercicio', datos)
-      .catch(() => { /* un fallo de red no debe cortar la leccion */ });
+    return enviarAlServidor('/aprendiz/rap/guardar-ejercicio', datos);
+  }
+
+  function reintentarEjercicio(exIdx) {
+    const box=document.getElementById('exercise-box-'+exIdx);
+    delete answersObj[exIdx]; matchedPairs[exIdx]=[]; selectedOrderSeq=[];
+    selectedColumnText={en:'',es:'',enNode:null,esNode:null};
+    document.getElementById('val-banner-'+exIdx).className='validation-banner';
+    const ayuda=document.getElementById('val-ayuda-'+exIdx);
+    if(ayuda){ ayuda.style.display='none'; ayuda.innerHTML=''; }
+    document.getElementById('btn-next-exercise-'+exIdx).style.display='none';
+    document.getElementById('retry-exercise-'+exIdx).style.display='none';
+    box.querySelectorAll('.option-item,.word-chip,.matching-card').forEach(node=>{
+      node.style.pointerEvents='auto'; node.style.opacity='1'; node.classList.remove('selected','used','correct','incorrect');
+    });
+    const input=box.querySelector('.dictation-input'); if(input) input.disabled=false;
+    const validate=document.getElementById('btn-validate-'+exIdx); if(validate) validate.style.display='inline-block';
+    const chat=document.getElementById('ordered-chat-display-'+exIdx); if(chat) chat.replaceChildren();
+    inicioEjercicioMs=Date.now();
   }
 
   function nextExercise(exIdx) {
@@ -1663,7 +1828,7 @@
         </div>
       `;
       carousel.appendChild(finishBox);
-    });
+    }).catch(()=>{ momento3Completado=false; });
   }
 
   // HU22: al terminar la práctica el servidor abre una ronda nueva de intentos;
@@ -1683,12 +1848,21 @@
   }
 
   // --- MOMENTO 4: QUIZ EVALUATION CLOSURE ---
-  function startQuiz() {
+  async function startQuiz() {
+    if(totalQuizPreguntas===0) { alert('Este quiz todavía no tiene preguntas.'); return; }
+    const button=document.getElementById('btn-comenzar-quiz'); button.disabled=true;
+    try {
+      const datos=new FormData(); datos.append('rap_id',rapId); datos.append('preguntas_ids',JSON.stringify(quizPreguntasIds));
+      const result=await enviarAlServidor('/aprendiz/rap/iniciar-quiz',datos);
+      if(!result.exito) throw new Error(result.error);
+      sesionQuizId=result.sesion_quiz_id || null;
+      quizTimeRemaining=result.segundos_restantes ?? quizLimiteSeg;
+    } catch(error) { alert(error.message || 'No se pudo comenzar el quiz.'); button.disabled=false; return; }
+    button.disabled=false;
     document.getElementById('quiz-intro-box').style.display = 'none';
     document.getElementById('quiz-player-box').style.display = 'block';
     currentQuizPregIdx = 0;
     quizAnswers = {};
-    quizTimeRemaining = quizLimiteSeg;
     
     // Mostrar primera pregunta
     document.querySelectorAll('.quiz-question-box').forEach(b => b.style.display = 'none');
@@ -1761,6 +1935,8 @@
   }
 
   function submitQuiz() {
+    if(enviandoQuiz) return;
+    enviandoQuiz=true;
     // Preparar respuestas
     let answersData = {};
     for (let key in quizAnswers) {
@@ -1772,6 +1948,7 @@
     let formData = new FormData();
     formData.append('rap_id', rapId);
     formData.append('duracion_seg', duracion);
+    if(sesionQuizId) formData.append('sesion_quiz_id',sesionQuizId);
     
     for (let pId in answersData) {
       formData.append(`respuestas[${pId}]`, answersData[pId]);
@@ -1791,7 +1968,7 @@
     })
     .catch(() => {
       alert("No se pudo enviar el quiz. Revisa tu conexión y vuelve a presentarlo.");
-    });
+    }).finally(()=>{enviandoQuiz=false;});
   }
 
   function showQuizResults(data) {

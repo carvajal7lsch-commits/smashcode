@@ -129,7 +129,7 @@
                 <select id="programa_id" name="programa_id" class="campo-input" style="padding-left:38px; cursor:pointer;">
                   <option value="">— Sin programa asignado —</option>
                   <?php foreach ($programas as $p): ?>
-                    <option value="<?= $p['id'] ?>"
+                    <option value="<?= $p['id'] ?>" <?= isset($p['activo']) && !$p['activo'] && ($usuario['programa_id'] ?? '') !== $p['id'] ? 'disabled' : '' ?>
                       <?= ($usuario['programa_id'] ?? '') === $p['id'] ? 'selected' : '' ?>>
                       <?= limpiar($p['nombre']) ?>
                     </option>

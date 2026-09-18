@@ -198,7 +198,7 @@
     <!-- Modal: Eliminar Programa -->
     <div class="modal-fondo" id="modal-eliminar">
       <div class="modal-caja">
-        <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:var(--rojo); margin-bottom:12px;">⚠️ Confirmar Eliminación</p>
+        <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:var(--rojo); margin-bottom:12px;"><?= icono_svg('warning') ?> Confirmar eliminación</p>
         <p class="modal-desc" id="modal-eliminar-desc" style="font-size:0.875rem; color:var(--texto-secundario); line-height:1.6; margin-bottom:24px;"></p>
         <form method="POST" action="<?= PROYECTO_PATH ?>/admin/programas/eliminar">
           <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">

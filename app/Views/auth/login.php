@@ -60,9 +60,9 @@
       <h1 class="titulo-auth">Bienvenido a<br>SmashCode</h1>
       <p class="subtitulo-auth">Aprende inglés médico-clínico y mejora tu comunicación en enfermería.</p>
       <div class="etiquetas-auth">
-        <span class="etiqueta-auth">⚡ Gamificado</span>
-        <span class="etiqueta-auth">📚 6 Niveles</span>
-        <span class="etiqueta-auth">✅ SENA</span>
+        <span class="etiqueta-auth"><?= icono_svg('bolt') ?> Gamificado</span>
+        <span class="etiqueta-auth"><?= icono_svg('book') ?> Inglés clínico</span>
+        <span class="etiqueta-auth"><?= icono_svg('check') ?> SENA</span>
       </div>
     </div>
 
@@ -76,21 +76,23 @@
       <h2 class="titulo-formulario titulo-formulario-auth"><?= $accion === 'registrar' ? 'Crea tu cuenta' : 'Inicia sesión' ?></h2>
       <p class="subtitulo-formulario">Ingresa al mundo del inglés clínico para enfermería.</p>
 
-      <!-- Tabs rol -->
-      <div class="tabs-rol" role="tablist">
-        <button class="tab-rol activo" id="tab-aprendiz" role="tab">Aprendiz</button>
-        <button class="tab-rol" id="tab-instructor" role="tab">Instructor</button>
-        <button class="tab-rol" id="tab-admin" role="tab">Admin</button>
-      </div>
-
       <!-- Tabs acción -->
       <div class="tabs-accion">
-        <button class="tab-accion <?= $accion === 'ingresar'  ? 'activo' : '' ?>" id="btn-ingresar"  type="button">Ingresar</button>
-        <button class="tab-accion <?= $accion === 'registrar' ? 'activo' : '' ?>" id="btn-registrar" type="button">Registrarse</button>
+        <button class="tab-accion <?= $accion === 'ingresar'  ? 'activo' : '' ?>" id="btn-ingresar"  type="button">Iniciar sesión</button>
+        <button class="tab-accion <?= $accion === 'registrar' ? 'activo' : '' ?>" id="btn-registrar" type="button">Regístrate</button>
       </div>
 
       <?php if ($error): ?>
         <div class="alerta alerta-error"><i class="fas fa-circle-exclamation"></i><?= $error ?></div>
+        <?php if (!empty($_SESSION['activacion_pendiente'])): ?>
+          <!-- RF-01: salida para quien no recibió o dejó vencer el enlace -->
+          <form method="POST" action="<?= PROYECTO_PATH ?>/activar/reenviar" style="margin:-8px 0 16px 0; text-align:center;">
+            <input type="hidden" name="csrf_token" value="<?= $csrf ?>">
+            <button type="submit" class="btn-enlace" style="background:none; border:none; cursor:pointer; text-decoration:underline; font-weight:700; font-size:0.85rem; color:var(--azul);">
+              Reenviar el enlace de activación
+            </button>
+          </form>
+        <?php endif; ?>
       <?php endif; ?>
       <?php if ($exito): ?>
         <div class="alerta alerta-exito"><i class="fas fa-circle-check"></i><?= $exito ?></div>
@@ -121,11 +123,11 @@
         </div>
 
         <button type="submit" class="btn btn-verde btn-block">
-          <i class="fas fa-right-to-bracket"></i> Ingresar
+          <i class="fas fa-right-to-bracket"></i> Iniciar sesión
         </button>
         <div class="separador-o">o ingresa con</div>
         <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">
-          <i class="fab fa-google"></i> Continuar con Google
+          <svg class="google-marca" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C44.4 38.04 46.98 31.88 46.98 24.55Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.78-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg> Continuar con Google
         </a>
       </form>
 
@@ -183,7 +185,7 @@
         </button>
         <div class="separador-o">o regístrate con</div>
         <a href="<?= PROYECTO_PATH ?>/login/google" class="btn btn-social btn-block">
-          <i class="fab fa-google"></i> Continuar con Google
+          <svg class="google-marca" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6C44.4 38.04 46.98 31.88 46.98 24.55Z"/><path fill="#FBBC05" d="M10.53 28.59A14.4 14.4 0 0 1 9.75 24c0-1.59.27-3.13.78-4.59l-7.98-6.19A23.9 23.9 0 0 0 0 24c0 3.87.93 7.53 2.56 10.78l7.97-6.19Z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.91-5.8l-7.73-6c-2.15 1.45-4.92 2.3-8.18 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"/></svg> Continuar con Google
         </a>
         <p class="auth-terminos-texto">
           Al registrarte aceptas nuestros <a href="#" class="auth-terminos-link">Términos de Servicio</a> y <a href="#" class="auth-terminos-link">Política de Privacidad</a>.

@@ -86,13 +86,13 @@ function evaluarFuerza(clave) {
   indicador.className = 'indicador-fuerza';
   if (puntos <= 1) {
     indicador.classList.add('fuerza-debil');
-    ayuda.textContent = '⚠️ Contraseña débil — agrega mayúsculas y números.';
+    ayuda.textContent = 'Contraseña débil — agrega mayúsculas y números.';
   } else if (puntos === 2 || puntos === 3) {
     indicador.classList.add('fuerza-media');
-    ayuda.textContent = '👍 Contraseña aceptable — agrega un símbolo para mejorarla.';
+    ayuda.textContent = 'Contraseña aceptable — agrega un símbolo para mejorarla.';
   } else {
     indicador.classList.add('fuerza-fuerte');
-    ayuda.textContent = '✅ Contraseña fuerte — ¡excelente!';
+    ayuda.textContent = 'Contraseña fuerte — ¡excelente!';
   }
 }
 </script>

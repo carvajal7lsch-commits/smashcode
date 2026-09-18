@@ -5,6 +5,7 @@ use App\Core\Controller;
 use App\Models\Quiz;
 use App\Models\Pregunta;
 use App\Models\Rap;
+use App\Models\ContenidoCurso;
 
 class AdminQuizController extends Controller {
 
@@ -76,6 +77,13 @@ class AdminQuizController extends Controller {
         $limiteTiempoSeg = $_POST['limite_tiempo_seg'] ?? 300;
         $maxIntentos = $_POST['max_intentos'] ?? 3;
         $aleatorizar = !empty($_POST['aleatorizar']) ? 1 : 0;
+        if (!is_numeric($puntajeMinimo) || $puntajeMinimo < 1 || $puntajeMinimo > 100
+            || filter_var($limiteTiempoSeg,FILTER_VALIDATE_INT) === false || $limiteTiempoSeg < 1 || $limiteTiempoSeg > 86400
+            || filter_var($maxIntentos,FILTER_VALIDATE_INT) === false || $maxIntentos < 1 || $maxIntentos > 100) {
+            http_response_code(400);
+            echo json_encode(['error'=>'Configuración inválida del quiz.']);
+            return;
+        }
 
         if (empty($rapId)) {
             http_response_code(400);
@@ -89,6 +97,8 @@ class AdminQuizController extends Controller {
         try {
             $pdo = \App\Core\Model::obtenerConexion();
             $pdo->beginTransaction();
+            $contenido = new ContenidoCurso();
+            $contenido->bloquearModulo($rapId);
 
             $quiz = $quizModel->obtenerPorRap($rapId);
             if (!$quiz) {
@@ -117,7 +127,7 @@ class AdminQuizController extends Controller {
             // Guardar o actualizar preguntas
             if (isset($_POST['preguntas']) && is_array($_POST['preguntas'])) {
                 foreach ($_POST['preguntas'] as $p) {
-                    if (empty($p['texto']) || empty($p['respuesta_correcta'])) continue;
+                    if (!is_array($p) || trim((string)($p['texto'] ?? '')) === '' || trim((string)($p['respuesta_correcta'] ?? '')) === '') throw new \DomainException('Completa el enunciado y la respuesta de cada pregunta.');
 
                     $opciones = $p['opciones'] ?? [];
                     if (is_array($opciones)) {
@@ -127,6 +137,9 @@ class AdminQuizController extends Controller {
                     }
 
                     $preguntaId = $p['id'] ?? null;
+                    if (count($opcionesClean) < 2 || !in_array($p['respuesta_correcta'], $opcionesClean, true)) {
+                        throw new \DomainException('Cada pregunta necesita al menos dos opciones y la respuesta correcta debe ser una de ellas.');
+                    }
                     if (!empty($preguntaId) && in_array($preguntaId, $idsActuales)) {
                         $idsEnviados[] = $preguntaId;
                         $preguntaModel->actualizar($preguntaId, [
@@ -156,10 +169,15 @@ class AdminQuizController extends Controller {
                 }
             }
 
+            $contenido->validarPublicado($rapId);
             $pdo->commit();
             echo json_encode(['success' => true]);
 
-        } catch (\Exception $e) {
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            http_response_code(422);
+            echo json_encode(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
             $pdo->rollBack();
             http_response_code(500);
             echo json_encode(['error' => 'Error al guardar el quiz: ' . $e->getMessage()]);

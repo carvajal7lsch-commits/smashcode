@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Progreso;
 use App\Models\GamificacionConfig;
 use App\Models\Programa;
+use App\Models\AccesoCurso;
 use PDO;
 
 class AprendizController extends Controller {
@@ -39,6 +40,13 @@ class AprendizController extends Controller {
         }
 
         $pdo = obtenerConexion();
+        $esPreview = in_array(obtenerRolSesion(), ['admin', 'instructor']);
+        try {
+            (new AccesoCurso())->rap($rapId, $esPreview);
+        } catch (\DomainException $e) {
+            http_response_code(403);
+            exit(htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8'));
+        }
 
         // Obtener RAP y nivel
         $stmtRap = $pdo->prepare(
@@ -102,6 +110,28 @@ class AprendizController extends Controller {
             $stmtOpc = $pdo->prepare('SELECT id, texto, es_correcta, retroalimentacion FROM ejercicio_opcion WHERE ejercicio_id = ?');
             $stmtOpc->execute([$ej['id']]);
             $ej['opciones'] = $stmtOpc->fetchAll();
+            $ej['ayuda'] = null;
+        }
+        unset($ej);
+
+        // RF-34: recurso de ayuda de cada ejercicio. Se resuelve en una sola consulta
+        // para no pegarle a la base una vez por ejercicio.
+        $idsAyuda = array_values(array_filter(array_column($ejercicios, 'vocab_ayuda_id')));
+        if ($idsAyuda) {
+            $inAyuda = implode(',', array_fill(0, count($idsAyuda), '?'));
+            $stmtAyuda = $pdo->prepare(
+                "SELECT id, termino_en, termino_es, transcripcion_ipa, oracion_ejemplo, traduccion_ejemplo
+                 FROM vocabulario WHERE id IN ($inAyuda) AND activo = 1"
+            );
+            $stmtAyuda->execute($idsAyuda);
+            $ayudas = [];
+            foreach ($stmtAyuda->fetchAll() as $fila) {
+                $ayudas[$fila['id']] = $fila;
+            }
+            foreach ($ejercicios as &$ej) {
+                $ej['ayuda'] = $ayudas[$ej['vocab_ayuda_id'] ?? ''] ?? null;
+            }
+            unset($ej);
         }
 
         // Obtener Quizzes y Preguntas unificados. El quiz de cierre reúne las preguntas
@@ -168,10 +198,19 @@ class AprendizController extends Controller {
         $quizBloqueado = !empty($intentosQuiz['bloqueado']);
         $modoRepaso    = ($rapCompletado || $quizBloqueado) && ($_GET['repetir'] ?? '') === '1';
 
-        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos', 'rapCompletado', 'modoRepaso', 'intentosQuiz'));
+        $practica = $esPreview ? null : (new AccesoCurso())->practica($rap, (float) $progreso['porcentaje'], $modoRepaso);
+        if ($practica && (int) $practica['etapa'] < 75) {
+            $stmtResp = $pdo->prepare("SELECT i.ejercicio_id, i.es_correcto FROM intento_ejercicio i JOIN ejercicio e ON e.id=i.ejercicio_id JOIN rap r ON r.id=e.rap_id WHERE i.usuario_id=? AND r.nivel_id=? AND i.creado_en>=? ORDER BY i.creado_en, i.numero_intento");
+            $stmtResp->execute([$uid, $rap['nivel_id'], $practica['iniciada_en']]);
+            $ejerciciosRespondidos = [];
+            foreach ($stmtResp->fetchAll() as $intento) $ejerciciosRespondidos[$intento['ejercicio_id']] = (bool) $intento['es_correcto'];
+        }
+
+        $this->render('aprendiz/rap', compact('rap', 'vocabulario', 'marcados', 'dialogos', 'ejercicios', 'quiz', 'preguntas', 'progreso', 'esPreview', 'ejerciciosRespondidos', 'rapCompletado', 'modoRepaso', 'intentosQuiz', 'practica'));
     }
 
     public function toggleVocabMarcado(): void {
+        if (!$this->validarEscritura()) return;
         header('Content-Type: application/json');
         $uid = $_SESSION['usuario_id'];
         $vocabId = limpiar($_POST['vocabulario_id'] ?? '');
@@ -182,6 +221,18 @@ class AprendizController extends Controller {
         }
 
         $pdo = obtenerConexion();
+        $stmt = $pdo->prepare('SELECT rap_id FROM vocabulario WHERE id=? AND activo=1');
+        $stmt->execute([$vocabId]);
+        $rapId = $stmt->fetchColumn();
+        // El glosario permite repasar palabras de cualquier módulo publicado.
+        if (!$rapId) { $this->errorJson('Vocabulario inexistente o inactivo.'); return; }
+        try { (new AccesoCurso())->rap((string)$rapId, true); }
+        catch (\DomainException $e) { $this->errorJson($e->getMessage()); return; }
+        if (obtenerRolSesion()==='aprendiz') {
+            $stmt=$pdo->prepare('SELECT r.activo AND n.activo FROM rap r JOIN nivel n ON n.id=r.nivel_id WHERE r.id=?');
+            $stmt->execute([$rapId]);
+            if (!$stmt->fetchColumn()) { $this->errorJson('Este vocabulario no está publicado.'); return; }
+        }
         $stmt = $pdo->prepare('SELECT 1 FROM vocabulario_marcado WHERE usuario_id = ? AND vocabulario_id = ? LIMIT 1');
         $stmt->execute([$uid, $vocabId]);
         $existe = $stmt->fetchColumn();
@@ -198,36 +249,63 @@ class AprendizController extends Controller {
     }
 
     public function guardarProgreso(): void {
+        if (!$this->validarEscritura()) return;
         header('Content-Type: application/json');
         $uid = $_SESSION['usuario_id'];
-        $rapId = limpiar($_POST['rap_id'] ?? '');
-        $porcentaje = (float)($_POST['porcentaje'] ?? 0.00);
-
-        if (empty($rapId)) {
-            echo json_encode(['exito' => false, 'error' => 'RAP ID no provisto']);
+        $rapId = (string) ($_POST['rap_id'] ?? '');
+        $pct = (int) ($_POST['porcentaje'] ?? 0);
+        $rap = $this->validarAccesoRap($rapId);
+        if (!$rap) return;
+        if (obtenerRolSesion() !== 'aprendiz') {
+            echo json_encode(['exito'=>true, 'preview'=>true, 'porcentaje'=>$pct]);
             return;
         }
-
-        if (in_array(obtenerRolSesion(), ['admin', 'instructor'])) {
-            echo json_encode(['exito' => true, 'porcentaje' => $porcentaje, 'preview' => true]);
-            return;
-        }
-
-        // Desde el navegador solo se avanza hasta el 75% (Momento 3 terminado):
-        // el 100% y el completado los pone únicamente la aprobación del quiz.
-        $porcentaje = max(0.0, min(75.0, $porcentaje));
-
-        // El avance es del módulo, no solo del RAP abierto (ver obtenerRapsDelModulo)
-        $progresoModel = new Progreso();
-        foreach ($this->obtenerRapsDelModulo(obtenerConexion(), $rapId) as $idRap) {
-            $progresoModel->actualizarProgreso($uid, $idRap, $porcentaje, 0);
-            // HU22: terminar la práctica (75%) abre una ronda nueva de intentos del quiz
-            if ($porcentaje >= 75.0) {
-                $progresoModel->iniciarRondaQuiz($uid, $idRap);
+        $pdo = obtenerConexion();
+        try {
+            $pdo->beginTransaction();
+            $this->bloquearUsuario($pdo);
+            $practica = (new AccesoCurso())->sesion((string) ($_POST['practica_id'] ?? ''), $rap['nivel_id']);
+            $actual = (int) $practica['etapa'];
+            if (!in_array($pct, [25,50,75], true)) throw new \DomainException('Momento inválido.');
+            if ($pct > $actual) {
+                if ($pct === 25) {
+                    $stmt = $pdo->prepare('SELECT v.id FROM vocabulario v JOIN rap r ON r.id=v.rap_id WHERE r.nivel_id=? AND r.activo=1 AND v.activo=1 ORDER BY v.rap_id,v.id LIMIT 3');
+                    $stmt->execute([$rap['nivel_id']]);
+                    $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    $pares = json_decode((string) ($_POST['pares'] ?? '[]'), true);
+                    $recibidos = [];
+                    foreach (is_array($pares) ? $pares : [] as $par) {
+                        if (!is_array($par) || ($par['en'] ?? '') !== ($par['es'] ?? '')) throw new \DomainException('Completa el emparejamiento del Warm-Up.');
+                        $recibidos[] = $par['en'];
+                    }
+                    sort($ids); sort($recibidos);
+                    if (!$ids || $ids !== $recibidos) throw new \DomainException('Completa el emparejamiento del Warm-Up.');
+                } elseif ($actual < $pct - 25) {
+                    throw new \DomainException('Completa el momento anterior primero.');
+                }
+                if ($pct === 75) {
+                    $stmt = $pdo->prepare('SELECT COUNT(*) FROM ejercicio e JOIN rap r ON r.id=e.rap_id WHERE r.nivel_id=? AND r.activo=1 AND e.activo=1 AND NOT EXISTS (SELECT 1 FROM intento_ejercicio i WHERE i.ejercicio_id=e.id AND i.usuario_id=? AND i.creado_en>=?)');
+                    $stmt->execute([$rap['nivel_id'], $uid, $practica['iniciada_en']]);
+                    if ((int) $stmt->fetchColumn() > 0) throw new \DomainException('Responde todos los ejercicios de esta práctica antes del quiz.');
+                }
+                $stmt = $pdo->prepare('UPDATE sesion_practica SET etapa=? WHERE id=?');
+                $stmt->execute([$pct,$practica['id']]);
+                $model = new Progreso();
+                foreach ($this->obtenerRapsDelModulo($pdo,$rapId) as $id) {
+                    $model->actualizarProgreso($uid,$id,$pct,0);
+                    if ($pct === 75) $model->iniciarRondaQuiz($uid,$id);
+                }
             }
+            $pdo->commit();
+            echo json_encode(['exito'=>true,'porcentaje'=>max($actual,$pct)]);
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $this->errorJson($e->getMessage());
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log($e->getMessage());
+            $this->errorJson('No se pudo guardar el progreso.',500);
         }
-
-        echo json_encode(['exito' => true, 'porcentaje' => $porcentaje]);
     }
 
     /**
@@ -239,109 +317,171 @@ class AprendizController extends Controller {
      * tasa de error del instructor (HU06/HU23) tenían de dónde leer.
      */
     public function guardarIntentoEjercicio(): void {
+        if (!$this->validarEscritura()) return;
         header('Content-Type: application/json');
-        $uid = $_SESSION['usuario_id'];
-
-        $ejercicioId = limpiar($_POST['ejercicio_id'] ?? '');
-        $opcionId    = limpiar($_POST['opcion_id'] ?? '');
-        $respuesta   = mb_substr(trim((string)($_POST['respuesta'] ?? '')), 0, 500);
-        $tiempoMs    = (int)($_POST['tiempo_respuesta_ms'] ?? 0);
-        $esCorrectoCliente = ((int)($_POST['es_correcto'] ?? 0) === 1) ? 1 : 0;
-
-        if (empty($ejercicioId)) {
-            echo json_encode(['exito' => false, 'error' => 'Ejercicio no provisto']);
+        if (obtenerRolSesion() !== 'aprendiz') {
+            echo json_encode(['exito'=>true,'preview'=>true,'xp_ganados'=>0]);
             return;
         }
-
-        // Admin e instructor recorren el RAP en modo vista previa: no ensucian las métricas
-        if (in_array(obtenerRolSesion(), ['admin', 'instructor'])) {
-            echo json_encode(['exito' => true, 'preview' => true]);
-            return;
-        }
-
         $pdo = obtenerConexion();
-
-        $stmtEj = $pdo->prepare('SELECT id FROM ejercicio WHERE id = ? AND activo = 1 LIMIT 1');
-        $stmtEj->execute([$ejercicioId]);
-        if (!$stmtEj->fetchColumn()) {
-            echo json_encode(['exito' => false, 'error' => 'Ejercicio inexistente o inactivo']);
-            return;
-        }
-
-        $esCorrecto = $this->resolverAciertoEjercicio($pdo, $ejercicioId, $opcionId, $respuesta, $esCorrectoCliente);
-
-        $stmtCount = $pdo->prepare('SELECT COUNT(*) FROM intento_ejercicio WHERE usuario_id = ? AND ejercicio_id = ?');
-        $stmtCount->execute([$uid, $ejercicioId]);
-        $numeroIntento = (int)$stmtCount->fetchColumn() + 1;
-
-        $stmtIns = $pdo->prepare(
-            'INSERT INTO intento_ejercicio (id, ejercicio_id, usuario_id, respuesta_elegida, es_correcto, numero_intento, tiempo_respuesta_ms)
-             VALUES (?, ?, ?, ?, ?, ?, ?)'
-        );
-        $stmtIns->execute([
-            generarUUID(),
-            $ejercicioId,
-            $uid,
-            $respuesta !== '' ? $respuesta : null,
-            $esCorrecto,
-            $numeroIntento,
-            $tiempoMs > 0 ? $tiempoMs : null
-        ]);
-
-        // HU05: el tiempo de cada ejercicio tambien suma al total invertido en el RAP
-        if ($tiempoMs > 0) {
-            $stmtRap = $pdo->prepare('SELECT rap_id FROM ejercicio WHERE id = ? LIMIT 1');
-            $stmtRap->execute([$ejercicioId]);
-            $rapDelEjercicio = (string) $stmtRap->fetchColumn();
-            if ($rapDelEjercicio !== '') {
-                (new Progreso())->sumarTiempo($uid, $rapDelEjercicio, (int) round($tiempoMs / 1000));
+        $uid = $_SESSION['usuario_id'];
+        $id = (string) ($_POST['ejercicio_id'] ?? '');
+        $solicitud = (string) ($_POST['solicitud_id'] ?? '');
+        if (!preg_match('/^[0-9a-f-]{36}$/i',$solicitud)) { $this->errorJson('Solicitud de ejercicio inválida.'); return; }
+        try {
+            $pdo->beginTransaction();
+            $this->bloquearUsuario($pdo);
+            $stmt = $pdo->prepare('SELECT resultado_json FROM intento_ejercicio WHERE usuario_id=? AND solicitud_id=? AND ejercicio_id=?');
+            $stmt->execute([$uid,$solicitud,$id]);
+            if ($guardado = $stmt->fetchColumn()) {
+                $pdo->commit(); echo $guardado; return;
             }
+            $stmt = $pdo->prepare('SELECT * FROM ejercicio WHERE id=? AND activo=1');
+            $stmt->execute([$id]);
+            $ej = $stmt->fetch();
+            if (!$ej) throw new \DomainException('Ejercicio inexistente o inactivo.');
+            $rap = (new AccesoCurso())->rap($ej['rap_id']);
+            $practica = (new AccesoCurso())->sesion((string) ($_POST['practica_id'] ?? ''),$rap['nivel_id']);
+            if ((int) $practica['etapa'] !== 50) throw new \DomainException('Completa los momentos anteriores o inicia un repaso para practicar.');
+            $stmt = $pdo->prepare('SELECT COUNT(*) FROM intento_ejercicio WHERE usuario_id=? AND ejercicio_id=? AND creado_en>=?');
+            $stmt->execute([$uid,$id,$practica['iniciada_en']]);
+            $intentosRonda = (int) $stmt->fetchColumn();
+            if ($intentosRonda >= max(1,(int) $ej['max_intentos'])) throw new \DomainException('Se agotaron los intentos de este ejercicio en la práctica actual.');
+            $respuesta = mb_substr(trim((string) ($_POST['respuesta'] ?? '')),0,10000);
+            $correcto = $this->resolverAciertoEjercicio($pdo,$id,(string) ($_POST['opcion_id'] ?? ''),$respuesta,0);
+            $stmt = $pdo->prepare('SELECT COUNT(*), COALESCE(MAX(es_correcto),0) FROM intento_ejercicio WHERE usuario_id=? AND ejercicio_id=?');
+            $stmt->execute([$uid,$id]);
+            $historia = $stmt->fetch(PDO::FETCH_NUM);
+            $xp = $correcto && !(int) $historia[1] ? (new GamificacionConfig())->obtenerValor('xp_ejercicio_correcto',10) : 0;
+            $result = ['exito'=>true,'es_correcto'=>(bool)$correcto,'numero_intento'=>(int)$historia[0]+1,'xp_ganados'=>$xp,'intentos_restantes'=>max(0,(int)$ej['max_intentos']-$intentosRonda-1)];
+            $stmt = $pdo->prepare('INSERT INTO intento_ejercicio (id,ejercicio_id,usuario_id,respuesta_elegida,es_correcto,numero_intento,tiempo_respuesta_ms,solicitud_id,resultado_json) VALUES (?,?,?,?,?,?,?,?,?)');
+            $ms = max(0,min(3600000,(int) ($_POST['tiempo_respuesta_ms'] ?? 0)));
+            $stmt->execute([generarUUID(),$id,$uid,mb_substr($respuesta,0,500),$correcto,$result['numero_intento'],$ms,$solicitud,json_encode($result)]);
+            if ($xp > 0 && !(new User())->actualizarXP($uid,$xp)) throw new \RuntimeException('No se pudo guardar XP.');
+            if ($ms > 0) (new Progreso())->sumarTiempo($uid,$ej['rap_id'],(int) round($ms/1000));
+            $pdo->commit();
+            echo json_encode($result);
+        } catch (\DomainException $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            $this->errorJson($e->getMessage());
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log($e->getMessage());
+            $this->errorJson('No se pudo guardar el ejercicio.',500);
         }
-
-        echo json_encode([
-            'exito'          => true,
-            'es_correcto'    => (bool)$esCorrecto,
-            'numero_intento' => $numeroIntento
-        ]);
     }
 
-    /**
-     * Decide si un intento de ejercicio fue correcto sin fiarse del navegador
-     * cuando la base de datos permite comprobarlo.
-     *
-     * - Si llega el id de la opción elegida, manda `es_correcta` de esa fila.
-     * - Si no, y el ejercicio tiene una única opción correcta, se compara el
-     *   texto (pasado por normalizarTextoEspanol(), que es la misma forma en
-     *   que la vista lo pintó, para que las tildes no generen falsos fallos).
-     * - Los tipos compuestos (emparejar, ordenar diálogo, role play) no tienen
-     *   una única respuesta almacenada: ahí se conserva el resultado del cliente.
-     */
-    private function resolverAciertoEjercicio(\PDO $pdo, string $ejercicioId, string $opcionId, string $respuesta, int $esCorrectoCliente): int {
-        if ($opcionId !== '') {
-            $stmt = $pdo->prepare('SELECT es_correcta FROM ejercicio_opcion WHERE id = ? AND ejercicio_id = ? LIMIT 1');
-            $stmt->execute([$opcionId, $ejercicioId]);
-            $fila = $stmt->fetch();
-            if ($fila !== false) {
-                return ((int)$fila['es_correcta'] === 1) ? 1 : 0;
-            }
+    private function resolverAciertoEjercicio(PDO $pdo, string $id, string $opcionId, string $respuesta, int $ignorado): int {
+        $stmt = $pdo->prepare('SELECT tipo FROM ejercicio WHERE id=?');
+        $stmt->execute([$id]);
+        $tipo = $stmt->fetchColumn();
+        $stmt = $pdo->prepare('SELECT id,texto,es_correcta FROM ejercicio_opcion WHERE ejercicio_id=? ORDER BY id');
+        $stmt->execute([$id]);
+        $opciones = $stmt->fetchAll();
+        $normalizar = static fn($texto) => mb_strtolower(trim(html_entity_decode((string)$texto,ENT_QUOTES | ENT_HTML5,'UTF-8')));
+        if (in_array($tipo,['seleccion_multiple','role_play'],true)) {
+            foreach ($opciones as $op) if ($op['id']===$opcionId) return (int) $op['es_correcta'] === 1 ? 1 : 0;
+            return 0;
         }
-
-        if ($respuesta !== '') {
-            $stmt = $pdo->prepare('SELECT texto FROM ejercicio_opcion WHERE ejercicio_id = ? AND es_correcta = 1');
-            $stmt->execute([$ejercicioId]);
-            $correctas = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-            if (count($correctas) === 1) {
-                $esperada = mb_strtolower(trim(normalizarTextoEspanol((string)$correctas[0])));
-                $recibida = mb_strtolower(trim(normalizarTextoEspanol($respuesta)));
-                return ($esperada === $recibida) ? 1 : 0;
+        if ($tipo === 'arrastrar_soltar') {
+            $pares = json_decode($respuesta,true);
+            if (!is_array($pares) || count($pares)!==count($opciones) || !$opciones) return 0;
+            $esperados=[]; $recibidos=[];
+            foreach ($opciones as $op) {
+                $partes=explode('=',$op['texto'],2);
+                if(count($partes)!==2) return 0;
+                $esperados[]=[$normalizar($partes[0]),$normalizar($partes[1])];
             }
+            foreach($pares as $par) {
+                if(!is_array($par) || !isset($par['en'],$par['es'])) return 0;
+                $recibidos[]=[$normalizar($par['en']),$normalizar($par['es'])];
+            }
+            sort($esperados); sort($recibidos);
+            return $esperados===$recibidos ? 1 : 0;
         }
+        if ($tipo === 'ordenar_dialogo') {
+            $esperada=[];
+            foreach($opciones as $op) foreach(explode('|',$op['texto']) as $linea) $esperada[]=$normalizar($linea);
+            return $respuesta!=='' && $esperada && $esperada===array_map($normalizar,explode('|',$respuesta)) ? 1 : 0;
+        }
+        if ($respuesta==='') return 0;
+        if ($tipo === 'escucha_escribe') {
+            $correctas = array_values(array_filter($opciones,static fn($opcion)=>(int)$opcion['es_correcta']===1));
+            return count($correctas)===1 && $normalizar($correctas[0]['texto'])===$normalizar($respuesta) ? 1 : 0;
+        }
+        foreach($opciones as $op) if((int)$op['es_correcta']===1 && $normalizar($op['texto'])===$normalizar($respuesta)) return 1;
+        return 0;
+    }
 
-        return $esCorrectoCliente;
+    private function bloquearUsuario(PDO $pdo): void {
+        $stmt=$pdo->prepare('SELECT id FROM usuarios WHERE id=? FOR UPDATE');
+        $stmt->execute([$_SESSION['usuario_id']]); $stmt->fetch();
+    }
+
+    private function errorJson(string $error,int $codigo=403): void {
+        http_response_code($codigo); header('Content-Type: application/json');
+        echo json_encode(['exito'=>false,'error'=>$error]);
+    }
+
+    private function validarEscritura(): bool {
+        if(!validarTokenCSRF((string) ($_POST['csrf_token'] ?? ''))) {
+            $this->errorJson('La sesión del formulario cambió. Recarga la página.',419); return false;
+        }
+        return true;
+    }
+
+    private function validarAccesoRap(string $id): ?array {
+        try { return (new AccesoCurso())->rap($id,obtenerRolSesion()!=='aprendiz'); }
+        catch (\DomainException $e) { $this->errorJson($e->getMessage()); return null; }
+    }
+
+    public function iniciarQuiz(): void {
+        if (!$this->validarEscritura()) return;
+        header('Content-Type: application/json');
+        $rapId=(string) ($_POST['rap_id'] ?? '');
+        $rap=$this->validarAccesoRap($rapId);
+        if(!$rap) return;
+        if(obtenerRolSesion()!=='aprendiz') {
+            echo json_encode(['exito'=>true,'preview'=>true]); return;
+        }
+        $pdo=obtenerConexion();
+        try {
+            $pdo->beginTransaction(); $this->bloquearUsuario($pdo);
+            $sesion=(new AccesoCurso())->sesion((string) ($_POST['practica_id'] ?? ''),$rap['nivel_id']);
+            if((int)$sesion['etapa']<75) throw new \DomainException('Termina la práctica antes de comenzar el quiz.');
+            $raps=$this->obtenerRapsDelModulo($pdo,$rapId);
+            $quizzes=$this->obtenerQuizzesDelModulo($pdo,$raps,$rapId);
+            if(!$quizzes) throw new \DomainException('Quiz no disponible.');
+            $estado=$this->estadoIntentosQuiz($pdo,$_SESSION['usuario_id'],$quizzes,$rapId);
+            if($estado['bloqueado']) throw new \DomainException('Se agotaron los intentos. Repasa el RAP antes de continuar.');
+            $preguntas=$this->obtenerPreguntasDeQuizzes($pdo,array_column($quizzes,'id'));
+            if(!$preguntas) throw new \DomainException('El quiz no tiene preguntas.');
+            $ids=json_decode((string)($_POST['preguntas_ids'] ?? '[]'),true);
+            $esperados=array_column($preguntas,'id'); sort($esperados);
+            if(!is_array($ids)) throw new \DomainException('Recarga el quiz.');
+            sort($ids);
+            if($ids!==$esperados) throw new \DomainException('El contenido del quiz cambió. Recarga el RAP antes de comenzar.');
+            $stmt=$pdo->prepare('SELECT id, GREATEST(0,TIMESTAMPDIFF(SECOND,NOW(6),vence_en)) AS segundos_restantes FROM sesion_quiz WHERE usuario_id=? AND rap_id=? AND resultado_json IS NULL AND vence_en>NOW(6) ORDER BY iniciada_en DESC LIMIT 1');
+            $stmt->execute([$_SESSION['usuario_id'],$rapId]);
+            $activo=$stmt->fetch();
+            if(!$activo) {
+                $id=generarUUID();
+                $segundos=max(1,(int)($quizzes[0]['limite_tiempo_seg'] ?: 300));
+                $stmt=$pdo->prepare('INSERT INTO sesion_quiz (id,usuario_id,rap_id,quiz_id,vence_en,preguntas_json,puntaje_minimo) VALUES (?,?,?,?,DATE_ADD(NOW(6),INTERVAL ? SECOND),?,?)');
+                $stmt->execute([$id,$_SESSION['usuario_id'],$rapId,$quizzes[0]['id'],$segundos,json_encode($preguntas),$quizzes[0]['puntaje_minimo']]);
+                $activo=['id'=>$id,'segundos_restantes'=>$segundos];
+            }
+            $pdo->commit();
+            echo json_encode(['exito'=>true,'sesion_quiz_id'=>$activo['id'],'segundos_restantes'=>(int)$activo['segundos_restantes']]);
+        } catch(\DomainException $e) {
+            if($pdo->inTransaction())$pdo->rollBack(); $this->errorJson($e->getMessage());
+        } catch(\Throwable $e) {
+            if($pdo->inTransaction())$pdo->rollBack(); error_log($e->getMessage()); $this->errorJson('No se pudo iniciar el quiz.',500);
+        }
     }
 
     public function guardarIntentoQuiz(): void {
+        if (!$this->validarEscritura()) return;
         header('Content-Type: application/json');
         $uid = $_SESSION['usuario_id'];
         $rapId = limpiar($_POST['rap_id'] ?? '');
@@ -368,7 +508,21 @@ class AprendizController extends Controller {
             return;
         }
 
+        if (!$this->validarAccesoRap($rapId)) return;
         $pdo = obtenerConexion();
+        try {
+        $pdo->beginTransaction();
+        $this->bloquearUsuario($pdo);
+        $stmt = $pdo->prepare('SELECT *, TIMESTAMPDIFF(SECOND,iniciada_en,NOW(6)) AS duracion_real, NOW(6)>DATE_ADD(vence_en,INTERVAL 3 SECOND) AS vencido FROM sesion_quiz WHERE id=? AND usuario_id=? AND rap_id=? FOR UPDATE');
+        $stmt->execute([(string)($_POST['sesion_quiz_id'] ?? ''),$uid,$rapId]);
+        $sesionQuiz = $stmt->fetch();
+        if (!$sesionQuiz) throw new \DomainException('Comienza el quiz antes de enviar respuestas.');
+        if ($sesionQuiz['resultado_json']) {
+            $pdo->commit(); echo $sesionQuiz['resultado_json']; return;
+        }
+        if ($sesionQuiz['vencido']) throw new \DomainException('El tiempo de este quiz terminó. Vuelve a comenzar un intento.');
+        $duracionSeg = max(0,(int)$sesionQuiz['duracion_real']);
+        if (!is_array($respuestas)) throw new \DomainException('Respuestas inválidas.');
 
         // 1. Obtener el quiz del módulo: se califican las mismas preguntas que la
         //    página le mostró al aprendiz, las de todos los RAPs del módulo
@@ -376,16 +530,18 @@ class AprendizController extends Controller {
         $quizzes    = $this->obtenerQuizzesDelModulo($pdo, $rapsModulo, $rapId);
 
         if (empty($quizzes)) {
-            echo json_encode(['exito' => false, 'error' => 'Quiz no encontrado para este RAP']);
-            return;
+            throw new \DomainException('Quiz no encontrado para este RAP');
         }
 
         // El intento queda registrado en el primero, que es el quiz del RAP abierto
         $quiz = $quizzes[0];
+        $quiz['id'] = $sesionQuiz['quiz_id'];
+        $quiz['puntaje_minimo'] = $sesionQuiz['puntaje_minimo'];
 
         // HU22: con los intentos de la ronda agotados no se califica ni se registra
         $intentos = $this->estadoIntentosQuiz($pdo, $uid, $quizzes, $rapId);
         if ($intentos['bloqueado']) {
+            $pdo->rollBack();
             echo json_encode([
                 'exito'     => false,
                 'bloqueado' => true,
@@ -396,12 +552,11 @@ class AprendizController extends Controller {
         }
 
         // 2. Obtener Preguntas del Quiz
-        $preguntas = $this->obtenerPreguntasDeQuizzes($pdo, array_column($quizzes, 'id'));
+        $preguntas = json_decode($sesionQuiz['preguntas_json'], true);
         $totalPreguntas = count($preguntas);
 
         if ($totalPreguntas === 0) {
-            echo json_encode(['exito' => false, 'error' => 'El quiz no tiene preguntas configuradas']);
-            return;
+            throw new \DomainException('El quiz no tiene preguntas configuradas');
         }
 
         $correctas = 0;
@@ -409,7 +564,9 @@ class AprendizController extends Controller {
 
         // 3. Evaluar respuestas
         foreach ($preguntas as $preg) {
-            $elegida = trim($respuestas[$preg['id']] ?? '');
+            $elegida = $respuestas[$preg['id']] ?? '';
+            if (!is_string($elegida) || mb_strlen($elegida)>500) throw new \DomainException('Respuesta inválida.');
+            $elegida = trim($elegida);
             $esCorrecto = (strcasecmp($elegida, trim($preg['respuesta_correcta'])) === 0) ? 1 : 0;
             if ($esCorrecto) {
                 $correctas++;
@@ -433,13 +590,13 @@ class AprendizController extends Controller {
         $numeroIntento = $intentosPrevios + 1;
 
         $intentoId = generarUUID();
-        $stmtInsInt = $pdo->prepare('INSERT INTO intento_quiz (id, quiz_id, usuario_id, puntaje, aprobado, numero_intento, duracion_seg) VALUES (?, ?, ?, ?, ?, ?, ?)');
-        $stmtInsInt->execute([$intentoId, $quiz['id'], $uid, $puntaje, $aprobado, $numeroIntento, $duracionSeg]);
+        $stmtInsInt = $pdo->prepare('INSERT INTO intento_quiz (id, quiz_id, usuario_id, puntaje, aprobado, numero_intento, duracion_seg, puntaje_minimo_original) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+        $stmtInsInt->execute([$intentoId, $quiz['id'], $uid, $puntaje, $aprobado, $numeroIntento, $duracionSeg, $quiz['puntaje_minimo']]);
 
         // Guardar respuestas individuales
-        $stmtInsResp = $pdo->prepare('INSERT INTO respuesta_quiz (id, intento_quiz_id, pregunta_id, respuesta_elegida, es_correcto) VALUES (?, ?, ?, ?, ?)');
+        $stmtInsResp = $pdo->prepare('INSERT INTO respuesta_quiz (id, intento_quiz_id, pregunta_id, respuesta_elegida, es_correcto, texto_pregunta_original) VALUES (?, ?, ?, ?, ?, ?)');
         foreach ($detalles as $pregId => $det) {
-            $stmtInsResp->execute([generarUUID(), $intentoId, $pregId, $det['elegida'], $det['es_correcto']]);
+            $stmtInsResp->execute([generarUUID(), $intentoId, $pregId, $det['elegida'], $det['es_correcto'], $det['texto']]);
         }
 
         // 5. Actualizar Progreso del módulo (mejor puntaje y completado)
@@ -466,7 +623,9 @@ class AprendizController extends Controller {
             }
 
             $promedioModuloDespues = $this->obtenerPromedioModuloDelRap($pdo, $uid, $rapId);
-            if ($promedioModuloAntes < 80.0 && $promedioModuloDespues >= 80.0) {
+            $umbralSiguiente = $this->obtenerUmbralSiguienteModulo($pdo,$rapId);
+            if ($umbralSiguiente !== null && !AccesoCurso::alcanzaUmbral($promedioModuloAntes,$umbralSiguiente)
+                && AccesoCurso::alcanzaUmbral($promedioModuloDespues,$umbralSiguiente)) {
                 $moduloDesbloqueado = $this->obtenerNombreSiguienteModulo($pdo, $rapId);
             }
 
@@ -481,7 +640,7 @@ class AprendizController extends Controller {
             if ($puntaje === 100.00) {
                 $xpGanados += $xpQuizPerfecto;
             }
-            $userModel->actualizarXP($uid, $xpGanados);
+            if (!$userModel->actualizarXP($uid, $xpGanados)) throw new \RuntimeException('No se pudo guardar XP.');
             // HU15: actualizarXP() deja anotado si el aprendiz subio de rango
             $subioNivelPerfil = $userModel->obtenerUltimoAscensoNivel();
 
@@ -517,7 +676,7 @@ class AprendizController extends Controller {
             $insigniaGanada = $nuevas ? implode(' y ', $nuevas) : null;
         }
 
-        echo json_encode([
+        $resultado = [
             'exito' => true,
             'puntaje' => $puntaje,
             'aprobado' => (bool)$aprobado,
@@ -528,7 +687,19 @@ class AprendizController extends Controller {
             'subio_nivel' => $subioNivelPerfil,
             'modulo_desbloqueado' => $moduloDesbloqueado,
             'resumen' => $this->construirResumenRap($pdo, $uid, $rapId, $detalles, $correctas, $totalPreguntas, (bool)$aprobado)
-        ]);
+        ];
+        $stmt=$pdo->prepare('UPDATE sesion_quiz SET resultado_json=? WHERE id=?');
+        $stmt->execute([json_encode($resultado),$sesionQuiz['id']]);
+        $pdo->commit();
+        echo json_encode($resultado);
+        } catch (\DomainException $e) {
+            if($pdo->inTransaction()) $pdo->rollBack();
+            $this->errorJson($e->getMessage());
+        } catch (\Throwable $e) {
+            if($pdo->inTransaction()) $pdo->rollBack();
+            error_log($e->getMessage());
+            $this->errorJson('No se pudo guardar el quiz.',500);
+        }
     }
 
 
@@ -710,6 +881,12 @@ class AprendizController extends Controller {
      * Nombre del módulo siguiente al que contiene el RAP indicado, o null si
      * este ya era el último módulo activo del curso (HU05).
      */
+    private function obtenerUmbralSiguienteModulo(\PDO $pdo, string $rapId): ?float {
+        $stmt=$pdo->prepare('SELECT n.umbral_desbloqueo FROM nivel n WHERE n.activo=1 AND n.orden>(SELECT n2.orden FROM nivel n2 JOIN rap r ON r.nivel_id=n2.id WHERE r.id=?) ORDER BY n.orden LIMIT 1');
+        $stmt->execute([$rapId]);$umbral=$stmt->fetchColumn();
+        return $umbral===false ? null : (float)$umbral;
+    }
+
     private function obtenerNombreSiguienteModulo(\PDO $pdo, string $rapId): ?string {
         $stmt = $pdo->prepare(
             'SELECT n.nombre
@@ -887,7 +1064,10 @@ class AprendizController extends Controller {
             $params[] = $nivelId;
         }
         if ($busqueda) {
-            $sql .= " AND (v.termino_en LIKE ? OR v.termino_es LIKE ?)";
+            // RF-16: las etiquetas existen para encontrar la palabra, así que entran
+            // en la búsqueda junto al término en inglés y su traducción.
+            $sql .= " AND (v.termino_en LIKE ? OR v.termino_es LIKE ? OR v.etiquetas LIKE ?)";
+            $params[] = "%$busqueda%";
             $params[] = "%$busqueda%";
             $params[] = "%$busqueda%";
         }
@@ -899,9 +1079,33 @@ class AprendizController extends Controller {
 
         // Obtener filtros
         // Solo catálogos activos: desactivar un área o categoría la quita de los filtros (HU18)
-        $areas = $pdo->query("SELECT id, nombre FROM area_clinica WHERE activo = 1 ORDER BY nombre")->fetchAll();
-        $categorias = $pdo->query("SELECT id, nombre FROM categoria_vocabulario WHERE activo = 1 ORDER BY nombre")->fetchAll();
-        $niveles = $pdo->query("SELECT id, nombre FROM nivel ORDER BY orden")->fetchAll();
+        //
+        // RF-20: cada opción trae cuántos términos consultables tiene. Sin ese número,
+        // filtrar por un área todavía sin vocabulario devuelve una lista vacía sin
+        // explicación y parece un error de la plataforma.
+        $areas = $pdo->query(
+            "SELECT a.id, a.nombre, COUNT(v.id) AS total
+             FROM area_clinica a
+             LEFT JOIN vocabulario v ON v.area_clinica_id = a.id AND v.activo = 1
+             LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
+             WHERE a.activo = 1
+             GROUP BY a.id, a.nombre ORDER BY a.nombre"
+        )->fetchAll();
+        $categorias = $pdo->query(
+            "SELECT c.id, c.nombre, COUNT(v.id) AS total
+             FROM categoria_vocabulario c
+             LEFT JOIN vocabulario v ON v.categoria_id = c.id AND v.activo = 1
+             LEFT JOIN rap r ON r.id = v.rap_id AND r.activo = 1
+             WHERE c.activo = 1
+             GROUP BY c.id, c.nombre ORDER BY c.nombre"
+        )->fetchAll();
+        $niveles = $pdo->query(
+            "SELECT n.id, n.nombre, COUNT(v.id) AS total
+             FROM nivel n
+             LEFT JOIN rap r ON r.nivel_id = n.id AND r.activo = 1
+             LEFT JOIN vocabulario v ON v.rap_id = r.id AND v.activo = 1
+             GROUP BY n.id, n.nombre, n.orden ORDER BY n.orden"
+        )->fetchAll();
 
         // Obtener vocabulario marcado por el usuario para las estrellas
         $uid = $_SESSION['usuario_id'] ?? null;
@@ -1082,6 +1286,7 @@ class AprendizController extends Controller {
 
             $nuevoHash = password_hash($claveNueva, PASSWORD_BCRYPT, ['cost' => 12]);
             $userModel->actualizarContrasena($uid, $nuevoHash);
+            actualizarHuellaSesion();
             $this->redirect('aprendiz/perfil?exito=clave');
 
         } elseif ($accion === 'ficha') {

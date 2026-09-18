@@ -224,7 +224,7 @@
         $seccionActiva = null;
         $promedioAnteriorParaHeader = 100.00;
         foreach ($nivelesAgrupados as $nivelData) {
-            $nivelAlcanzable = ($nivelData['orden'] == 1) || ($promedioAnteriorParaHeader >= 80);
+            $nivelAlcanzable = ($nivelData['orden'] == 1) || (\App\Models\AccesoCurso::alcanzaUmbral($promedioAnteriorParaHeader,(float)$nivelData['umbral']));
             if ($nivelAlcanzable && $nivelData['progreso_promedio'] < 100) {
                 $seccionActiva = $nivelData;
                 break;
@@ -258,10 +258,10 @@
             ];
 
             foreach ($nivelesAgrupados as $indexNivel => $nivelData):
-                // Un nivel está desbloqueado si es el primero o si el nivel anterior alcanzó 80%
+                // Un nivel está desbloqueado si es el primero o si el nivel anterior alcanzó su umbral configurado
                 $nivelDesbloqueado = (!$autenticado)
                     ? ($nivelData['orden'] == 1)
-                    : (($nivelData['orden'] == 1) || ($promedioNivelAnterior >= 80));
+                    : (($nivelData['orden'] == 1) || (\App\Models\AccesoCurso::alcanzaUmbral($promedioNivelAnterior,(float)$nivelData['umbral'])));
 
                 $rap = $nivelData['raps'][0] ?? null;
                 if (!$rap) continue;
@@ -368,7 +368,7 @@
                     <div class="path-item <?= $isActive ? 'current' : '' ?> <?= $offsetClase ?>"
                          style="<?= $isActive ? 'z-index:50;' : '' ?>">
                         <div class="node-wrapper"
-                             onclick="<?= $estadoMomento !== 'bloqueado' ? "window.location='{$urlMomento}'" : "mostrarMensajeBloqueado()" ?>"
+                             onclick="<?= $estadoMomento !== 'bloqueado' ? "window.location='{$urlMomento}'" : "mostrarMensajeBloqueado(" . (float)$nivelData['umbral'] . "," . ($estadoRap === 'bloqueado' ? 'true' : 'false') . ")" ?>"
                              title="<?= limpiar($nivelData['nombre']) ?> — <?= $mDef['nombre'] ?>">
 
                             <?php if ($isActive): ?>
@@ -495,8 +495,8 @@
 
 <script>
   /* Mostrar mensaje cuando el aprendiz intenta acceder a un nivel bloqueado */
-  function mostrarMensajeBloqueado() {
-    alert('🔒 Este nivel está bloqueado. Completa el nivel anterior con al menos 80% de progreso.');
+  function mostrarMensajeBloqueado(umbral, moduloBloqueado) {
+    alert(moduloBloqueado ? `Este módulo está bloqueado. Completa el módulo anterior con al menos ${umbral}% de progreso.` : 'Completa el momento anterior antes de continuar.');
   }
 </script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>

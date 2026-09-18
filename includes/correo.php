@@ -1,51 +1,53 @@
 <?php
-/**
- * correo.php — Funciones para envío de correos usando PHPMailer
- */
-require_once __DIR__ . '/../vendor/autoload.php';
+/** Envío SMTP con contenido HTML y alternativa legible en texto plano. */
+require_once __DIR__.'/../vendor/autoload.php';
+if (!defined('SMTP_HOST')) require_once __DIR__.'/../config/credenciales.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-function enviarCorreo(string $destinatario, string $asunto, string $cuerpo): bool {
-    $mail = new PHPMailer(true);
+/** Disponibilidad global: la respuesta no depende de que exista una cuenta. */
+function correoDisponible(): bool {
+    $enabled=$_ENV['MAIL_ENABLED'] ?? getenv('MAIL_ENABLED');
+    if ($enabled!==false && $enabled!==null && $enabled!=='' && !filter_var($enabled,FILTER_VALIDATE_BOOLEAN)) return false;
+    if (($_ENV['MAIL_TRANSPORT'] ?? '')==='local') return ($_ENV['APP_ENV'] ?? '')==='local' && in_array(SMTP_HOST,['127.0.0.1','localhost'],true);
+    return SMTP_USER!=='' && SMTP_PASS!=='';
+}
+
+function textoCorreo(string $html): string {
+    $html=preg_replace_callback('/<a\b[^>]*href=["\']([^"\']+)["\'][^>]*>(.*?)<\/a>/is',static function($m) {
+        $etiqueta=trim(strip_tags($m[2]));$enlace=html_entity_decode($m[1],ENT_QUOTES,'UTF-8');
+        return html_entity_decode($etiqueta,ENT_QUOTES,'UTF-8')===$enlace ? $enlace : $etiqueta.' ('.$enlace.')';
+    },$html);
+    $html=preg_replace('/<head\b[^>]*>.*?<\/head>|<div[^>]*display:none[^>]*>.*?<\/div>/is','',$html);
+    $html=preg_replace('/<br\s*\/?>/i',"\n",$html);
+    $html=preg_replace('/<li\b[^>]*>/i',"\n- ",$html);
+    $html=preg_replace('/<\/(?:p|h[1-6]|tr|div|ol|ul)>/i',"\n\n",$html);
+    return trim(preg_replace('/\n{3,}/',"\n\n",html_entity_decode(strip_tags($html),ENT_QUOTES,'UTF-8')));
+}
+
+function enviarCorreo(string $destinatario,string $asunto,string $cuerpo): bool {
+    $enabled=$_ENV['MAIL_ENABLED'] ?? getenv('MAIL_ENABLED');
+    if ($enabled!==false && $enabled!==null && $enabled!=='' && !filter_var($enabled,FILTER_VALIDATE_BOOLEAN)) return false;
+    $mail=new PHPMailer(true);
     try {
-        // Cargar configuración de correo
-        if (!defined('SMTP_HOST')) {
-            if (file_exists(__DIR__ . '/../config/credenciales.php')) {
-                require_once __DIR__ . '/../config/credenciales.php';
-            } else {
-                require_once __DIR__ . '/../config/credenciales.example.php';
-            }
+        $mail->isSMTP();$mail->Host=SMTP_HOST;$mail->Port=(int)SMTP_PORT;
+        if (($_ENV['MAIL_TRANSPORT'] ?? '')==='local') {
+            if (($_ENV['APP_ENV'] ?? '')!=='local' || !in_array(SMTP_HOST,['127.0.0.1','localhost'],true)) throw new Exception('El transporte local requiere SMTP de loopback y APP_ENV=local.');
+            $mail->SMTPAuth=false;$mail->SMTPSecure='';$mail->SMTPAutoTLS=false;
+        } else {
+            if (SMTP_USER==='' || SMTP_PASS==='') throw new Exception('Faltan credenciales SMTP.');
+            $mail->SMTPAuth=true;$mail->Username=SMTP_USER;$mail->Password=SMTP_PASS;
+            $mail->SMTPSecure=(int)SMTP_PORT===465?PHPMailer::ENCRYPTION_SMTPS:PHPMailer::ENCRYPTION_STARTTLS;
         }
-
-        // Configuración para Gmail SMTP
-        $mail->isSMTP();
-        $mail->Host       = SMTP_HOST;
-        $mail->SMTPAuth   = true;
-        $mail->Username   = SMTP_USER; 
-        $mail->Password   = SMTP_PASS; 
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = SMTP_PORT;
-        // Sin esto PHPMailer usa ISO-8859-1 y las tildes llegan dañadas
-        $mail->CharSet    = PHPMailer::CHARSET_UTF8;
-        // Por defecto espera 300 s: un SMTP lento dejaría colgado el registro o la recuperación
-        $mail->Timeout    = 10;
-
-        // Remitente y destinatario
-        $mail->setFrom('no-reply@smashcode.edu.co', 'SmashCode SENA');
-        $mail->addAddress($destinatario);
-
-        // Contenido
-        $mail->isHTML(true);
-        $mail->Subject = $asunto;
-        $mail->Body    = $cuerpo;
-        $mail->AltBody = strip_tags($cuerpo);
-
-        $mail->send();
-        return true;
+        $mail->CharSet=PHPMailer::CHARSET_UTF8;$mail->Timeout=10;
+        $from=trim((string)($_ENV['SMTP_FROM_EMAIL'] ?? ''));
+        if ($from==='') $from=SMTP_USER;
+        if ($from==='') $from='no-reply@smashcode.test';
+        $mail->setFrom($from,(string)($_ENV['SMTP_FROM_NAME'] ?? 'SmashCode'));
+        $mail->addAddress($destinatario);$mail->isHTML(true);$mail->Subject=$asunto;$mail->Body=$cuerpo;$mail->AltBody=textoCorreo($cuerpo);
+        $mail->send();return true;
     } catch (Exception $e) {
-        error_log("No se pudo enviar el correo a $destinatario. Error: {$mail->ErrorInfo}");
-        return false;
+        error_log('[Correo] No se pudo completar el envío SMTP: '.$e->getMessage());return false;
     }
 }

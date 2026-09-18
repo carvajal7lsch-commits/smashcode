@@ -242,7 +242,7 @@ class InstructorController extends Controller {
                 $this->celdaCsv($r['modulo_nombre']),
                 $this->celdaCsv('Quiz ' . $r['rap_titulo']),
                 number_format((float) $r['puntaje'], 2, '.', ''),
-                number_format((float) $r['puntaje_minimo'], 2, '.', ''),
+                $r['puntaje_minimo'] === null ? '' : number_format((float) $r['puntaje_minimo'], 2, '.', ''),
                 ((int) $r['aprobado'] === 1) ? 'Si' : 'No',
                 $r['creado_en'],
                 $duracion,

@@ -39,7 +39,7 @@
               <select name="area" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
                 <option value="">Todas las Áreas</option>
                 <?php foreach ($areas as $a): ?>
-                  <option value="<?= $a['id'] ?>" <?= $areaId === $a['id'] ? 'selected' : '' ?>><?= htmlspecialchars($a['nombre']) ?></option>
+                  <option value="<?= $a['id'] ?>" <?= $areaId === $a['id'] ? 'selected' : '' ?>><?= htmlspecialchars($a['nombre']) ?> (<?= (int) $a['total'] ?>)</option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -48,7 +48,7 @@
               <select name="categoria" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
                 <option value="">Todas las Categorías</option>
                 <?php foreach ($categorias as $c): ?>
-                  <option value="<?= $c['id'] ?>" <?= $categoriaId === $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?></option>
+                  <option value="<?= $c['id'] ?>" <?= $categoriaId === $c['id'] ? 'selected' : '' ?>><?= htmlspecialchars($c['nombre']) ?> (<?= (int) $c['total'] ?>)</option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -57,7 +57,7 @@
               <select name="nivel" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--gris-claro); background: var(--bg-tarjeta); color: var(--texto-principal);">
                 <option value="">Todos los Niveles</option>
                 <?php foreach ($niveles as $n): ?>
-                  <option value="<?= $n['id'] ?>" <?= $nivelId === $n['id'] ? 'selected' : '' ?>><?= htmlspecialchars($n['nombre']) ?></option>
+                  <option value="<?= $n['id'] ?>" <?= $nivelId === $n['id'] ? 'selected' : '' ?>><?= htmlspecialchars($n['nombre']) ?> (<?= (int) $n['total'] ?>)</option>
                 <?php endforeach; ?>
               </select>
             </div>
@@ -108,6 +108,16 @@
                         <?php if (!empty($v['traduccion_ejemplo'])): ?>
                           <!-- HU19: traducción del ejemplo -->
                           <small style="color:var(--texto-tenue);"><?= htmlspecialchars($v['traduccion_ejemplo']) ?></small>
+                        <?php endif; ?>
+                        <?php if (!empty($v['etiquetas'])): ?>
+                          <!-- RF-16: etiquetas de búsqueda -->
+                          <div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px;">
+                            <?php foreach (array_slice(array_filter(array_map('trim', explode(',', $v['etiquetas']))), 0, 15) as $etiqueta): ?>
+                              <span style="font-size:0.7rem; font-weight:700; padding:2px 8px; border-radius:999px; background:var(--gris-claro); color:var(--texto-secundario);">
+                                <?= htmlspecialchars($etiqueta) ?>
+                              </span>
+                            <?php endforeach; ?>
+                          </div>
                         <?php endif; ?>
                       </div>
                     </div>
@@ -164,6 +174,7 @@
   function toggleStar(vocabId, btnNode) {
     let formData = new FormData();
     formData.append('vocabulario_id', vocabId);
+    formData.append('csrf_token',<?= json_encode(generarTokenCSRF()) ?>);
 
     fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/marcar-vocabulario', {
       method: 'POST',
@@ -178,6 +189,7 @@
         window.location.href = '<?= PROYECTO_PATH ?>/login';
         return;
       }
+      if (!d.exito) { alert(d.error || 'No se pudo guardar.'); return; }
       if (d.exito) {
         let icon = btnNode.querySelector('i');
         if (d.marcado) {

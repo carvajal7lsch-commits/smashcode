@@ -200,6 +200,19 @@
         </div>
       </div>
 
+      <div class="grupo-input">
+        <label class="label-input">Recurso de ayuda</label>
+        <select class="input-base" id="ej-vocab-ayuda" name="vocab_ayuda_id">
+          <option value="">Sin recurso de ayuda</option>
+          <?php foreach (($vocabularioAyuda ?? []) as $palabra): ?>
+            <option value="<?= htmlspecialchars($palabra['id'], ENT_QUOTES) ?>">
+              <?= htmlspecialchars($palabra['termino_en']) ?> — <?= htmlspecialchars($palabra['termino_es']) ?>
+            </option>
+          <?php endforeach; ?>
+        </select>
+        <small class="form-hint">Opcional. Al fallar, el aprendiz ve esta palabra del módulo para repasar.</small>
+      </div>
+
       <!-- Contenedor dinámico de opciones -->
       <div class="tarjeta" style="background:var(--bg-app); border:1px solid var(--border-color); margin-top:20px; padding:16px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
@@ -263,6 +276,7 @@
     document.getElementById('ej-instrucciones').value = ej.instrucciones || '';
     document.getElementById('ej-max-intentos').value = ej.max_intentos || 3;
     document.getElementById('ej-puntos').value = ej.puntos || 10;
+    document.getElementById('ej-vocab-ayuda').value = ej.vocab_ayuda_id || '';
 
     document.getElementById('contenedor-opciones').innerHTML = '';
     opcionIndex = 0;

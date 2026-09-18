@@ -155,12 +155,11 @@ function normalizarTextoEspanol(string $texto): string {
 }
 
 /**
- * Sanitiza una cadena para prevenir XSS y restaura tildes en español.
+ * Recorta y escapa una cadena para HTML sin modificar su ortografía.
  * @param string $valor Cadena de entrada
- * @return string Cadena segura y normalizada
+ * @return string Cadena escapada
  */
 function limpiar(string $valor): string {
-    $valor = normalizarTextoEspanol($valor);
     return htmlspecialchars(strip_tags(trim($valor)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 }
 
@@ -278,3 +277,12 @@ function detectarGeneroHablante(string $hablante, int $ordenTurno = 1): string {
     return ($ordenTurno % 2 === 1) ? 'male' : 'female';
 }
 
+
+/** Iconos vectoriales decorativos; el texto visible proporciona la etiqueta accesible. */
+function icono_svg(string $nombre,string $clase=''): string {
+    $permitidos=['bolt','book','check','flame','warning','medal','stethoscope','pill','hospital','clipboard','ambulance','activity','lock'];
+    if (!in_array($nombre,$permitidos,true)) $nombre='book';
+    $ruta=htmlspecialchars(PROYECTO_PATH.'/assets/icons/smashcode.svg#'.$nombre,ENT_QUOTES,'UTF-8');
+    $clase=htmlspecialchars('icono-svg '.$clase,ENT_QUOTES,'UTF-8');
+    return '<svg class="'.$clase.'" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="'.$ruta.'"></use></svg>';
+}

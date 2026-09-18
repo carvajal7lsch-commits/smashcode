@@ -75,6 +75,7 @@
   function toggleVocabStar(vocabId, node) {
     let formData = new FormData();
     formData.append('vocabulario_id', vocabId);
+    formData.append('csrf_token',<?= json_encode(generarTokenCSRF()) ?>);
 
     fetch('<?= PROYECTO_PATH ?>/aprendiz/rap/marcar-vocabulario', {
       method: 'POST',
@@ -89,6 +90,7 @@
         window.location.href = '<?= PROYECTO_PATH ?>/login';
         return;
       }
+      if (!d.exito) { alert(d.error || 'No se pudo guardar.'); return; }
       if (d.exito) {
         if (d.marcado) {
           node.className = 'vocab-card-star active';

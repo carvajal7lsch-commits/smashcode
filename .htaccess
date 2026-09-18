@@ -5,6 +5,12 @@
     # Prevenir que se listen los directorios
     Options -Indexes
 
+    # Los archivos internos no pasan por los controles del router.
+    RewriteRule ^(?:database|config|includes|app|vendor|tools|tests)(?:/|$) - [F,L,NC]
+
+    # Nunca servir configuración, historial ni archivos ocultos.
+    RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+
     # Si el archivo o directorio solicitado existe físicamente en el disco, cargarlo directamente
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d

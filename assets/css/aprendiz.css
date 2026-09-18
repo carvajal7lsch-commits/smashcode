@@ -283,7 +283,11 @@
       position: relative;
     }
     .progreso-header-fill::after {
-      content: "⚡";
+      content: "";
+      background-image: url("../icons/bolt.svg");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 14px 14px;
       font-size: 0.8rem;
       position: absolute;
       right: -8px;
@@ -292,7 +296,7 @@
       width: 24px;
       height: 24px;
       border-radius: 50%;
-      background: #ffd900;
+      background-color: #ffd900;
       border: 2px solid #ffffff;
       display: flex;
       align-items: center;

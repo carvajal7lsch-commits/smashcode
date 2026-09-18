@@ -57,6 +57,15 @@
         </div>
       </div>
 
+      <?php if ($credencialesTemporales): ?>
+        <div class="alerta alerta-error" style="border-radius:12px; margin-bottom:20px;">
+          <p>La clave temporal se guardó, pero no se pudo enviar el correo. Entrégala al usuario por un medio seguro. Se muestra una sola vez.</p>
+          <p>Correo: <strong><?= htmlspecialchars($credencialesTemporales['correo'],ENT_QUOTES,'UTF-8') ?></strong></p>
+          <p>Clave temporal: <code data-clave-temporal><?= htmlspecialchars($credencialesTemporales['clave'],ENT_QUOTES,'UTF-8') ?></code></p>
+          <p>El usuario deberá cambiarla al ingresar. Puedes generar otra desde el botón de clave temporal.</p>
+        </div>
+      <?php endif; ?>
+
       <!-- Alertas de éxito / error -->
       <?php $exito = $_GET['exito'] ?? ''; ?>
       <?php $errorMsg = $_GET['error'] ?? ''; ?>
@@ -65,6 +74,10 @@
       <?php endif; ?>
       <?php if ($exito === 'creado'): ?>
         <div class="alerta alerta-exito" style="border-radius:12px;"><i class="fas fa-circle-check"></i> Usuario creado correctamente.</div>
+      <?php elseif ($exito === 'credenciales_enviadas'): ?>
+        <div class="alerta alerta-exito">Clave temporal guardada y enviada al correo del usuario.</div>
+      <?php elseif ($exito === 'correo_pendiente'): ?>
+        <div class="alerta alerta-error">No se pudo enviar la clave temporal. Si ya cerraste el aviso, genera otra con el botón de clave temporal.</div>
       <?php elseif ($exito === 'instructor_creado'): ?>
         <div class="alerta alerta-exito" style="border-radius:12px;"><i class="fas fa-chalkboard-teacher"></i> Cuenta de instructor creada. Se enviaron las credenciales temporales a su correo.</div>
       <?php elseif ($exito === 'actualizado'): ?>
@@ -213,7 +226,14 @@
                       <i class="fas <?= $u['activo'] ? 'fa-user-slash' : 'fa-user-check' ?>" style="font-size:0.8rem;"></i>
                     </button>
                     
-                    <button type="button" class="btn-accion-premium btn-premium-del"
+                    <?php if ($u['activo'] && in_array($u['rol'],['aprendiz','instructor'],true)): ?>
+                    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/clave-temporal" onsubmit="return confirm('Se reemplazará la contraseña y el usuario deberá cambiarla al ingresar. ¿Continuar?')">
+                      <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
+                      <input type="hidden" name="id" value="<?= htmlspecialchars($u['id'],ENT_QUOTES,'UTF-8') ?>">
+                      <button type="submit" class="btn-accion-premium btn-premium-edit" title="Generar clave temporal" aria-label="Generar clave temporal"><i class="fas fa-key"></i></button>
+                    </form>
+                    <?php endif; ?>
+                  <button type="button" class="btn-accion-premium btn-premium-del"
                       style="padding:0; border-radius:10px; width:34px; height:34px; display:inline-flex; align-items:center; justify-content:center;"
                       title="Eliminar (Soft-Delete)"
                       onclick="abrirModalEliminar('<?= $u['id'] ?>', '<?= limpiar($u['nombre_completo']) ?>')">
@@ -292,7 +312,7 @@
                     <span style="color: var(--texto-tenue); display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.02em;">Puntos XP</span>
                     <strong style="color: #FF9600; font-size: 0.82rem; font-weight: 800; display: flex; align-items: center; gap: 4px;">
                       <?php if ($u['rol'] === 'aprendiz'): ?>
-                        🔥 <?= number_format($u['xp_puntos']) ?>
+                        <?= icono_svg('flame') ?> <?= number_format($u['xp_puntos']) ?>
                       <?php else: ?>
                         <span style="color:var(--texto-tenue); font-weight:400;">—</span>
                       <?php endif; ?>
@@ -331,6 +351,13 @@
                     <i class="fas <?= $u['activo'] ? 'fa-user-slash' : 'fa-user-check' ?>" style="font-size:0.8rem;"></i>
                   </button>
                   
+                    <?php if ($u['activo'] && in_array($u['rol'],['aprendiz','instructor'],true)): ?>
+                    <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/clave-temporal" onsubmit="return confirm('Se reemplazará la contraseña y el usuario deberá cambiarla al ingresar. ¿Continuar?')">
+                      <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
+                      <input type="hidden" name="id" value="<?= htmlspecialchars($u['id'],ENT_QUOTES,'UTF-8') ?>">
+                      <button type="submit" class="btn-accion-premium btn-premium-edit" title="Generar clave temporal" aria-label="Generar clave temporal"><i class="fas fa-key"></i></button>
+                    </form>
+                    <?php endif; ?>
                   <button type="button" class="btn-accion-premium btn-premium-del"
                      style="padding:0; border-radius:10px; width:36px; height:36px; display:inline-flex; align-items:center; justify-content:center;"
                      title="Eliminar (Soft-Delete)"
@@ -390,7 +417,7 @@
 <!-- Modal: Eliminar -->
 <div class="modal-fondo" id="modal-eliminar">
   <div class="modal-caja-premium">
-    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:#E11D48; margin-bottom:12px;">⚠️ Confirmar Eliminación</p>
+    <p class="modal-titulo" style="font-size:1.3rem; font-weight:800; color:#E11D48; margin-bottom:12px;"><?= icono_svg('warning') ?> Confirmar eliminación</p>
     <p class="modal-desc" id="modal-eliminar-desc" style="font-size:0.875rem; color:var(--texto-secundario); line-height:1.6; margin-bottom:24px;"></p>
     <form method="POST" action="<?= PROYECTO_PATH ?>/admin/usuarios/eliminar">
       <input type="hidden" name="csrf_token" value="<?= generarTokenCSRF() ?>">
@@ -479,8 +506,8 @@
           <i class="fas fa-graduation-cap icono-input" style="position:absolute; left:14px; top:50%; transform:translateY(-50%); color:var(--texto-tenue); z-index:10;"></i>
           <select id="crear_programa" name="programa_id" class="select-premium" style="width:100%; padding:11px 14px 11px 38px; cursor:pointer; background:var(--fondo-input); color:var(--texto-principal); border:1px solid var(--borde-sutil); border-radius:10px;">
             <option value="">— Sin programa asignado —</option>
-            <?php foreach ($programas as $p): ?>
-              <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>
+            <?php foreach ($programas as $p): if (!$p['activo']) continue; ?>
+              <option value="<?= limpiar($p['id']) ?>" data-inactivo="<?= $p['activo'] ? '0' : '1' ?>"><?= limpiar($p['nombre']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -554,7 +581,7 @@
           <select id="editar-programa" name="programa_id" class="select-premium" style="width:100%; padding:11px 14px 11px 38px; cursor:pointer; background:var(--fondo-input); color:var(--texto-principal); border:1px solid var(--borde-sutil); border-radius:10px;">
             <option value="">— Sin programa asignado —</option>
             <?php foreach ($programas as $p): ?>
-              <option value="<?= limpiar($p['id']) ?>"><?= limpiar($p['nombre']) ?></option>
+              <option value="<?= limpiar($p['id']) ?>" data-inactivo="<?= $p['activo'] ? '0' : '1' ?>"><?= limpiar($p['nombre']) ?></option>
             <?php endforeach; ?>
           </select>
         </div>
@@ -666,7 +693,10 @@
 
     // Preseleccionar programa
     const selPrograma = document.getElementById('editar-programa');
-    if (selPrograma) selPrograma.value = programaId || '';
+    if (selPrograma) {
+      for (const option of selPrograma.options) option.disabled = option.dataset.inactivo === '1' && option.value !== programaId;
+      selPrograma.value = programaId || '';
+    }
 
     adaptarModalEditar(rol);
     document.getElementById('modal-editar-usuario').classList.add('visible');

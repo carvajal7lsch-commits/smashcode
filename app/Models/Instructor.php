@@ -187,17 +187,17 @@ class Instructor extends Model {
                        n.nombre AS modulo_nombre,
                        r.orden AS rap_orden,
                        r.titulo AS rap_titulo,
-                       q.puntaje_minimo,
+                       i.puntaje_minimo_original AS puntaje_minimo,
                        i.puntaje,
                        i.aprobado,
                        i.numero_intento,
                        i.duracion_seg,
                        i.creado_en,
                        (SELECT GROUP_CONCAT(
-                                   CONCAT(p.texto, ' -> ',
+                                   CONCAT(COALESCE(rq.texto_pregunta_original, '[enunciado original no disponible]'), ' -> ',
                                           COALESCE(NULLIF(rq.respuesta_elegida, ''), '(sin responder)'),
                                           ' [', IF(rq.es_correcto = 1, 'correcta', 'incorrecta'), ']')
-                                   ORDER BY p.texto SEPARATOR ' | ')
+                                   ORDER BY COALESCE(rq.texto_pregunta_original,rq.id) SEPARATOR ' | ')
                         FROM respuesta_quiz rq
                         JOIN pregunta p ON p.id = rq.pregunta_id
                         WHERE rq.intento_quiz_id = i.id) AS detalle_respuestas

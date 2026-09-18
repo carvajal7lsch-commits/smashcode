@@ -4,6 +4,8 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\Programa;
+use App\Models\ValidacionUsuario;
+use App\Services\CorreoPlantillas;
 use Firebase\JWT\JWT;
 use Exception;
 
@@ -85,9 +87,11 @@ class AuthController extends Controller {
                 if (!$usuario) {
                     $error = 'Correo o contraseña incorrectos.';
                 } elseif ($usuario['bloqueado']) {
-                    $error = 'Cuenta bloqueada. Revisa tu correo.';
+                    $error = 'Cuenta bloqueada. Usa Recuperar contraseña o contacta al administrador.';
                 } elseif (!$usuario['activo']) {
                     $error = 'Cuenta suspendida. Contacta al administrador.';
+                } elseif ($usuario['contrasena']===null) {
+                    $error='Esta cuenta no tiene una contraseña creada. Elige Continuar con Google o Recuperar contraseña.';
                 } elseif (!password_verify($contrasena, $usuario['contrasena'])) {
                     // Contraseña incorrecta
                     $intentos = $usuario['intentos_fallidos'] + 1;
@@ -99,23 +103,36 @@ class AuthController extends Controller {
                         // Importar la función de envío de correos desde includes
                         if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
                             require_once dirname(__DIR__, 2) . '/includes/correo.php';
-                            enviarCorreo(
-                                $correo,
-                                'Alerta de Seguridad - Cuenta Bloqueada',
-                                '<h1>Cuenta Bloqueada</h1><p>Tu cuenta ha sido bloqueada tras 5 intentos fallidos de inicio de sesión. Por favor, restablece tu contraseña para recuperar el acceso.</p>'
-                            );
+                            try {
+                                $mensaje=CorreoPlantillas::bloqueo($usuario['nombre_completo'],CorreoPlantillas::urlAplicacion('recuperar'));
+                                enviarCorreo($correo,$mensaje['asunto'],$mensaje['html']);
+                            } catch (\Throwable $e) {
+                                error_log('[Correo] No se pudo preparar el aviso de bloqueo: '.$e->getMessage());
+                            }
                         }
                     } else {
                         $error = 'Contraseña incorrecta. Intento ' . $intentos . ' de 5.';
                     }
+                } elseif (!$usuario['correo_verificado']) {
+                    // RF-01: se avisa solo después de acertar la contraseña, para no
+                    // revelarle a un tercero qué correos tienen cuenta sin activar.
+                    $this->userModel->resetearIntentosFallidos($usuario['id']);
+                    $_SESSION['activacion_pendiente'] = [
+                        'id'     => $usuario['id'],
+                        'correo' => $correo,
+                        'nombre' => $usuario['nombre_completo']
+                    ];
+                    $error = 'Tu cuenta todavía no está activada. Revisa el correo que te enviamos y confirma el enlace.';
                 } else {
                     // Autenticación exitosa
+                    unset($_SESSION['activacion_pendiente']);
                     $this->userModel->resetearIntentosFallidos($usuario['id']);
                     session_regenerate_id(true);
                     $_SESSION['usuario_id'] = $usuario['id'];
                     $_SESSION['nombre'] = $usuario['nombre_completo'];
                     $_SESSION['rol'] = $usuario['rol'];
                     $_SESSION['ultima_actividad'] = time();
+                    actualizarHuellaSesion();
 
                     // Generar token JWT para la sesión
                     if (!defined('JWT_SECRET')) {
@@ -180,45 +197,57 @@ class AuthController extends Controller {
         if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
             $error = 'Solicitud inválida. Recarga la página.';
         } else {
-            $nombre = limpiar($_POST['nombre_completo'] ?? '');
-            $correo = limpiar($_POST['correo'] ?? '');
-            $ficha = limpiar($_POST['ficha_sena'] ?? '');
-            $programa = limpiar($_POST['programa_id'] ?? '');
-            $contrasena = $_POST['contrasena'] ?? '';
+            $nombre = ValidacionUsuario::entrada($_POST['nombre_completo'] ?? '');
+            $correo = ValidacionUsuario::entrada($_POST['correo'] ?? '');
+            $ficha = ValidacionUsuario::entrada($_POST['ficha_sena'] ?? '');
+            $programa = ValidacionUsuario::entrada($_POST['programa_id'] ?? '');
+            $contrasena = is_string($_POST['contrasena'] ?? null) ? $_POST['contrasena'] : '';
+            try {
+                $errores=ValidacionUsuario::errores($nombre,$correo,$ficha,'aprendiz',$_POST);
 
-            if (empty($nombre) || empty($correo) || empty($contrasena)) {
-                $error = 'Nombre, correo y contraseña son obligatorios.';
-            } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-                $error = 'El correo no tiene un formato válido.';
-            } elseif (strlen($contrasena) < 8 || !preg_match('/[A-Z]/', $contrasena) || !preg_match('/[0-9]/', $contrasena)) {
-                $error = 'La contraseña debe tener mínimo 8 caracteres, 1 mayúscula y 1 número.';
-            } else {
-                if ($this->userModel->existeCorreo($correo)) {
-                    $error = 'Este correo ya está registrado.';
+                if ($errores) {
+                    $error=implode(' ',$errores);
+                } elseif (!ValidacionUsuario::programaPermitido($programa)) {
+                    $error='Selecciona un programa activo válido.';
+                } elseif (empty($contrasena)) {
+                    $error = 'Nombre, correo y contraseña son obligatorios.';
+                } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                    $error = 'El correo no tiene un formato válido.';
+                } elseif (strlen($contrasena) < 8 || !preg_match('/[A-Z]/', $contrasena) || !preg_match('/[0-9]/', $contrasena)) {
+                    $error = 'La contraseña debe tener mínimo 8 caracteres, 1 mayúscula y 1 número.';
                 } else {
-                    $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
-                    $id = generarUUID();
-                    
-                    if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
-                        // HU16: correo de confirmación. Si el servidor de correo falla, la cuenta
-                        // igual queda creada y activa, y el aviso no promete un correo que no salió.
-                        $exito = $this->enviarCorreoBienvenida($correo, $nombre)
-                            ? '¡Cuenta creada! Te enviamos un correo de confirmación. Ya puedes iniciar sesión.'
-                            : '¡Cuenta creada! Ya puedes iniciar sesión.';
-                        $accion = 'ingresar';
-                        
-                        $this->render('auth/login', [
-                            'accion' => 'ingresar',
-                            'error' => '',
-                            'exito' => $exito,
-                            'programas' => $programas,
-                            'csrf' => $csrf
-                        ]);
-                        return;
+                    if ($this->userModel->existeCorreo($correo)) {
+                        $error = 'Este correo ya está registrado.';
                     } else {
-                        $error = 'Error interno al registrar la cuenta. Intenta más tarde.';
+                        $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
+                        $id = generarUUID();
+                    
+                        if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
+                            // RF-01: la cuenta nace sin verificar y se habilita con el enlace del
+                            // correo. Si el correo no sale (servidor caído o MAIL_ENABLED=false) se
+                            // habilita igual: es la misma regla que ya seguía la bienvenida, y sin
+                            // ella una instalación sin SMTP no dejaría entrar a nadie jamás.
+                            $exito = $this->enviarCorreoActivacion($id, $correo, $nombre)
+                                ? '¡Cuenta creada! Te enviamos un correo para activarla. Revisa tu bandeja y confirma el enlace antes de iniciar sesión.'
+                                : '¡Cuenta creada! Ya puedes iniciar sesión.';
+                            $accion = 'ingresar';
+                        
+                            $this->render('auth/login', [
+                                'accion' => 'ingresar',
+                                'error' => '',
+                                'exito' => $exito,
+                                'programas' => $programas,
+                                'csrf' => $csrf
+                            ]);
+                            return;
+                        } else {
+                            $error = 'Error interno al registrar la cuenta. Intenta más tarde.';
+                        }
                     }
                 }
+            } catch (\Throwable $e) {
+                error_log('[Registro] '.$e->getMessage());
+                $error='No se pudo registrar la cuenta. Revisa los datos e intenta nuevamente.';
             }
         }
 
@@ -232,6 +261,80 @@ class AuthController extends Controller {
     }
 
     /**
+     * RF-01: emite el token de activación y manda el enlace. Devuelve si el correo
+     * salió; el llamador decide qué hacer cuando no. Si no sale, la cuenta se marca
+     * verificada para no dejarla en un limbo del que nadie puede rescatarla.
+     */
+    private function enviarCorreoActivacion(string $usuarioId, string $correo, string $nombre): bool {
+        $rutaCorreo = dirname(__DIR__, 2) . '/includes/correo.php';
+        if (!file_exists($rutaCorreo)) {
+            $this->userModel->marcarCorreoVerificado($usuarioId);
+            return false;
+        }
+        require_once $rutaCorreo;
+
+        try {
+            $token  = bin2hex(random_bytes(32));
+            $expira = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            if (!$this->userModel->crearTokenActivacion($usuarioId, $token, $expira)) {
+                throw new \RuntimeException('No se pudo registrar el token de activación.');
+            }
+
+            $mensaje = CorreoPlantillas::activacion($nombre, CorreoPlantillas::urlAplicacion('activar?token=' . $token));
+            if (enviarCorreo($correo, $mensaje['asunto'], $mensaje['html'])) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            error_log('[Activacion] No se pudo preparar el correo: ' . $e->getMessage());
+        }
+
+        $this->userModel->marcarCorreoVerificado($usuarioId);
+        return false;
+    }
+
+    /**
+     * RF-01: consume el enlace de activación. No revela si el token existió o solo
+     * venció, y siempre devuelve al login con un mensaje claro.
+     */
+    public function activar(): void {
+        $token = is_string($_GET['token'] ?? null) ? trim($_GET['token']) : '';
+
+        if ($token !== '' && $this->userModel->activarCuenta($token)) {
+            $this->redirect('login?exito=' . urlencode('¡Cuenta activada! Ya puedes iniciar sesión.'));
+            return;
+        }
+
+        $this->redirect('login?error=' . urlencode('El enlace de activación es inválido o ya venció. Inicia sesión para pedir uno nuevo.'));
+    }
+
+    /**
+     * RF-01: reenvía el enlace de activación. Solo atiende a quien acaba de acertar
+     * su contraseña en esta misma sesión, así que no sirve para averiguar correos
+     * ajenos ni para inundar de mensajes a nadie.
+     */
+    public function reenviarActivacion(): void {
+        iniciarSesion();
+
+        if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
+            $this->redirect('login?error=' . urlencode('Solicitud inválida. Recarga la página.'));
+            return;
+        }
+
+        $pendiente = $_SESSION['activacion_pendiente'] ?? null;
+        if (!is_array($pendiente) || empty($pendiente['id'])) {
+            $this->redirect('login?error=' . urlencode('Inicia sesión de nuevo para reenviar el enlace de activación.'));
+            return;
+        }
+
+        $enviado = $this->enviarCorreoActivacion($pendiente['id'], $pendiente['correo'], $pendiente['nombre']);
+        unset($_SESSION['activacion_pendiente']);
+
+        $this->redirect('login?' . ($enviado
+            ? 'exito=' . urlencode('Te reenviamos el enlace de activación. Revisa tu correo.')
+            : 'exito=' . urlencode('No pudimos enviar el correo, así que habilitamos tu cuenta. Ya puedes iniciar sesión.')));
+    }
+
+    /**
      * Envía el correo de confirmación de registro (HU16) y devuelve si salió.
      */
     private function enviarCorreoBienvenida(string $correo, string $nombre): bool {
@@ -241,23 +344,20 @@ class AuthController extends Controller {
         }
         require_once $rutaCorreo;
 
-        return enviarCorreo($correo, 'Bienvenido a SmashCode: tu cuenta está activa', $this->cuerpoCorreoBienvenida($nombre));
+        try {
+            return enviarCorreo($correo, 'Tu cuenta en SmashCode está lista', $this->cuerpoCorreoBienvenida($nombre));
+        } catch (\Throwable $e) {
+            error_log('[Correo] No se pudo preparar la bienvenida: '.$e->getMessage());
+            return false;
+        }
     }
 
     /**
      * Cuerpo del correo de bienvenida. $nombre llega ya escapado por limpiar().
-     * Detrás del proxy del VPS el HTTPS lo indica X-Forwarded-Proto.
+     * Usa APP_URL o el esquema del servidor y los proxies configurados.
      */
     private function cuerpoCorreoBienvenida(string $nombre): string {
-        $esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
-            || strtolower($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
-        $enlace = ($esHttps ? 'https://' : 'http://') . ($_SERVER['HTTP_HOST'] ?? 'localhost') . PROYECTO_PATH . '/login';
-
-        return '<h1>¡Bienvenido a SmashCode!</h1>'
-             . '<p>Hola ' . $nombre . ',</p>'
-             . '<p>Tu cuenta de aprendiz quedó creada y activa. Ya puedes iniciar sesión y empezar por el Módulo 1: Getting to Know Other People.</p>'
-             . "<p><a href='" . $enlace . "'>" . $enlace . '</a></p>'
-             . '<p>Si no creaste esta cuenta, ignora este mensaje.</p>';
+        return CorreoPlantillas::bienvenida($nombre,CorreoPlantillas::urlAplicacion('login'))['html'];
     }
 
     /**
@@ -310,6 +410,14 @@ class AuthController extends Controller {
             if (empty($correo) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
                 $error = 'Ingresa un correo electrónico válido.';
             } else {
+                require_once dirname(__DIR__,2).'/includes/correo.php';
+                if (!correoDisponible()) {
+                    $this->render('auth/recuperar', [
+                        'error'=>'La recuperación por correo no está disponible por ahora. Contacta al administrador de tu programa.',
+                        'exito'=>'', 'csrf'=>$csrf
+                    ]);
+                    return;
+                }
                 $usuario = $this->userModel->obtenerPorCorreo($correo);
 
                 if ($usuario) {
@@ -322,24 +430,16 @@ class AuthController extends Controller {
                     
                     $this->userModel->crearTokenRecuperacion($usuario['id'], $token_string, $expira);
 
-                    // Construcción dinámica de la URI
-                    $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https://" : "http://";
-                    $enlace = $protocolo . $_SERVER['HTTP_HOST'] . PROYECTO_PATH . "/restablecer?token=" . $token_string;
-
-                    $cuerpo = "<h1>Recuperación de Contraseña</h1>";
-                    $cuerpo .= "<p>Hola " . limpiar($usuario['nombre_completo']) . ",</p>";
-                    $cuerpo .= "<p>Has solicitado restablecer tu contraseña. Haz clic en el siguiente enlace. Este enlace expira en 24 horas.</p>";
-                    $cuerpo .= "<p><a href='$enlace'>$enlace</a></p>";
-                    $cuerpo .= "<p>Si no fuiste tú, ignora este mensaje.</p>";
-
-                    if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
-                        require_once dirname(__DIR__, 2) . '/includes/correo.php';
-                        enviarCorreo($correo, 'Recupera tu contraseña en SmashCode', $cuerpo);
+                    $enlace=CorreoPlantillas::urlAplicacion('restablecer?token='.rawurlencode($token_string));
+                    $mensaje=CorreoPlantillas::recuperacion($usuario['nombre_completo'],$enlace);
+                    if (file_exists(dirname(__DIR__,2).'/includes/correo.php')) {
+                        require_once dirname(__DIR__,2).'/includes/correo.php';
+                        enviarCorreo($correo,$mensaje['asunto'],$mensaje['html']);
                     }
                 }
                 
                 // Siempre mostramos éxito por seguridad para no revelar si el correo existe
-                $exito = 'Si el correo está registrado, te hemos enviado las instrucciones para restablecer tu contraseña.';
+                $exito = 'Solicitud recibida. Revisa tu correo y la carpeta de spam. Si no recibes el enlace en unos minutos, solicita otro o contacta al administrador.';
             }
         }
 
@@ -513,6 +613,7 @@ class AuthController extends Controller {
 
         $hash = password_hash($claveNueva, PASSWORD_BCRYPT, ['cost' => 12]);
         $this->userModel->actualizarContrasenaYLimpiarFlag($_SESSION['usuario_id'], $hash);
+        actualizarHuellaSesion();
 
         // Redirigir al panel correspondiente con mensaje de éxito
         $this->redirigirPorRol($_SESSION['rol']);
@@ -534,7 +635,7 @@ class AuthController extends Controller {
         }
 
         if (empty(GOOGLE_CLIENT_ID) || empty(GOOGLE_CLIENT_SECRET) || empty(GOOGLE_REDIRECT_URI)) {
-            $this->redirect('login?error=' . urlencode('El inicio de sesión con Google no está configurado. Revisa el archivo .env'));
+            $this->redirect('login?error=' . urlencode('El acceso con Google no está disponible por ahora. Inicia sesión con tu correo y contraseña.'));
             return;
         }
 
@@ -581,13 +682,13 @@ class AuthController extends Controller {
                 $origenState !== '' ? trim($origenState) : 'ninguno',
                 empty($stateRecibido) ? 'vacio' : 'presente'
             ));
-            $this->redirect('login?error=' . urlencode('Solicitud inválida. Vuelve a intentarlo desde el botón de Google.'));
+            $this->redirect('login?error=' . urlencode('Tu solicitud de Google venció o no se pudo validar. Vuelve a elegir Continuar con Google.'));
             return;
         }
 
         // 2. Google devuelve ?error=access_denied si el usuario cancela el consentimiento
         if (!empty($_GET['error'])) {
-            $this->redirect('login?error=' . urlencode('Cancelaste el inicio de sesión con Google.'));
+            $this->redirect('login?error=' . urlencode('Cancelaste el acceso con Google. Puedes intentarlo de nuevo o usar tu correo y contraseña.'));
             return;
         }
 
@@ -641,7 +742,7 @@ class AuthController extends Controller {
                 return;
             }
             if (!empty($usuario['bloqueado'])) {
-                $this->redirect('login?error=' . urlencode('Cuenta bloqueada. Revisa tu correo.'));
+            $this->redirect('login?error=' . urlencode('Cuenta bloqueada. Usa Recuperar contraseña o contacta al administrador.'));
                 return;
             }
         } else {
@@ -830,6 +931,7 @@ class AuthController extends Controller {
         $_SESSION['nombre'] = $usuario['nombre_completo'];
         $_SESSION['rol'] = $usuario['rol'];
         $_SESSION['ultima_actividad'] = time();
+        actualizarHuellaSesion();
 
         // Generar token JWT para la sesión
         if (!defined('JWT_SECRET')) {
@@ -853,5 +955,15 @@ class AuthController extends Controller {
         ];
         $jwt = JWT::encode($payload, $secret_key, 'HS256');
         $_SESSION['jwt_token'] = $jwt;
+    }
+
+    public function csrf(): void {
+        header('Content-Type: application/json');
+        if (!estaAutenticado()) {
+            http_response_code(401);
+            echo json_encode(['exito' => false, 'sesion_expirada' => true]);
+            return;
+        }
+        echo json_encode(['exito' => true, 'csrf_token' => generarTokenCSRF(), 'usuario_id' => $_SESSION['usuario_id']]);
     }
 }

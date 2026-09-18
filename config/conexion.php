@@ -32,6 +32,7 @@ function obtenerConexion(): PDO {
 
     if ($conexion === null) {
         $dsn = 'mysql:host=' . DB_HOST
+             . ';port=' . (defined('DB_PUERTO') ? DB_PUERTO : 3306)
              . ';dbname=' . DB_NOMBRE
              . ';charset=' . DB_CHARSET;
 

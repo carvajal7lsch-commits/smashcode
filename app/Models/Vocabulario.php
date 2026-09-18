@@ -38,11 +38,32 @@ class Vocabulario extends Model {
         return $stmt->fetch() ?: null;
     }
 
+    /**
+     * Normaliza las etiquetas de búsqueda (RF-16): separa por comas, recorta,
+     * descarta vacías y repetidas sin distinguir mayúsculas, y limita el total
+     * para que quepan en la columna. Devuelve null si no queda ninguna.
+     */
+    public static function normalizarEtiquetas(?string $crudas): ?string {
+        $partes = array_filter(array_map('trim', explode(',', (string) $crudas)), fn($e) => $e !== '');
+
+        $unicas = [];
+        foreach ($partes as $etiqueta) {
+            $etiqueta = mb_substr($etiqueta, 0, 40);
+            $clave = mb_strtolower($etiqueta);
+            if (!isset($unicas[$clave])) {
+                $unicas[$clave] = $etiqueta;
+            }
+        }
+
+        $lista = implode(', ', array_slice(array_values($unicas), 0, 15));
+        return $lista === '' ? null : mb_substr($lista, 0, 255);
+    }
+
     public function crear(array $datos): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(
-            'INSERT INTO vocabulario (id, rap_id, termino_en, termino_es, categoria_id, area_clinica_id, transcripcion_ipa, audio_url, imagen_url, oracion_ejemplo, traduccion_ejemplo, nivel_dificultad, activo)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
+            'INSERT INTO vocabulario (id, rap_id, termino_en, termino_es, categoria_id, area_clinica_id, transcripcion_ipa, audio_url, imagen_url, oracion_ejemplo, traduccion_ejemplo, nivel_dificultad, etiquetas, activo)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)'
         );
         return $stmt->execute([
             $datos['id'],
@@ -56,7 +77,8 @@ class Vocabulario extends Model {
             $datos['imagen_url'] ?: null,
             $datos['oracion_ejemplo'] ?: null,
             ($datos['traduccion_ejemplo'] ?? '') ?: null,
-            $datos['nivel_dificultad'] ?: null
+            $datos['nivel_dificultad'] ?: null,
+            self::normalizarEtiquetas($datos['etiquetas'] ?? null)
         ]);
     }
 
@@ -76,7 +98,8 @@ class Vocabulario extends Model {
                 imagen_url = ?, 
                 oracion_ejemplo = ?,
                 traduccion_ejemplo = ?,
-                nivel_dificultad = ?
+                nivel_dificultad = ?,
+                etiquetas = ?
              WHERE id = ?'
         );
         return $stmt->execute([
@@ -90,6 +113,7 @@ class Vocabulario extends Model {
             $datos['oracion_ejemplo'] ?: null,
             ($datos['traduccion_ejemplo'] ?? '') ?: null,
             $datos['nivel_dificultad'] ?: null,
+            self::normalizarEtiquetas($datos['etiquetas'] ?? null),
             $id
         ]);
     }

@@ -17,7 +17,7 @@ class User extends Model {
      */
     public function obtenerPorCorreo(string $correo): ?array {
         $pdo = self::obtenerConexion();
-        $stmt = $pdo->prepare('SELECT id, nombre_completo, contrasena, rol, activo, bloqueado, intentos_fallidos, debe_cambiar_clave FROM usuarios WHERE correo = ? LIMIT 1');
+        $stmt = $pdo->prepare('SELECT id, nombre_completo, contrasena, rol, activo, bloqueado, intentos_fallidos, debe_cambiar_clave, correo_verificado FROM usuarios WHERE correo = ? AND eliminado = 0 LIMIT 1');
         $stmt->execute([$correo]);
         $usuario = $stmt->fetch();
         return $usuario ?: null;
@@ -58,6 +58,54 @@ class User extends Model {
         $pdo = self::obtenerConexion();
         $stmt = $pdo->prepare('INSERT INTO usuarios (id, nombre_completo, correo, contrasena, ficha_sena, programa_id, rol) VALUES (?, ?, ?, ?, ?, ?, "aprendiz")');
         return $stmt->execute([$id, $nombre, $correo, $hashContrasena, $fichaSena ?: null, $programaId ?: null]);
+    }
+
+    /* --------------------------------------------------------
+     * Activación de cuenta por correo (RF-01)
+     * -------------------------------------------------------- */
+
+    /**
+     * Emite un token de activación y anula los anteriores del mismo usuario,
+     * para que reenviar el correo invalide el enlace viejo.
+     */
+    public function crearTokenActivacion(string $usuarioId, string $token, string $expiraEn): bool {
+        $pdo = self::obtenerConexion();
+        $pdo->prepare('UPDATE token_activacion SET usado = 1 WHERE usuario_id = ?')->execute([$usuarioId]);
+        $stmt = $pdo->prepare('INSERT INTO token_activacion (id, usuario_id, token, expira_en) VALUES (?, ?, ?, ?)');
+        return $stmt->execute([generarUUID(), $usuarioId, $token, $expiraEn]);
+    }
+
+    /**
+     * Marca la cuenta como verificada y consume el token, en una sola
+     * transacción: un enlace que no habilita la cuenta no debe gastarse.
+     * Devuelve false si el token no existe, ya se usó o venció.
+     */
+    public function activarCuenta(string $token): bool {
+        $pdo = self::obtenerConexion();
+        try {
+            $pdo->beginTransaction();
+            $stmt = $pdo->prepare('SELECT usuario_id FROM token_activacion WHERE token = ? AND usado = 0 AND expira_en > NOW() LIMIT 1');
+            $stmt->execute([$token]);
+            $usuarioId = $stmt->fetchColumn();
+            if (!$usuarioId) {
+                $pdo->rollBack();
+                return false;
+            }
+            $pdo->prepare('UPDATE usuarios SET correo_verificado = 1 WHERE id = ?')->execute([$usuarioId]);
+            $pdo->prepare('UPDATE token_activacion SET usado = 1 WHERE token = ?')->execute([$token]);
+            $pdo->commit();
+            return true;
+        } catch (\Throwable $e) {
+            if ($pdo->inTransaction()) $pdo->rollBack();
+            error_log('[Activacion] ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /** Deja la cuenta utilizable sin pasar por el correo (ver AuthController). */
+    public function marcarCorreoVerificado(string $usuarioId): bool {
+        $pdo = self::obtenerConexion();
+        return $pdo->prepare('UPDATE usuarios SET correo_verificado = 1 WHERE id = ?')->execute([$usuarioId]);
     }
 
     /* --------------------------------------------------------
@@ -236,14 +284,15 @@ class User extends Model {
      */
     public function actualizarXP(string $id, int $puntos): bool {
         $pdo = self::obtenerConexion();
-        $pdo->beginTransaction();
+        $propia = !$pdo->inTransaction();
+        if ($propia) $pdo->beginTransaction();
         try {
             // Obtener XP actuales
             $stmt = $pdo->prepare('SELECT xp_puntos, nivel_perfil FROM usuarios WHERE id = ? FOR UPDATE');
             $stmt->execute([$id]);
             $user = $stmt->fetch();
             if (!$user) {
-                $pdo->rollBack();
+                if ($propia) $pdo->rollBack();
                 return false;
             }
 
@@ -265,9 +314,10 @@ class User extends Model {
             $nivelAnterior = (int)floor((int)$user['xp_puntos'] / $xpPorNivel) + 1;
             $this->ultimoAscensoNivel = ($nuevoNivel > $nivelAnterior) ? $nuevoNivel : 0;
 
-            $pdo->commit();
+            if ($propia) $pdo->commit();
             return true;
         } catch (Exception $e) {
+            if (!$propia) throw $e;
             $pdo->rollBack();
             error_log('[User Model] Error en actualizarXP: ' . $e->getMessage());
             return false;

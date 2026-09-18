@@ -10,11 +10,24 @@ services:
       - DB_NOMBRE=${DB_NOMBRE}
       - DB_USUARIO=${DB_USUARIO}
       - DB_CLAVE=${DB_CLAVE}
+      # URL pública. Sin ella los enlaces de los correos (activación de cuenta,
+      # recuperación, clave temporal) se arman con el Host de la petición, que
+      # detrás de un proxy no siempre es el dominio real.
+      - APP_URL=${APP_URL}
+      - APP_ENV=${APP_ENV:-production}
       - SMTP_HOST=${SMTP_HOST}
       - SMTP_PORT=${SMTP_PORT}
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
+      - SMTP_FROM_EMAIL=${SMTP_FROM_EMAIL:-}
+      - SMTP_FROM_NAME=${SMTP_FROM_NAME:-SmashCode}
+      - MAIL_TRANSPORT=${MAIL_TRANSPORT:-smtp}
+      # En false el auto-registro deja de exigir activación por correo (RF-01):
+      # sin correo que enviar, la cuenta se habilita sola.
+      - MAIL_ENABLED=${MAIL_ENABLED:-true}
       - JWT_SECRET=${JWT_SECRET}
+      - SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE:-true}
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}

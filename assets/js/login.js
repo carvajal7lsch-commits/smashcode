@@ -1,26 +1,9 @@
 /**
  * login.js — Lógica JS del módulo de autenticación
- * Maneja el cambio de tabs (rol / acción) sin recargar la página.
+ * Maneja el cambio entre iniciar sesión y registrarse sin recargar la página.
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-
-  /* ── Tabs de ROL (Aprendiz / Instructor / Admin) ── */
-  const tabsRol = document.querySelectorAll('.tab-rol');
-  tabsRol.forEach(tab => {
-    tab.addEventListener('click', () => {
-      tabsRol.forEach(t => t.classList.remove('activo'));
-      tab.classList.add('activo');
-
-      /* Instructor y Admin solo tienen formulario de ingresar */
-      if (tab.id !== 'tab-aprendiz') {
-        document.getElementById('btn-registrar').style.display = 'none';
-        activarAccion('ingresar');
-      } else {
-        document.getElementById('btn-registrar').style.display = 'block';
-      }
-    });
-  });
 
   /* ── Tabs de ACCIÓN (Ingresar / Registrarse) ── */
   document.getElementById('btn-ingresar')?.addEventListener('click',  () => activarAccion('ingresar'));

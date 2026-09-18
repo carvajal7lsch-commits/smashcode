@@ -51,6 +51,9 @@
       </div>
 
       <!-- Alertas flash -->
+      <?php if (!empty($error)): ?>
+        <div class="alerta-flash alerta-error" role="alert"><?= $error ?></div>
+      <?php endif; ?>
       <?php if ($exito): ?>
         <div class="alerta-flash alerta-exito" role="alert">
           <i class="fas fa-check-circle"></i> Estado del RAP actualizado correctamente.
@@ -231,7 +234,7 @@
         <div id="modal-warning-completo" style="display:none; margin-bottom:20px; padding:12px 16px; background:rgba(255,150,0,0.08); border:1px solid rgba(255,150,0,0.3); border-radius:12px; display:flex; gap:10px; align-items:center;">
           <i class="fas fa-triangle-exclamation" style="color:#FF9600; font-size:1.2rem;"></i>
           <p style="margin:0; font-size:0.75rem; color:var(--texto-secundario); text-align:left;">
-            ⚠️ <strong>Atención:</strong> Este RAP tiene componentes incompletos. Se recomienda completar todos los componentes antes de publicarlo.
+            <?= icono_svg('warning') ?> <strong>Atención:</strong> Este RAP tiene componentes incompletos. Se recomienda completar todos los componentes antes de publicarlo.
           </p>
         </div>
 
