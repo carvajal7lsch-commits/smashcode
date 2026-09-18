@@ -600,7 +600,11 @@ button, input, select { font-family: var(--fuente); }
 /* ── AUTH ── */
 .pagina-auth {
   position: relative;
-  min-height: 100vh;
+  /* Alto fijo, no mínimo: con min-height la página crecía al abrir la pestaña de
+     registro y el scroll se lo comía el navegador. Con alto fijo el desborde lo
+     absorbe .panel-auth-der, que ya tiene overflow-y:auto. */
+  height: 100vh;
+  height: 100dvh;      /* en móvil 100vh supera el área visible por las barras del navegador */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -657,6 +661,7 @@ button, input, select { font-family: var(--fuente); }
   display: flex;
   width: 100%;
   max-width: 900px;
+  max-height: 100%;   /* nunca más alto que la ventana */
   border-radius: var(--radio);
   overflow: hidden;
   background: rgba(31, 47, 54, 0.65) !important;

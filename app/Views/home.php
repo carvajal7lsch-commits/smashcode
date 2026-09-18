@@ -2,6 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="<?= PROYECTO_PATH ?>/assets/img/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aprender — SmashCode Enfermería SENA</title>
   <meta name="description" content="Aprende inglés clínico con SmashCode, plataforma gamificada para enfermería SENA.">
@@ -60,22 +61,46 @@
       font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 10px;
     }
 
-    /* Path Container */
+    /* Path Container
+       Geometría de los nodos en un solo sitio. El nodo es un círculo y el aro se
+       deriva de él, así el aire es igual por los cuatro lados. Antes el nodo medía
+       70x65 (una elipse) y el aro 98px, con 14px de holgura a los lados pero 16.5
+       arriba y abajo: de ahí que se viera descentrado. */
     .path-container {
       display: flex; flex-direction: column; align-items: center;
-      gap: 60px; padding-bottom: 100px;
+      /* 28px de separación + los 30px que cada nodo reserva para su etiqueta */
+      gap: 28px; padding-bottom: 100px;
+
+      --nodo: 72px;          /* diámetro del círculo */
+      --aro-grosor: 6px;     /* grosor del anillo */
+      --aro-aire: 2px;       /* separación entre el círculo y el anillo */
+      --aro: 88px;           /* 72 + 2·2 de aire + 2·6 de borde */
+      --nodo-sombra: 6px;    /* borde 3D inferior del nodo */
     }
-    .path-item { position: relative; width: 100%; display: flex; justify-content: center; overflow: visible; z-index: 1; }
-    .path-item.current { z-index: 50; }
+    .path-item {
+      position: relative; width: 100%; display: flex; justify-content: center;
+      overflow: visible; z-index: 1;
+      /* Reserva el espacio de la etiqueta: sin esto el aro, que sobresale por
+         debajo del nodo, se le montaba encima. */
+      padding-bottom: 30px;
+    }
+    /* El nodo actual lleva el globo "EMPEZAR" a 45px por encima (más 5 del rebote),
+       así que reserva ese alto. Antes el separador del módulo usaba margin-bottom:-20px
+       y el globo terminaba encima de la píldora del título. */
+    .path-item.current { z-index: 50; margin-top: 26px; }
     .path-item.offset-right { transform: translateX(40px); }
     .path-item.offset-left { transform: translateX(-40px); }
 
     .node-wrapper { position: relative; display: flex; justify-content: center; align-items: center; }
     .node-wrapper::before {
       content: ''; position: absolute; top: 50%; left: 50%;
-      transform: translate(-50%, -50%); width: 82px; height: 82px;
-      background: transparent; border: 8px solid var(--gris-claro); border-radius: 50%;
-      z-index: 0; pointer-events: none;
+      /* El nodo se ve desplazado hacia abajo por su sombra 3D, así que el aro
+         acompaña ese desplazamiento en vez de quedar centrado sobre el círculo. */
+      transform: translate(-50%, calc(-50% + var(--nodo-sombra) / 2));
+      width: var(--aro); height: var(--aro);
+      box-sizing: border-box;                        /* el borde ya no suma al tamaño */
+      background: transparent; border: var(--aro-grosor) solid var(--gris-claro);
+      border-radius: 50%; z-index: 0; pointer-events: none;
     }
     .path-item.current .node-wrapper::before { display: none; }
 
@@ -105,19 +130,56 @@
     }
 
     .node {
-      position: relative; z-index: 1; width: 70px; height: 65px;
+      position: relative; z-index: 1; width: var(--nodo); height: var(--nodo);
       border-radius: 50%; display: flex; align-items: center; justify-content: center;
       font-size: 30px; cursor: pointer; transition: all 0.1s ease;
     }
     .node.star { background: var(--duo-green); color: #fff; box-shadow: 0 6px 0 var(--duo-green-dark); }
     .node.star:hover { transform: translateY(2px); box-shadow: 0 4px 0 var(--duo-green-dark); }
     .node.star:active { transform: translateY(6px); box-shadow: 0 0 0 var(--duo-green-dark); }
-    .node.star-locked { background: var(--gris-claro); color: var(--gris-medio); box-shadow: 0 6px 0 var(--borde-sutil); cursor: not-allowed; }
+    .node.star-locked { background: var(--gris-claro); color: var(--gris-medio); box-shadow: 0 4px 0 var(--borde-sutil); cursor: not-allowed; font-size: 25px; }
+    /* Los momentos bloqueados pesan menos: círculo, aro y sombra más pequeños, para
+       que la vista se vaya a lo que sí está disponible. El aro se encoge con ellos
+       y conserva los mismos 2px de aire. */
+    .path-item:has(.star-locked) { --nodo: 62px; --aro: 78px; --nodo-sombra: 4px; }
     .node.completed { background: var(--duo-green); color: #fff; box-shadow: 0 6px 0 var(--duo-green-dark); }
     .node.chest-complete { background: #ffd700; color: #fff; box-shadow: 0 6px 0 #cc9900; }
     .node.trophy-complete { background: var(--duo-green); color: #fff; box-shadow: 0 6px 0 var(--duo-green-dark); }
 
-    .progress-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; pointer-events: none; }
+    /* Mismo tamaño y mismo desplazamiento que el aro gris, para que el anillo de
+       progreso del momento actual caiga exactamente donde cae el de los demás. */
+    .progress-ring {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, calc(-50% + var(--nodo-sombra) / 2));
+      width: var(--aro); height: var(--aro);
+      z-index: 0; pointer-events: none;
+    }
+
+    /* ── Panel lateral derecho ── */
+    .rango-medalla {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: var(--duo-green); color: #fff;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .insignia-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 800; padding: 5px 10px; border-radius: 999px;
+      background: var(--gris-claro); color: var(--texto-principal);
+    }
+    .insignia-chip i { color: var(--naranja); }
+    .ranking-fila {
+      display: flex; align-items: center; gap: 10px;
+      padding: 7px 0; font-size: 13px; font-weight: 700;
+    }
+    .ranking-fila + .ranking-fila { border-top: 1px solid var(--borde-sutil); }
+    .ranking-puesto {
+      width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+      background: var(--gris-claro); color: var(--texto-tenue);
+      display: flex; align-items: center; justify-content: center; font-size: 11px;
+    }
+    .ranking-yo .ranking-puesto { background: var(--duo-green); color: #fff; }
+    .ranking-nombre { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ranking-xp { color: var(--texto-tenue); font-size: 12px; }
 
     /* Side Column */
     .side-column { width: 350px; flex-shrink: 0; }
@@ -189,6 +251,7 @@
                 $nivelesAgrupados[$nId] = [
                     'id' => $row['id'],
                     'nombre' => $row['nombre'],
+                    'descripcion' => $row['descripcion'] ?? '',
                     'orden' => $row['orden'] ?? 1,
                     'umbral' => $row['umbral_desbloqueo'],
                     'raps' => []
@@ -244,7 +307,9 @@
                 </div>
                 <h1 id="header-title"><?= limpiar($seccionActiva['nombre']) ?></h1>
             </div>
-            <button class="guide-btn"><i class="fas fa-book-open"></i> GUÍA</button>
+            <button class="guide-btn" type="button" onclick="verGuiaModulo()">
+                <i class="fas fa-book-open"></i> GUÍA
+            </button>
         </div>
 
         <div class="path-container" style="padding-bottom: 40px;">
@@ -280,7 +345,7 @@
                 if ($estadoRap !== 'completado') $todosCompletadosGlobal = false;
             ?>
                     <!-- ── Encabezado de sección del Módulo / Nivel ── -->
-                    <div style="width:100%; text-align:center; margin-bottom:-20px; margin-top:24px;">
+                    <div style="width:100%; text-align:center; margin-bottom:4px; margin-top:24px;">
                         <span style="
                             display: inline-block;
                             background: var(--blanco);
@@ -380,23 +445,26 @@
                             </div>
 
                             <?php if ($isActive && $autenticado):
-                                $radius        = 45;
+                                // 41 = (88 del aro − 6 de trazo) / 2, para que el anillo de
+                                // progreso pise exactamente el mismo sitio que el aro gris.
+                                $radius        = 41;
                                 $circumference = 2 * pi() * $radius;
                                 $dashoffset    = $circumference - ($pctRap / 100) * $circumference;
                             ?>
-                            <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="var(--gris-claro)" stroke-width="8"/>
-                                <circle cx="50" cy="50" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="8"
+                            <svg class="progress-ring" width="88" height="88" viewBox="0 0 88 88">
+                                <circle cx="44" cy="44" r="<?= $radius ?>" fill="none" stroke="var(--gris-claro)" stroke-width="6"/>
+                                <circle cx="44" cy="44" r="<?= $radius ?>" fill="none" stroke="#58cc02" stroke-width="6"
                                         stroke-dasharray="<?= $circumference ?>" stroke-dashoffset="<?= $dashoffset ?>"
-                                        stroke-linecap="round" transform="rotate(-90 50 50)"/>
+                                        stroke-linecap="round" transform="rotate(-90 44 44)"/>
                             </svg>
                             <?php endif; ?>
                         </div>
 
-                        <!-- Label del momento -->
+                        <!-- Label del momento: vive dentro del padding reservado por
+                             .path-item, así el aro nunca se le monta encima -->
                         <div style="
                             position: absolute;
-                            bottom: -22px;
+                            bottom: 2px;
                             left: 50%;
                             transform: translateX(-50%);
                             font-size: 10px;
@@ -446,39 +514,74 @@
       <!-- PANEL LATERAL DERECHO -->
       <aside class="side-column" aria-label="Panel de gamificación">
           
+        <!-- Solo indicadores con respaldo real: XP acumulado, racha de días y rango
+             clínico. Antes había bandera, gemas y vidas fijas de una maqueta. -->
         <div class="right-stats-bar">
-            <div class="stat"><img src="https://flagcdn.com/us.svg" width="25" alt="EN" style="border-radius:4px;"></div>
-            <div class="stat fire"><i class="fas fa-fire"></i> <span>0</span></div>
-            <div class="stat gem"><i class="fas fa-gem"></i> <span>0</span></div>
-            <div class="stat xp" style="color:var(--duo-blue);"><i class="fas fa-bolt"></i> <span><?= $autenticado ? formatearXP($usuario['xp_puntos']) : '0' ?> XP</span></div>
-            <div class="stat heart"><i class="fas fa-heart"></i> <span>5</span></div>
-        </div>
-
-        <div class="card promo-card">
-            <h3>¡Compite en las Ligas!</h3>
-            <div class="promo-content">
-                <div class="lock-icon"><i class="fas fa-lock"></i></div>
-                <p style="font-size:14px;color:var(--texto-tenue);">Completa lecciones para empezar a competir</p>
+            <div class="stat xp" title="Puntos de experiencia acumulados">
+                <i class="fas fa-bolt"></i> <span><?= $autenticado ? formatearXP($usuario['xp_puntos']) : '0' ?> XP</span>
+            </div>
+            <div class="stat fire" title="Días seguidos practicando">
+                <i class="fas fa-fire"></i> <span><?= (int) $racha ?> <?= (int) $racha === 1 ? 'día' : 'días' ?></span>
             </div>
         </div>
 
-        <div class="card daily-card">
+        <?php if ($autenticado): ?>
+        <div class="card">
             <div class="card-header">
-                <h3>Desafíos del día</h3>
-                <a href="#">VER TODOS</a>
+                <h3>Tu rango clínico</h3>
+                <a href="<?= PROYECTO_PATH ?>/aprendiz/perfil">VER PERFIL</a>
             </div>
-            <div class="challenge-item">
-                <i class="fas fa-bolt"></i>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+                <div class="rango-medalla"><i class="fas fa-user-nurse"></i></div>
                 <div style="flex:1;">
-                    <p style="font-size:14px;font-weight:600;margin-bottom:4px;">Gana 10 XP</p>
-                    <div class="mini-progress-bar">
-                        <div class="mini-progress-fill" style="width: <?= $autenticado ? min(100,($usuario['xp_puntos']??0)/10*100) : 0 ?>%;"></div>
-                        <i class="fas fa-box"></i>
-                    </div>
-                    <div style="font-size:11px;color:var(--texto-tenue);margin-top:4px;"><?= $autenticado ? min(10,$usuario['xp_puntos']??0) : 0 ?> / 10</div>
+                    <p style="font-size:15px; font-weight:800; margin-bottom:2px;"><?= htmlspecialchars($rango['nombre']) ?></p>
+                    <p style="font-size:12px; color:var(--texto-tenue);">Nivel <?= (int) $rango['nivel'] ?> · <?= formatearXP($usuario['xp_puntos']) ?> XP</p>
                 </div>
             </div>
         </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Insignias</h3>
+                <a href="<?= PROYECTO_PATH ?>/aprendiz/perfil">VER TODAS</a>
+            </div>
+            <p style="font-size:13px; color:var(--texto-tenue); margin:10px 0 12px;">
+                <?= count($insigniasGanadas) ?> de <?= (int) $totalInsignias ?> conseguidas
+            </p>
+            <?php if ($insigniasGanadas): ?>
+                <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                    <?php foreach (array_slice($insigniasGanadas, 0, 4) as $insignia): ?>
+                        <span class="insignia-chip" title="<?= htmlspecialchars($insignia['descripcion'] ?? '') ?>">
+                            <i class="fas fa-medal"></i> <?= htmlspecialchars($insignia['nombre']) ?>
+                        </span>
+                    <?php endforeach; ?>
+                </div>
+            <?php else: ?>
+                <p style="font-size:13px; color:var(--texto-tenue);">Aprueba un quiz con 90% o más para conseguir la primera.</p>
+            <?php endif; ?>
+        </div>
+
+        <?php if (count($leaderboard) > 1): ?>
+        <div class="card">
+            <div class="card-header">
+                <h3>Ranking de la semana</h3>
+                <a href="<?= PROYECTO_PATH ?>/aprendiz/leaderboard">VER TODO</a>
+            </div>
+            <p style="font-size:12px; color:var(--texto-tenue); margin:8px 0 12px;">
+                Cuenta desde el lunes <?= htmlspecialchars($inicioSemana) ?>
+            </p>
+            <?php foreach (array_slice($leaderboard, 0, 3) as $i => $fila):
+                    $esYo = $fila['id'] === ($usuario['id'] ?? '');
+            ?>
+                <div class="ranking-fila<?= $esYo ? ' ranking-yo' : '' ?>">
+                    <span class="ranking-puesto"><?= $i + 1 ?></span>
+                    <span class="ranking-nombre"><?= htmlspecialchars($fila['nombre_completo']) ?><?= $esYo ? ' (tú)' : '' ?></span>
+                    <span class="ranking-xp"><?= (int) $fila['xp_semana'] ?> XP</span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+        <?php endif; ?>
 
         <?php if (!$autenticado): ?>
         <div class="card signup-card">
@@ -494,11 +597,78 @@
 </div><!-- /contenedor-app -->
 
 <script>
+  /* Ficha del módulo (botón GUÍA). Antes el botón existía pero no hacía nada:
+     venía de la maqueta y nunca se le conectó contenido. Ahora resume de qué
+     trata el módulo, qué RAPs cubre y qué se hace en cada momento. */
+  const GUIA_MODULO = <?= json_encode([
+      'nombre'      => $seccionActiva['nombre'],
+      'descripcion' => $seccionActiva['descripcion'] ?? '',
+      'progreso'    => round((float) $seccionActiva['progreso_promedio']),
+      'raps'        => array_map(fn($r) => $r['titulo'], $seccionActiva['raps']),
+  ], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+
+  const MOMENTOS_GUIA = [
+    ['fa-gamepad',     'Warm-Up',    'Repasas el vocabulario del módulo con un juego de emparejar.'],
+    ['fa-book-reader', 'Absorption', 'Ves la explicación gramatical y el diálogo clínico en contexto.'],
+    ['fa-dumbbell',    'Practice',   'Resuelves los ejercicios: completar, dictado, arrastrar y role-play.'],
+    ['fa-flag-checkered', 'Quiz',    'Presentas la evaluación del RAP. Necesitas el puntaje mínimo para aprobarlo.']
+  ];
+
+  function verGuiaModulo() {
+    const esc = (t) => String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+    let html = '';
+
+    if (GUIA_MODULO.descripcion) {
+      html += `<p style="margin-bottom:16px;">${esc(GUIA_MODULO.descripcion)}</p>`;
+    }
+
+    if (GUIA_MODULO.raps && GUIA_MODULO.raps.length) {
+      html += `<div style="font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-bottom:6px;">
+                 Contenido del módulo</div>
+               <ul style="margin:0 0 16px 18px;padding:0;list-style:disc;">` +
+        GUIA_MODULO.raps.map(r => `<li style="margin-bottom:3px;">${esc(r)}</li>`).join('') +
+        `</ul>`;
+    }
+
+    html += `<div style="font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em;opacity:.7;margin-bottom:8px;">
+               Cómo avanzas</div>`;
+    html += MOMENTOS_GUIA.map(([icono, nombre, texto], i) => `
+      <div style="display:flex;gap:11px;align-items:flex-start;margin-bottom:11px;">
+        <div style="width:28px;height:28px;border-radius:50%;flex-shrink:0;background:var(--duo-green);
+                    color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;">
+          <i class="fas ${icono}"></i>
+        </div>
+        <div>
+          <div style="font-weight:800;font-size:.86rem;">M${i + 1}: ${esc(nombre)}</div>
+          <div style="font-size:.82rem;opacity:.85;">${esc(texto)}</div>
+        </div>
+      </div>`).join('');
+
+    html += `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--borde-sutil);
+                         font-size:.84rem;font-weight:700;">
+               Llevas ${GUIA_MODULO.progreso}% de este módulo
+             </div>`;
+
+    Avisos.dialogo({ titulo: GUIA_MODULO.nombre, html: html, boton: 'Cerrar' });
+  }
+
   /* Mostrar mensaje cuando el aprendiz intenta acceder a un nivel bloqueado */
   function mostrarMensajeBloqueado(umbral, moduloBloqueado) {
-    alert(moduloBloqueado ? `Este módulo está bloqueado. Completa el módulo anterior con al menos ${umbral}% de progreso.` : 'Completa el momento anterior antes de continuar.');
+    Avisos.dialogo({
+      icono: 'fa-lock',
+      color: 'var(--gris-medio)',
+      titulo: moduloBloqueado ? 'Módulo bloqueado' : 'Aún no disponible',
+      mensaje: moduloBloqueado
+        ? `Completa el módulo anterior con al menos ${umbral}% de progreso para abrir este.`
+        : 'Termina el momento anterior para continuar con este.',
+      boton: 'Entendido'
+    });
   }
 </script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
+  <script src="<?= PROYECTO_PATH ?>/assets/js/avisos.js"></script>
 </body>
 </html>

@@ -24,6 +24,7 @@ $opcionesEstado = [
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="<?= PROYECTO_PATH ?>/assets/img/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Resultados de Quizzes — Instructor SmashCode</title>
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">

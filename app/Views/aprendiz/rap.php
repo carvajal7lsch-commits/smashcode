@@ -2,6 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="<?= PROYECTO_PATH ?>/assets/img/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= limpiar($rap['titulo']) ?> — SmashCode</title>
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
@@ -776,7 +777,7 @@
   // --- NAVEGACIÓN ENTRE TABS ---
   function switchTab(num) {
     if (num > maxTabUnlocked) {
-      alert("Este momento está bloqueado. Completa el momento actual para desbloquear el siguiente.");
+      Avisos.error("Este momento está bloqueado. Completa el momento actual para desbloquear el siguiente.");
       return;
     }
     document.querySelectorAll('.moment-tab').forEach(el => el.classList.remove('active'));
@@ -860,8 +861,8 @@
 
   async function reintentarEnEspera() {
     try {
-      if (!(await actualizarCsrf())) { alert('Inicia sesión antes de guardar.'); return; }
-    } catch(error) { alert(error.message); return; }
+      if (!(await actualizarCsrf())) { Avisos.error('Inicia sesión antes de guardar.'); return; }
+    } catch(error) { Avisos.error(error.message); return; }
     let pendientes = peticionesEnEspera;
     peticionesEnEspera = [];
     let aviso = document.getElementById('aviso-sesion-expirada');
@@ -893,7 +894,7 @@
 
     return enviarAlServidor('/aprendiz/rap/guardar-progreso', formData)
       .then(data=>{ if(!data.exito) throw new Error(data.error || 'No se guardó el avance.'); pintarProgreso(data.porcentaje); return data; })
-      .catch(error=>{ alert(error.message || 'No se guardó el avance. Revisa la conexión.'); throw error; });
+      .catch(error=>{ Avisos.error(error.message || 'No se guardó el avance. Revisa la conexión.'); throw error; });
   }
 
   // --- AUDIO / SPEECH SYNTHESIS CON DIFERENCIACIÓN CLARA HOMBRE / MUJER ---
@@ -1599,7 +1600,7 @@
     }
 
     if (!ans) {
-      alert("Por favor selecciona o ingresa una respuesta primero.");
+      Avisos.error("Por favor selecciona o ingresa una respuesta primero.");
       return;
     }
 
@@ -1615,7 +1616,7 @@
         if (!ans.isCorrect && !ans.retro) ans.retro = 'Respuesta incorrecta.';
       }
     } catch(error) {
-      alert(error.message || 'No se pudo guardar la respuesta. Revisa la conexión.');
+      Avisos.error(error.message || 'No se pudo guardar la respuesta. Revisa la conexión.');
       box.querySelectorAll('.option-item,.word-chip,.matching-card').forEach(node=>node.style.pointerEvents='auto');
       if(pendingInput) pendingInput.disabled=false;
       let saveAgain=document.getElementById('save-again-'+exIdx);
@@ -1849,7 +1850,7 @@
 
   // --- MOMENTO 4: QUIZ EVALUATION CLOSURE ---
   async function startQuiz() {
-    if(totalQuizPreguntas===0) { alert('Este quiz todavía no tiene preguntas.'); return; }
+    if(totalQuizPreguntas===0) { Avisos.error('Este quiz todavía no tiene preguntas.'); return; }
     const button=document.getElementById('btn-comenzar-quiz'); button.disabled=true;
     try {
       const datos=new FormData(); datos.append('rap_id',rapId); datos.append('preguntas_ids',JSON.stringify(quizPreguntasIds));
@@ -1857,7 +1858,7 @@
       if(!result.exito) throw new Error(result.error);
       sesionQuizId=result.sesion_quiz_id || null;
       quizTimeRemaining=result.segundos_restantes ?? quizLimiteSeg;
-    } catch(error) { alert(error.message || 'No se pudo comenzar el quiz.'); button.disabled=false; return; }
+    } catch(error) { Avisos.error(error.message || 'No se pudo comenzar el quiz.'); button.disabled=false; return; }
     button.disabled=false;
     document.getElementById('quiz-intro-box').style.display = 'none';
     document.getElementById('quiz-player-box').style.display = 'block';
@@ -1960,14 +1961,14 @@
         showQuizResults(data);
       } else if (data.bloqueado) {
         // HU22: el servidor rechazó el intento; la página vuelve con el aviso de bloqueo
-        alert(data.error);
+        Avisos.error(data.error);
         window.location.reload();
       } else {
-        alert("Ocurrió un error al procesar el Quiz: " + data.error);
+        Avisos.error("Ocurrió un error al procesar el Quiz: " + data.error);
       }
     })
     .catch(() => {
-      alert("No se pudo enviar el quiz. Revisa tu conexión y vuelve a presentarlo.");
+      Avisos.error("No se pudo enviar el quiz. Revisa tu conexión y vuelve a presentarlo.");
     }).finally(()=>{enviandoQuiz=false;});
   }
 
@@ -2221,5 +2222,6 @@
 </script>
 
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
+  <script src="<?= PROYECTO_PATH ?>/assets/js/avisos.js"></script>
 </body>
 </html>

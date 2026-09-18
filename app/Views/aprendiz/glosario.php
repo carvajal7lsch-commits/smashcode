@@ -2,6 +2,7 @@
 <html lang="es" data-theme="dark">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="<?= PROYECTO_PATH ?>/assets/img/favicon.svg">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Glosario Médico — SmashCode</title>
   <link rel="stylesheet" href="<?= PROYECTO_PATH ?>/assets/css/estilos.css?v=<?= time() ?>">
@@ -185,11 +186,11 @@
     .then(d => {
       if (d.sesion_expirada) {
         // Aquí no hay avance que perder: basta con volver a iniciar sesión
-        alert(d.error);
+        Avisos.error(d.error);
         window.location.href = '<?= PROYECTO_PATH ?>/login';
         return;
       }
-      if (!d.exito) { alert(d.error || 'No se pudo guardar.'); return; }
+      if (!d.exito) { Avisos.error(d.error || 'No se pudo guardar.'); return; }
       if (d.exito) {
         let icon = btnNode.querySelector('i');
         if (d.marcado) {
@@ -240,5 +241,6 @@
   });
 </script>
 <script src="<?= PROYECTO_PATH ?>/assets/js/tema.js"></script>
+  <script src="<?= PROYECTO_PATH ?>/assets/js/avisos.js"></script>
 </body>
 </html>
