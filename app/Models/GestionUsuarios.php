@@ -116,9 +116,14 @@ class GestionUsuarios extends Model {
         return $stmt->execute([$id, $nombre, $correo, $hash, $rol, $programaId, $ficha]);
     }
 
-    /**
-     * Actualiza los datos de un usuario (sin tocar la contraseña).
-     */
+    /** Restablece acceso con una clave temporal y cambio obligatorio. */
+    public function restablecerClaveTemporal(string $id,string $hash): bool {
+        $stmt=self::obtenerConexion()->prepare("UPDATE usuarios SET contrasena=?,debe_cambiar_clave=1,intentos_fallidos=0,bloqueado=0 WHERE id=? AND activo=1 AND eliminado=0 AND rol IN ('aprendiz','instructor')");
+        $stmt->execute([$hash,$id]);
+        return $stmt->rowCount()===1;
+    }
+
+    /** Actualiza datos sin modificar la contraseña. */
     public function actualizar(string $id, string $nombre, string $correo, string $rol, ?string $ficha, ?string $programaId): bool {
         $pdo  = self::obtenerConexion();
         $stmt = $pdo->prepare(

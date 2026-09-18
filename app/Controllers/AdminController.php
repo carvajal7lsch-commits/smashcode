@@ -6,6 +6,7 @@ use App\Models\Admin;
 use App\Models\GestionUsuarios;
 use App\Models\Nivel;
 use App\Models\Programa;
+use App\Models\ValidacionUsuario;
 use App\Models\User;
 use App\Models\GamificacionConfig;
 
@@ -73,10 +74,13 @@ class AdminController extends Controller {
         $total  = $this->usuarioModel->contarTotal($busqueda, $rol);
         $paginas = (int) ceil($total / $porPagina);
         $totalUsuarios = $this->adminModel->obtenerTotalUsuarios();
-        $programas     = $this->programaModel->obtenerTodos();
+        $programas     = $this->programaModel->listarAdmin();
 
+        $credencialesTemporales = $_SESSION['credenciales_temporales'] ?? null;
+        unset($_SESSION['credenciales_temporales']);
+        header('Cache-Control: no-store, private');
         $this->render('admin/usuarios', compact(
-            'lista', 'total', 'paginas', 'pagina', 'busqueda', 'rol', 'totalUsuarios', 'programas'
+            'lista', 'total', 'paginas', 'pagina', 'busqueda', 'rol', 'totalUsuarios', 'programas', 'credencialesTemporales'
         ));
     }
 
@@ -104,88 +108,60 @@ class AdminController extends Controller {
             $this->redirect('admin/usuarios');
         }
 
-        $nombre     = limpiar($_POST['nombre_completo'] ?? '');
-        $correo     = limpiar($_POST['correo'] ?? '');
-        $rol        = limpiar($_POST['rol'] ?? 'aprendiz');
-        $ficha      = limpiar($_POST['ficha_sena'] ?? '');
-        $programaId = limpiar($_POST['programa_id'] ?? '');
-        $contrasena = $_POST['contrasena'] ?? '';
+        $nombre     = ValidacionUsuario::entrada($_POST['nombre_completo'] ?? '');
+        $correo     = ValidacionUsuario::entrada($_POST['correo'] ?? '');
+        $rol        = ValidacionUsuario::entrada($_POST['rol'] ?? 'aprendiz');
+        $ficha      = ValidacionUsuario::entrada($_POST['ficha_sena'] ?? '');
+        $programaId = ValidacionUsuario::entrada($_POST['programa_id'] ?? '');
+        $contrasena = is_string($_POST['contrasena'] ?? null) ? $_POST['contrasena'] : '';
+        try {
 
-        // Validaciones comunes
-        $errores = [];
-        if (empty($nombre))                                $errores[] = 'El nombre es obligatorio.';
-        if (!filter_var($correo, FILTER_VALIDATE_EMAIL))   $errores[] = 'Correo inválido.';
+            // Validaciones comunes
+            $errores = ValidacionUsuario::errores($nombre,$correo,$ficha,$rol,$_POST);
+            if (!ValidacionUsuario::programaPermitido($programaId)) $errores[]='Selecciona un programa activo válido.';
 
-        // La contraseña solo es obligatoria para el administrador
-        if ($rol === 'admin') {
-            if (strlen($contrasena) < 8)                   $errores[] = 'La contraseña debe tener mínimo 8 caracteres.';
-            if (!preg_match('/[A-Z]/', $contrasena))       $errores[] = 'Incluye al menos 1 mayúscula.';
-            if (!preg_match('/[0-9]/', $contrasena))       $errores[] = 'Incluye al menos 1 número.';
-        }
-
-        if ($errores) {
-            $this->redirect('admin/usuarios?error=' . urlencode(implode(' ', $errores)));
-            return;
-        }
-
-        if ($this->usuarioModel->existeCorreo($correo)) {
-            $this->redirect('admin/usuarios?error=' . urlencode('Ese correo ya está registrado en el sistema.'));
-            return;
-        }
-
-        $id = generarUUID();
-
-        // ── FLUJO APRENDIZ / INSTRUCTOR: clave temporal + correo automático ──
-        if ($rol === 'instructor' || $rol === 'aprendiz') {
-            $claveTemp = $this->generarClaveTemp();
-            $hash = password_hash($claveTemp, PASSWORD_BCRYPT, ['cost' => 12]);
-
-            $this->usuarioModel->crearConClaveTemporal($id, $nombre, $correo, $hash, $rol, $programaId ?: null, $ficha ?: null);
-
-            // Resolver nombre del programa para el correo
-            $nombrePrograma = '';
-            if ($programaId) {
-                foreach ($this->programaModel->obtenerTodos() as $p) {
-                    if ($p['id'] === $programaId) { $nombrePrograma = $p['nombre']; break; }
-                }
+            // La contraseña solo es obligatoria para el administrador
+            if ($rol === 'admin') {
+                if (strlen($contrasena) < 8)                   $errores[] = 'La contraseña debe tener mínimo 8 caracteres.';
+                if (!preg_match('/[A-Z]/', $contrasena))       $errores[] = 'Incluye al menos 1 mayúscula.';
+                if (!preg_match('/[0-9]/', $contrasena))       $errores[] = 'Incluye al menos 1 número.';
             }
 
-            $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
-            $urlLogin  = $protocolo . $_SERVER['HTTP_HOST'] . PROYECTO_PATH . '/login';
-            
-            $rolTexto = ucfirst($rol);
-
-            $asunto = '¡Bienvenido a SmashCode! Tus credenciales de acceso';
-            $cuerpo  = "<h2 style='color:#58CC02;'>¡Bienvenido(a) al equipo SmashCode!</h2>";
-            $cuerpo .= "<p>Hola <strong>" . htmlspecialchars($nombre) . "</strong>,</p>";
-            $cuerpo .= "<p>El administrador ha creado tu cuenta como <strong>{$rolTexto}</strong> en la plataforma SmashCode SENA.</p>";
-            $cuerpo .= "<p>Para acceder, utiliza las siguientes credenciales temporales. Por tu seguridad, el sistema te forzará a cambiarlas en tu primer inicio de sesión.</p>";
-            $cuerpo .= "<table style='border-collapse:collapse; font-size:1rem; margin:16px 0; background:#f4f4f4; padding:12px; border-radius:8px;'>";
-            $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Correo:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($correo) . "</td></tr>";
-            $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Contraseña Temporal:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($claveTemp) . "</td></tr>";
-            if ($ficha)         $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Ficha SENA:</td><td style='padding:8px 0;'>" . htmlspecialchars($ficha) . "</td></tr>";
-            if ($nombrePrograma) $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Programa asignado:</td><td style='padding:8px 0;'>" . htmlspecialchars($nombrePrograma) . "</td></tr>";
-            $cuerpo .= "</table>";
-            $cuerpo .= "<p style='margin-top:24px;'><a href='{$urlLogin}' style='display:inline-block; background:#58CC02; color:#fff; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:700;'>Ir a Iniciar Sesión</a></p>";
-            $cuerpo .= "<hr><p style='font-size:0.8rem; color:#aaa; margin-top:24px;'>Si tienes algún problema para acceder, contacta al administrador del sistema.</p>";
-
-            if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
-                require_once dirname(__DIR__, 2) . '/includes/correo.php';
-                enviarCorreo($correo, $asunto, $cuerpo);
+            if ($errores) {
+                $this->redirect('admin/usuarios?error=' . urlencode(implode(' ', $errores)));
+                return;
             }
 
+            if ($this->usuarioModel->existeCorreo($correo)) {
+                $this->redirect('admin/usuarios?error=' . urlencode('Ese correo ya está registrado en el sistema.'));
+                return;
+            }
+
+            $id = generarUUID();
+
+            // ── FLUJO APRENDIZ / INSTRUCTOR: clave temporal + correo automático ──
+            if ($rol === 'instructor' || $rol === 'aprendiz') {
+                $claveTemp = $this->generarClaveTemp();
+                $hash = password_hash($claveTemp, PASSWORD_BCRYPT, ['cost' => 12]);
+
+                $this->usuarioModel->crearConClaveTemporal($id, $nombre, $correo, $hash, $rol, $programaId ?: null, $ficha ?: null);
+
+                $this->entregarCredencialesTemporales($nombre,$correo,$rol,$ficha,$programaId,$claveTemp);
+                return;
+            }
+
+            // ── FLUJO ADMIN: contraseña ingresada por el admin ──
+            $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
+            // Admins no llevan ficha ni programa
+            $fichaFinal     = ($rol === 'admin') ? null : ($ficha ?: null);
+            $programaFinal  = ($rol === 'admin') ? null : ($programaId ?: null);
+
+            $this->usuarioModel->crear($id, $nombre, $correo, $hash, $rol, $fichaFinal, $programaFinal);
             $this->redirect('admin/usuarios?exito=creado');
-            return;
+        } catch (\Throwable $e) {
+            error_log('[Alta de usuario] '.$e->getMessage());
+            $this->redirect('admin/usuarios?error='.urlencode('No se pudo crear la cuenta. Revisa los datos e intenta nuevamente.'));
         }
-
-        // ── FLUJO ADMIN: contraseña ingresada por el admin ──
-        $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
-        // Admins no llevan ficha ni programa
-        $fichaFinal     = ($rol === 'admin') ? null : ($ficha ?: null);
-        $programaFinal  = ($rol === 'admin') ? null : ($programaId ?: null);
-
-        $this->usuarioModel->crear($id, $nombre, $correo, $hash, $rol, $fichaFinal, $programaFinal);
-        $this->redirect('admin/usuarios?exito=creado');
     }
 
     /**
@@ -200,7 +176,7 @@ class AdminController extends Controller {
         }
 
         $totalUsuarios = $this->adminModel->obtenerTotalUsuarios();
-        $programas     = $this->programaModel->obtenerTodos();
+        $programas     = $this->programaModel->listarAdmin();
         $this->render('admin/usuario_form', [
             'usuario'       => $usuario,
             'totalUsuarios' => $totalUsuarios,
@@ -219,28 +195,30 @@ class AdminController extends Controller {
             $this->redirect('admin/usuarios');
         }
 
-        $id         = limpiar($_POST['id'] ?? '');
-        $nombre     = limpiar($_POST['nombre_completo'] ?? '');
-        $correo     = limpiar($_POST['correo'] ?? '');
-        $rol        = limpiar($_POST['rol'] ?? 'aprendiz');
-        $ficha      = limpiar($_POST['ficha_sena'] ?? '');
-        $programaId = limpiar($_POST['programa_id'] ?? '');
+        $id         = ValidacionUsuario::entrada($_POST['id'] ?? '');
+        $nombre     = ValidacionUsuario::entrada($_POST['nombre_completo'] ?? '');
+        $correo     = ValidacionUsuario::entrada($_POST['correo'] ?? '');
+        $rol        = ValidacionUsuario::entrada($_POST['rol'] ?? 'aprendiz');
+        $ficha      = ValidacionUsuario::entrada($_POST['ficha_sena'] ?? '');
+        $programaId = ValidacionUsuario::entrada($_POST['programa_id'] ?? '');
 
-        if (empty($id) || empty($nombre) || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-            $this->redirect('admin/usuarios?error=' . urlencode('El nombre es obligatorio y el correo electrónico debe tener un formato válido.'));
-            return;
+        try {
+            $actual = $this->usuarioModel->obtenerPorId($id);
+            $errores = ValidacionUsuario::errores($nombre,$correo,$ficha,$rol,$_POST);
+            if (!$actual) $errores[]='No se encontró el usuario.';
+            if (!ValidacionUsuario::programaPermitido($programaId,$actual['programa_id'] ?? null)) $errores[]='Selecciona un programa activo válido.';
+            if ($errores) $this->redirect('admin/usuarios?error='.urlencode(implode(' ',$errores)));
+            $stmt = obtenerConexion()->prepare('SELECT id FROM usuarios WHERE correo=? AND id<>?');
+            $stmt->execute([$correo,$id]);
+            if ($stmt->fetchColumn()) {
+                $this->redirect('admin/usuarios?error=' . urlencode('Este correo ya está registrado.'));
+            }
+            $this->usuarioModel->actualizar($id, $nombre, $correo, $rol, $ficha ?: null, $programaId ?: null);
+            $this->redirect('admin/usuarios?exito=actualizado');
+        } catch (\Throwable $e) {
+            error_log('[Edición de usuario] '.$e->getMessage());
+            $this->redirect('admin/usuarios?error='.urlencode('No se pudieron guardar los cambios. Revisa los datos e intenta nuevamente.'));
         }
-
-        if (!in_array($rol,['aprendiz','instructor','admin'],true)) {
-            $this->redirect('admin/usuarios?error=' . urlencode('Selecciona un rol válido.'));
-        }
-        $stmt = obtenerConexion()->prepare('SELECT id FROM usuarios WHERE correo=? AND id<>?');
-        $stmt->execute([$correo,$id]);
-        if ($stmt->fetchColumn()) {
-            $this->redirect('admin/usuarios?error=' . urlencode('Este correo ya está registrado.'));
-        }
-        $this->usuarioModel->actualizar($id, $nombre, $correo, $rol, $ficha ?: null, $programaId ?: null);
-        $this->redirect('admin/usuarios?exito=actualizado');
     }
 
     /**
@@ -331,10 +309,64 @@ class AdminController extends Controller {
         $this->guardarUsuario();
     }
 
-    /**
-     * Genera una contraseña temporal segura de 12 caracteres:
-     * garantiza al menos 1 mayúscula, 1 número y 1 símbolo.
-     */
+    /** Permite recuperar la entrega de credenciales sin depender de SMTP. */
+    public function restablecerClaveTemporal(): void {
+        if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) $this->redirect('admin/usuarios');
+        try {
+            $usuario=$this->usuarioModel->obtenerPorId(ValidacionUsuario::entrada($_POST['id'] ?? ''));
+            if (!$usuario || !$usuario['activo'] || !in_array($usuario['rol'],['aprendiz','instructor'],true)) {
+                $this->redirect('admin/usuarios?error='.urlencode('Selecciona un aprendiz o instructor activo.'));
+            }
+            $clave=$this->generarClaveTemp();
+            if (!$this->usuarioModel->restablecerClaveTemporal($usuario['id'],password_hash($clave,PASSWORD_BCRYPT,['cost'=>12]))) {
+                throw new \RuntimeException('La cuenta ya no admite clave temporal.');
+            }
+            $this->entregarCredencialesTemporales($usuario['nombre_completo'],$usuario['correo'],$usuario['rol'],$usuario['ficha_sena'] ?? '',$usuario['programa_id'] ?? '',$clave);
+        } catch (\Throwable $e) {
+            error_log('[Clave temporal] '.$e->getMessage());
+            $this->redirect('admin/usuarios?error='.urlencode('No se pudo restablecer la clave temporal. Intenta nuevamente.'));
+        }
+    }
+
+    private function entregarCredencialesTemporales(string $nombre,string $correo,string $rol,string $ficha,string $programaId,string $claveTemp): void {
+        // Resolver nombre del programa para el correo
+        $nombrePrograma = '';
+        if ($programaId) {
+            foreach ($this->programaModel->obtenerTodos() as $p) {
+                if ($p['id'] === $programaId) { $nombrePrograma = $p['nombre']; break; }
+            }
+        }
+
+        $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://';
+        $urlLogin  = $protocolo . $_SERVER['HTTP_HOST'] . PROYECTO_PATH . '/login';
+
+        $rolTexto = ucfirst($rol);
+
+        $asunto = '¡Bienvenido a SmashCode! Tus credenciales de acceso';
+        $cuerpo  = "<h2 style='color:#58CC02;'>¡Bienvenido(a) al equipo SmashCode!</h2>";
+        $cuerpo .= "<p>Hola <strong>" . htmlspecialchars($nombre) . "</strong>,</p>";
+        $cuerpo .= "<p>El administrador ha generado una clave temporal para tu cuenta como <strong>{$rolTexto}</strong> en la plataforma SmashCode SENA.</p>";
+        $cuerpo .= "<p>Para acceder, utiliza las siguientes credenciales temporales. Por tu seguridad, el sistema te forzará a cambiarlas en tu primer inicio de sesión.</p>";
+        $cuerpo .= "<table style='border-collapse:collapse; font-size:1rem; margin:16px 0; background:#f4f4f4; padding:12px; border-radius:8px;'>";
+        $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Correo:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($correo) . "</td></tr>";
+        $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Contraseña Temporal:</td><td style='padding:8px 0; font-family:monospace; font-weight:bold;'>" . htmlspecialchars($claveTemp) . "</td></tr>";
+        if ($ficha)         $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Ficha SENA:</td><td style='padding:8px 0;'>" . htmlspecialchars($ficha) . "</td></tr>";
+        if ($nombrePrograma) $cuerpo .= "<tr><td style='padding:8px 16px 8px 0; font-weight:600; color:#555;'>Programa asignado:</td><td style='padding:8px 0;'>" . htmlspecialchars($nombrePrograma) . "</td></tr>";
+        $cuerpo .= "</table>";
+        $cuerpo .= "<p style='margin-top:24px;'><a href='{$urlLogin}' style='display:inline-block; background:#58CC02; color:#fff; padding:14px 28px; border-radius:8px; text-decoration:none; font-weight:700;'>Ir a Iniciar Sesión</a></p>";
+        $cuerpo .= "<hr><p style='font-size:0.8rem; color:#aaa; margin-top:24px;'>Si tienes algún problema para acceder, contacta al administrador del sistema.</p>";
+
+        $enviado=false;
+        if (file_exists(dirname(__DIR__, 2) . '/includes/correo.php')) {
+            require_once dirname(__DIR__, 2) . '/includes/correo.php';
+            $enviado=enviarCorreo($correo, $asunto, $cuerpo);
+        }
+
+        unset($_SESSION['credenciales_temporales']);
+        if (!$enviado) $_SESSION['credenciales_temporales']=['correo'=>$correo,'clave'=>$claveTemp];
+        $this->redirect('admin/usuarios?exito='.($enviado?'credenciales_enviadas':'correo_pendiente'));
+    }
+
     private function generarClaveTemp(): string {
         $mayus   = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
         $minuscu = 'abcdefghjkmnpqrstuvwxyz';

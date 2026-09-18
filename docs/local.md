@@ -48,3 +48,11 @@ La política existente del instructor sin programa asignado se conserva. El logi
 Publicar exige tres palabras para Warm-Up, ejercicios válidos por tipo, diálogos con turnos y un quiz evaluable. Las actividades se reúnen por módulo. Para dejar temporalmente incompleto un RAP, despublicarlo primero. Las ediciones de contenido publicado se validan dentro de la transacción y se revierten si dejan actividades inutilizables.
 
 Los intentos nuevos guardan el mínimo de aprobación y los enunciados originales. Los intentos anteriores a esta migración conservan puntaje, aprobación y respuestas; el criterio original queda vacío en CSV y el enunciado se indica como no disponible, porque no puede recuperarse con certeza. No se inventan valores históricos a partir del quiz actual.
+
+## Archivos y entrega de claves temporales
+
+Las subidas de vocabulario validan el contenido y el formato según el campo: audio MP3/OGG/WAV e imagen JPG/PNG/SVG estático, hasta 2 MB. Una subida fallida conserva el registro y los archivos anteriores. Los SVG nuevos no admiten scripts, eventos ni recursos externos; los archivos ya existentes se conservan.
+
+Las comprobaciones de estas correcciones se ejecutan con `python tests/additional-regression.py --artifact-root .local/additional-test-results`. Admiten `--php` para elegir el intérprete y crean y eliminan únicamente sus cuentas, registros y archivos propios.
+
+Si no se entrega la clave temporal por correo, el administrador recibe un aviso y ve la clave una sola vez en la lista de usuarios. Puede generar otra con el botón de clave temporal para un aprendiz o instructor activo. Esta acción reemplaza la clave, invalida las sesiones existentes y exige cambiarla al ingresar. La clave no se incluye en URLs ni logs. En local se conserva `MAIL_ENABLED=false`; esta alternativa permite probar las altas sin enviar correos reales.

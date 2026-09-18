@@ -4,6 +4,7 @@ namespace App\Controllers;
 use App\Core\Controller;
 use App\Models\User;
 use App\Models\Programa;
+use App\Models\ValidacionUsuario;
 use Firebase\JWT\JWT;
 use Exception;
 
@@ -181,45 +182,55 @@ class AuthController extends Controller {
         if (!validarTokenCSRF($_POST['csrf_token'] ?? '')) {
             $error = 'Solicitud inválida. Recarga la página.';
         } else {
-            $nombre = limpiar($_POST['nombre_completo'] ?? '');
-            $correo = limpiar($_POST['correo'] ?? '');
-            $ficha = limpiar($_POST['ficha_sena'] ?? '');
-            $programa = limpiar($_POST['programa_id'] ?? '');
-            $contrasena = $_POST['contrasena'] ?? '';
+            $nombre = ValidacionUsuario::entrada($_POST['nombre_completo'] ?? '');
+            $correo = ValidacionUsuario::entrada($_POST['correo'] ?? '');
+            $ficha = ValidacionUsuario::entrada($_POST['ficha_sena'] ?? '');
+            $programa = ValidacionUsuario::entrada($_POST['programa_id'] ?? '');
+            $contrasena = is_string($_POST['contrasena'] ?? null) ? $_POST['contrasena'] : '';
+            try {
+                $errores=ValidacionUsuario::errores($nombre,$correo,$ficha,'aprendiz',$_POST);
 
-            if (empty($nombre) || empty($correo) || empty($contrasena)) {
-                $error = 'Nombre, correo y contraseña son obligatorios.';
-            } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-                $error = 'El correo no tiene un formato válido.';
-            } elseif (strlen($contrasena) < 8 || !preg_match('/[A-Z]/', $contrasena) || !preg_match('/[0-9]/', $contrasena)) {
-                $error = 'La contraseña debe tener mínimo 8 caracteres, 1 mayúscula y 1 número.';
-            } else {
-                if ($this->userModel->existeCorreo($correo)) {
-                    $error = 'Este correo ya está registrado.';
+                if ($errores) {
+                    $error=implode(' ',$errores);
+                } elseif (!ValidacionUsuario::programaPermitido($programa)) {
+                    $error='Selecciona un programa activo válido.';
+                } elseif (empty($contrasena)) {
+                    $error = 'Nombre, correo y contraseña son obligatorios.';
+                } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+                    $error = 'El correo no tiene un formato válido.';
+                } elseif (strlen($contrasena) < 8 || !preg_match('/[A-Z]/', $contrasena) || !preg_match('/[0-9]/', $contrasena)) {
+                    $error = 'La contraseña debe tener mínimo 8 caracteres, 1 mayúscula y 1 número.';
                 } else {
-                    $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
-                    $id = generarUUID();
-                    
-                    if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
-                        // HU16: correo de confirmación. Si el servidor de correo falla, la cuenta
-                        // igual queda creada y activa, y el aviso no promete un correo que no salió.
-                        $exito = $this->enviarCorreoBienvenida($correo, $nombre)
-                            ? '¡Cuenta creada! Te enviamos un correo de confirmación. Ya puedes iniciar sesión.'
-                            : '¡Cuenta creada! Ya puedes iniciar sesión.';
-                        $accion = 'ingresar';
-                        
-                        $this->render('auth/login', [
-                            'accion' => 'ingresar',
-                            'error' => '',
-                            'exito' => $exito,
-                            'programas' => $programas,
-                            'csrf' => $csrf
-                        ]);
-                        return;
+                    if ($this->userModel->existeCorreo($correo)) {
+                        $error = 'Este correo ya está registrado.';
                     } else {
-                        $error = 'Error interno al registrar la cuenta. Intenta más tarde.';
+                        $hash = password_hash($contrasena, PASSWORD_BCRYPT, ['cost' => 12]);
+                        $id = generarUUID();
+                    
+                        if ($this->userModel->registrar($id, $nombre, $correo, $hash, $ficha ?: null, $programa ?: null)) {
+                            // HU16: correo de confirmación. Si el servidor de correo falla, la cuenta
+                            // igual queda creada y activa, y el aviso no promete un correo que no salió.
+                            $exito = $this->enviarCorreoBienvenida($correo, $nombre)
+                                ? '¡Cuenta creada! Te enviamos un correo de confirmación. Ya puedes iniciar sesión.'
+                                : '¡Cuenta creada! Ya puedes iniciar sesión.';
+                            $accion = 'ingresar';
+                        
+                            $this->render('auth/login', [
+                                'accion' => 'ingresar',
+                                'error' => '',
+                                'exito' => $exito,
+                                'programas' => $programas,
+                                'csrf' => $csrf
+                            ]);
+                            return;
+                        } else {
+                            $error = 'Error interno al registrar la cuenta. Intenta más tarde.';
+                        }
                     }
                 }
+            } catch (\Throwable $e) {
+                error_log('[Registro] '.$e->getMessage());
+                $error='No se pudo registrar la cuenta. Revisa los datos e intenta nuevamente.';
             }
         }
 

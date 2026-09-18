@@ -120,6 +120,7 @@ $app->get('/admin/usuarios/crear', 'AdminController@crearUsuario');
 $app->post('/admin/usuarios/guardar', 'AdminController@guardarUsuario');
 $app->get('/admin/usuarios/editar', 'AdminController@editarUsuario');
 $app->post('/admin/usuarios/actualizar', 'AdminController@actualizarUsuario');
+$app->post('/admin/usuarios/clave-temporal', 'AdminController@restablecerClaveTemporal');
 $app->post('/admin/usuarios/suspender', 'AdminController@suspenderUsuario');
 $app->post('/admin/usuarios/eliminar', 'AdminController@eliminarUsuario');
 $app->get('/admin/usuarios/actividad', 'AdminController@actividadUsuario');
