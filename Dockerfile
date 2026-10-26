@@ -1,7 +1,13 @@
-FROM php:8.2-apache
+# PHP 8.3: 8.2 deja de recibir parches el 31 de diciembre de 2026 y corría con
+# PHP2Shell (CVE-2026-109618 y CVE-2026-109619, corregidos en 8.3.36).
+FROM php:8.3-apache
 
 # Habilitar mod_rewrite para que funcionen las rutas en index.php
 RUN a2enmod rewrite
+
+# Desactivar el progreso de subida en sesion: es la via de PHP2Shell y de
+# CVE-2026-115560, que a 2026-10-25 todavia no tiene parche.
+RUN echo "session.upload_progress.enabled = 0" > "$PHP_INI_DIR/conf.d/sin-upload-progress.ini"
 
 # Instalar extensiones de PHP necesarias
 RUN docker-php-ext-install pdo pdo_mysql
